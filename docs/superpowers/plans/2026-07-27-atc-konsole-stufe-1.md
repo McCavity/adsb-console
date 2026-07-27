@@ -2001,7 +2001,7 @@ export async function startConsole() {
     dot.className = 'dot';
     box.appendChild(dot);
     const index = order.indexOf(id);
-    box.addEventListener('pointerup', () => { takeOver(); goTo(index); });
+    box.addEventListener('pointerup', () => { goTo(index, false); takeOver(); });
     dotsEl.appendChild(box);
   }
 
@@ -2032,7 +2032,15 @@ export async function startConsole() {
     els.get(page.id).classList.add(st);
   }
 
-  function goTo(index) {
+  // rotate: Soll nach dem Wechsel wieder automatisch weitergeblaettert
+  // werden? Der automatische Umlauf will das, eine Beruehrung nicht --
+  // dort uebernimmt takeOver() und plant die Fortsetzung in 60 s.
+  // Ausdruecklich als Parameter und nicht ueber die Aufrufreihenfolge:
+  // Vorher rief die Touch-Behandlung erst takeOver() und dann goTo(),
+  // und goTo startete die Rotation sofort wieder -- die Pause war
+  // gesetzt und im selben Atemzug ueberschrieben. Am 27.07. am Panel
+  // gemessen: Das Board blieb 15 statt 60 Sekunden stehen.
+  function goTo(index, rotate = true) {
     const next = ((index % order.length) + order.length) % order.length;
     if (next === current) return;
     els.get(order[current]).classList.remove('active');
@@ -2041,12 +2049,12 @@ export async function startConsole() {
     els.get(order[current]).classList.add('active');
     dotsEl.querySelectorAll('.dot')
       .forEach((d, i) => d.classList.toggle('on', i === current));
-    startRotation();
+    if (rotate) startRotation();
   }
 
   function startRotation() {
     clearTimeout(rotateTimer);
-    rotateTimer = setTimeout(() => goTo(current + 1), dwellFor(order[current]));
+    rotateTimer = setTimeout(() => goTo(current + 1, true), dwellFor(order[current]));
   }
 
   // Jede Beruehrung pausiert die Rotation; sie nimmt danach von der
@@ -2065,7 +2073,7 @@ export async function startConsole() {
     const dx = e.clientX - downX, dy = e.clientY - downY;
     takeOver();
     if (Math.abs(dx) >= 60 && Math.abs(dx) > Math.abs(dy) && Date.now() - downT < 1200) {
-      goTo(current + (dx < 0 ? 1 : -1));
+      goTo(current + (dx < 0 ? 1 : -1), false);
     }
   });
   document.addEventListener('contextmenu', e => e.preventDefault());
