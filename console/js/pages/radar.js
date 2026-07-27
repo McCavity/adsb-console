@@ -151,8 +151,9 @@ registerPage({
         };
       })
       .filter(t => t.nm <= cfg.radar.range_nm) : [];
-    renderBlips(c.blips, cfg, targets, c.sweepStart);
-    renderSide(el.querySelector('.radar-side'), cfg, state, targets);
+    const auswahl = waehleZiel(targets);
+    renderBlips(c.blips, cfg, targets, c.sweepStart, auswahl);
+    renderSide(el.querySelector('.radar-side'), cfg, state, targets, auswahl);
   },
 });
 
@@ -168,7 +169,7 @@ registerPage({
 // unlesbar. Am 27.07. am Panel gesehen.
 const MIN_RESYNC_DEG = 5;
 
-function renderBlips(root, cfg, targets, sweepStart) {
+function renderBlips(root, cfg, targets, sweepStart, auswahl) {
   // Zuordnung ueber eine Map statt ueber einen Selector-String: Ein hex
   // mit einem Anfuehrungszeichen oder einer eckigen Klammer -- etwa aus
   // einer praeparierten Testquelle -- wuerde querySelector mitten in der
@@ -197,7 +198,8 @@ function renderBlips(root, cfg, targets, sweepStart) {
       setPhase(el, cfg, t.brg, sweepStart);
     }
 
-    el.className = 'blip' + (t.heavy ? ' heavy' : '') + (t.emergency ? ' emg' : '');
+    el.className = 'blip' + (t.heavy ? ' heavy' : '') + (t.emergency ? ' emg' : '')
+                 + (auswahl && t.hex === auswahl.hex ? ' sel' : '');
     const p = projectToCanvas(t.nm, t.brg, cfg.radar.range_nm, R);
     el.style.left = (CENTER + p.x) + 'px';
     el.style.top = (CENTER + p.y) + 'px';
@@ -276,11 +278,24 @@ function installDecayKeyframes(cfg) {
   }`;
 }
 
+// Welches Ziel steht im Datenblock und wird auf dem Schirm hervorgehoben?
+// Notfall vor Naehe: Gibt es einen Sonder-Squawk, gehoert der Block ihm --
+// und bei mehreren dem naechstgelegenen davon. Sonst dem naechsten Ziel
+// ueberhaupt. Automatisch, ohne Bedienung: Eine Wandanzeige, die von
+// selbst das Richtige zeigt, schlaegt eine, deren Zustand jemand
+// zuruecksetzen muesste.
+function waehleZiel(targets) {
+  if (!targets.length) return null;
+  const notfaelle = targets.filter(t => t.emergency);
+  const menge = notfaelle.length ? notfaelle : targets;
+  return menge.reduce((a, b) => (b.nm < a.nm ? b : a));
+}
+
 // Der Datenblock rechts neben dem Schirm. Er ergaenzt das Bild, statt es
 // zu wiederholen: Was der Kreis zeigt (wo etwas ist), zeigt er nicht noch
 // einmal; er zeigt, was man aus dem Kreis nicht ablesen kann.
-function renderSide(root, cfg, state, targets) {
-  if (!targets.length) {
+function renderSide(root, cfg, state, targets, auswahl) {
+  if (!targets.length || !auswahl) {
     // Nachts ist das der Normalfall, kein Defekt -- deshalb bleibt die
     // Nachrichtenrate stehen: Sie laeuft weiter, auch wenn kein Ziel eine
     // Position sendet, und unterscheidet "nichts fliegt" von "Empfaenger
@@ -293,7 +308,7 @@ function renderSide(root, cfg, state, targets) {
       </div>`;
     return;
   }
-  const naechstes = targets.reduce((a, b) => (b.nm < a.nm ? b : a));
+  const naechstes = auswahl;
   const weitestes = targets.reduce((a, b) => (b.nm > a.nm ? b : a));
   const mitPosition = targets.length;
   const gesamt = (state.aircraft || []).length;
@@ -302,9 +317,9 @@ function renderSide(root, cfg, state, targets) {
     : '→ level';
 
   root.innerHTML = `
-    <div class="tile" style="flex:0 0 250px">
-      <div class="lbl">Nächstes Ziel</div>
-      <div class="huge em value" style="font-size:78px;margin:6px 0 10px">
+    <div class="tile${naechstes.emergency ? ' emg' : ''}" style="flex:0 0 250px">
+      <div class="lbl">${naechstes.emergency ? 'NOTFALL · Squawk ' + naechstes.squawk : 'Nächstes Ziel'}</div>
+      <div class="huge ${naechstes.emergency ? 'red' : 'em'} value" style="font-size:78px;margin:6px 0 10px">
         ${naechstes.callsign || '——'}${naechstes.heavy ? '<span class="hv"> HEAVY</span>' : ''}</div>
       <div class="row" style="gap:26px">
         <span class="med sky">${naechstes.fl}</span>
