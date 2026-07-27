@@ -33,7 +33,10 @@ Diese gelten für **jede** Aufgabe, auch wo sie nicht wiederholt werden.
 
 - **Die exakte Empfängerposition wird nie ins Repo geschrieben** — kein Testfixture, kein
   Beispiel, kein Kommentar. Tests verwenden erfundene Koordinaten. Sie steht auf dem
-  Gerät in `/etc/default/dump1090-fa` und ist faktisch eine Wohnadresse.
+  Gerät und ist faktisch eine Wohnadresse. Gelesen wird sie zur Laufzeit aus den
+  Argumenten `--lat`/`--lon` des laufenden `dump1090-fa`-Prozesses
+  (`/proc/<pid>/cmdline`) — **nicht** aus `/etc/default/dump1090-fa`: dort heißen die
+  Schlüssel `RECEIVER_LAT`/`RECEIVER_LON` und sind auf diesem Gerät leer.
 - **Keine Fremdquelle zur Laufzeit.** Keine CDN-Schrift, keine externe Bibliothek, keine
   Kartenkacheln. Alles wird lokal ausgeliefert.
 - **Nur Python-Standardbibliothek** im Daemon. Kein `pip install`, kein venv auf dem Gerät.
@@ -289,7 +292,8 @@ git commit -m "Reine Rechenfunktionen mit unabhaengig kalibrierten Tests"
 
 **Schnittstellen:**
 - Verbraucht: nichts.
-- Liefert: `read_receiver_position(path) -> (float, float)`;
+- Liefert: `parse_position_from_cmdline(argv: list[str]) -> tuple[float, float] | None`;
+  `read_receiver_position(cmdlines=None) -> (float, float)`;
   `parse_throttled(value: int) -> dict` mit den Schlüsseln `now` und `ever`, je ein Dict
   aus `undervoltage`, `arm_freq_capped`, `throttled`, `soft_temp_limit`;
   `great_circle_nm(lat1, lon1, lat2, lon2) -> float`;
@@ -302,7 +306,6 @@ git commit -m "Reine Rechenfunktionen mit unabhaengig kalibrierten Tests"
 ```python
 # tests/test_daemon.py
 import json
-import os
 import sys
 import tempfile
 import unittest
@@ -336,30 +339,43 @@ class ThrottleParser(unittest.TestCase):
 
 
 class Position(unittest.TestCase):
-    def test_liest_lat_und_lon(self):
-        # Erfundene Koordinaten -- die echte Position gehoert nicht ins Repo.
-        with tempfile.NamedTemporaryFile("w", suffix=".conf", delete=False) as f:
-            f.write('# Kommentar\nRECEIVER_OPTIONS="--device 0"\n'
-                    'LAT=12.3456\nLON=-4.5678\n')
-            path = f.name
-        try:
-            self.assertEqual(d.read_receiver_position(path), (12.3456, -4.5678))
-        finally:
-            os.unlink(path)
+    # Alle Koordinaten hier sind erfunden -- die echte Position gehoert nicht
+    # ins Repo. Gelesen wird zur Laufzeit die WIRKSAME Position des laufenden
+    # dump1090-fa aus /proc/<pid>/cmdline, nicht eine Konfigdatei: auf dem
+    # Zielgeraet sind RECEIVER_LAT/RECEIVER_LON in /etc/default/dump1090-fa
+    # leer, und die Position kommt aus der piaware-Konfiguration.
+    def test_zieht_lat_und_lon_aus_der_argumentliste(self):
+        argv = ["/usr/bin/dump1090-fa", "--device-type", "rtlsdr",
+                "--lat", "12.34567", "--lon", "-4.56789", "--max-range", "360"]
+        self.assertEqual(d.parse_position_from_cmdline(argv), (12.34567, -4.56789))
 
-    def test_fehlende_datei_ist_ein_klarer_fehler(self):
-        with self.assertRaises(FileNotFoundError):
-            d.read_receiver_position("/nicht/vorhanden/dump1090-fa")
+    def test_nur_eine_haelfte_ist_keine_position(self):
+        self.assertIsNone(d.parse_position_from_cmdline(
+            ["/usr/bin/dump1090-fa", "--lat", "12.34567"]))
 
-    def test_datei_ohne_position_ist_ein_klarer_fehler(self):
-        with tempfile.NamedTemporaryFile("w", delete=False) as f:
-            f.write("RECEIVER_OPTIONS=\n")
-            path = f.name
-        try:
-            with self.assertRaises(ValueError):
-                d.read_receiver_position(path)
-        finally:
-            os.unlink(path)
+    def test_flag_am_ende_ohne_wert(self):
+        # Wuerde ohne Laengenpruefung einen IndexError werfen.
+        self.assertIsNone(d.parse_position_from_cmdline(
+            ["/usr/bin/dump1090-fa", "--lon", "-4.5", "--lat"]))
+
+    def test_unlesbarer_wert(self):
+        self.assertIsNone(d.parse_position_from_cmdline(
+            ["/usr/bin/dump1090-fa", "--lat", "sued", "--lon", "-4.5"]))
+
+    def test_liest_aus_cmdline_puffern(self):
+        cmdlines = [
+            b"/usr/bin/python3\x00-m\x00http.server\x00",
+            b"/usr/bin/dump1090-fa\x00--lat\x0012.34567\x00--lon\x00-4.56789\x00",
+        ]
+        self.assertEqual(d.read_receiver_position(cmdlines), (12.34567, -4.56789))
+
+    def test_kein_dump1090_prozess_ist_ein_klarer_fehler(self):
+        with self.assertRaises(RuntimeError):
+            d.read_receiver_position([b"/usr/bin/python3\x00-m\x00http.server\x00"])
+
+    def test_dump1090_ohne_position_ist_ein_klarer_fehler(self):
+        with self.assertRaises(RuntimeError):
+            d.read_receiver_position([b"/usr/bin/dump1090-fa\x00--max-range\x00360\x00"])
 
 
 class Geometrie(unittest.TestCase):
@@ -415,10 +431,10 @@ Standardbibliothek -- auf dem Geraet gibt es kein venv und soll keines geben.
 """
 from __future__ import annotations
 
+import glob
 import json
 import math
 import os
-import re
 import tempfile
 from pathlib import Path
 
@@ -445,19 +461,52 @@ def parse_throttled(value: int) -> dict:
     }
 
 
-def read_receiver_position(path: str = "/etc/default/dump1090-fa") -> tuple[float, float]:
-    """Die exakte Position des Empfaengers vom Geraet lesen.
+def parse_position_from_cmdline(argv: list[str]) -> tuple[float, float] | None:
+    """--lat/--lon aus einer Argumentliste ziehen, oder None."""
+    found = {}
+    for i, a in enumerate(argv):
+        if a in ("--lat", "--lon") and i + 1 < len(argv):
+            try:
+                found[a] = float(argv[i + 1])
+            except ValueError:
+                return None
+    if "--lat" not in found or "--lon" not in found:
+        return None
+    return found["--lat"], found["--lon"]
 
-    Bleibt im Speicher. Sie wird nie in eine Ausgabedatei geschrieben und
-    gehoert nicht ins Repo -- receiver.json fuehrt sie ohnehin gerundet, und
-    das Frontend benutzt jene gerundete Fassung.
+
+def _iter_proc_cmdlines():
+    for path in glob.glob("/proc/[0-9]*/cmdline"):
+        try:
+            yield Path(path).read_bytes()
+        except OSError:
+            continue        # Prozess ist zwischen glob und Lesen verschwunden
+
+
+def read_receiver_position(cmdlines=None) -> tuple[float, float]:
+    """Die WIRKSAME Position des laufenden dump1090-fa.
+
+    Gelesen aus /proc/<pid>/cmdline statt aus einer Konfigdatei: Auf dem
+    Zielgeraet sind RECEIVER_LAT/RECEIVER_LON in /etc/default/dump1090-fa
+    leer, und dump1090 bezieht die Position aus der piaware-Konfiguration.
+    Die Prozessargumente sind die einzige Quelle, die unabhaengig davon
+    stimmt, welche Schicht den Wert geliefert hat -- und sie sind
+    unprivilegiert lesbar (am Geraet als uid 1000 belegt).
+
+    Die Position bleibt im Speicher. Sie wird nie in eine Ausgabedatei
+    geschrieben und gehoert nicht ins Repo; das Frontend benutzt die
+    gerundete Fassung aus receiver.json.
     """
-    text = Path(path).read_text()
-    lat = re.search(r"^\s*LAT=([-\d.]+)", text, re.MULTILINE)
-    lon = re.search(r"^\s*LON=([-\d.]+)", text, re.MULTILINE)
-    if not lat or not lon:
-        raise ValueError(f"{path} enthaelt kein LAT/LON")
-    return float(lat.group(1)), float(lon.group(1))
+    for raw in (cmdlines if cmdlines is not None else _iter_proc_cmdlines()):
+        argv = [a.decode("utf-8", "replace") for a in raw.split(b"\0") if a]
+        if not argv or "dump1090" not in argv[0]:
+            continue
+        pos = parse_position_from_cmdline(argv)
+        if pos is not None:
+            return pos
+    raise RuntimeError(
+        "kein laufender dump1090-Prozess mit --lat/--lon gefunden -- "
+        "laeuft dump1090-fa, und ist eine Position konfiguriert?")
 
 
 def great_circle_nm(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -499,7 +548,8 @@ def atomic_write_json(path: Path, obj) -> None:
 - [ ] **Schritt 4: Test laufen lassen, Bestehen bestätigen**
 
 Ausführen: `python3 -m unittest discover -s tests -v`
-Erwartet: PASS, 11 Tests.
+Erwartet: PASS, 15 Tests
+(3 Drosselung, 7 Position, 3 Geometrie, 2 atomares Schreiben).
 
 - [ ] **Schritt 5: Den Drosselungs-Test absichtlich rot machen**
 
@@ -762,7 +812,7 @@ def usable_positions(doc, lat0, lon0, max_nm=MAX_PLAUSIBLE_NM) -> list[dict]:
 - [ ] **Schritt 4: Test laufen lassen, Bestehen bestätigen**
 
 Ausführen: `python3 -m unittest discover -s tests -v`
-Erwartet: PASS, 24 Tests.
+Erwartet: PASS, 28 Tests.
 
 - [ ] **Schritt 5: Den Fensterschnitt absichtlich rot machen**
 
@@ -982,7 +1032,6 @@ def main(argv=None) -> int:
     ap.add_argument("--out-dir", default="/var/www/html/atc/data")
     ap.add_argument("--db", default="/var/lib/atc-console/atc.db")
     ap.add_argument("--run-dir", default=str(RUN_DIR))
-    ap.add_argument("--position-file", default="/etc/default/dump1090-fa")
     args = ap.parse_args(argv)
 
     # Signale ueber eine Variable leiten, damit die Schleife sauber austritt
@@ -990,7 +1039,11 @@ def main(argv=None) -> int:
     signal.signal(signal.SIGTERM, _stop)
     signal.signal(signal.SIGINT, _stop)
 
-    lat0, lon0 = read_receiver_position(args.position_file)
+    # Die wirksame Position des laufenden dump1090-fa (siehe Aufgabe 2).
+    # Kein Konfigpfad als Argument: die Konfigdatei ist auf dem Zielgeraet
+    # an dieser Stelle leer, und ein Argument, das zur falschen Quelle
+    # zeigen kann, ist schlimmer als keines.
+    lat0, lon0 = read_receiver_position()
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     run_dir = Path(args.run_dir)
@@ -1035,7 +1088,7 @@ if __name__ == "__main__":
 - [ ] **Schritt 4: Test laufen lassen, Bestehen bestätigen**
 
 Ausführen: `python3 -m unittest discover -s tests -v`
-Erwartet: PASS, 28 Tests.
+Erwartet: PASS, 32 Tests.
 
 - [ ] **Schritt 5: Die Unit schreiben**
 
@@ -2745,7 +2798,7 @@ Erwartet: PASS, 6 Tests.
 
 Ausführen: `node --test tests/*.mjs && python3 -m unittest discover -s tests -v`
 Erwartet: 34 JavaScript-Tests (11 geo, 6 config, 3 airports, 4 radar, 4 board, 6 stats)
-und 28 Python-Tests, alle grün.
+und 32 Python-Tests, alle grün.
 
 - [ ] **Schritt 6: Commit**
 
