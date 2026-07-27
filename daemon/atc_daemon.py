@@ -51,12 +51,19 @@ def parse_position_from_cmdline(argv: list[str]) -> tuple[float, float] | None:
     return found["--lat"], found["--lon"]
 
 
-def _iter_proc_cmdlines():
-    for path in glob.glob("/proc/[0-9]*/cmdline"):
+PROC_CMDLINE_GLOB = "/proc/[0-9]*/cmdline"
+
+
+def _iter_proc_cmdlines(pattern: str = PROC_CMDLINE_GLOB):
+    """cmdline-Puffer aller Prozesse. Das Muster ist ein Parameter, damit der
+    Ueberspring-Pfad unten testbar ist statt nur behauptet."""
+    for path in glob.glob(pattern):
         try:
             yield Path(path).read_bytes()
         except OSError:
-            continue        # Prozess ist zwischen glob und Lesen verschwunden
+            continue        # Prozess zwischen glob und Lesen verschwunden,
+                            # oder Eintrag nicht lesbar -- beides kein Grund
+                            # aufzugeben, es gibt weitere Kandidaten
 
 
 def read_receiver_position(cmdlines=None) -> tuple[float, float]:
