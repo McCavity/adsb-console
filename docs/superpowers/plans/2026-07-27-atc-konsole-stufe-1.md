@@ -1987,6 +1987,7 @@ export async function startConsole() {
   const dotsEl = document.getElementById('dots');
   const els = new Map();
   let current = 0, rotateTimer = null, resumeTimer = null;
+  const RESUME_MS = 60000;
 
   for (const id of order) {
     const el = document.createElement('div');
@@ -2062,7 +2063,12 @@ export async function startConsole() {
   function takeOver() {
     clearTimeout(rotateTimer);
     clearTimeout(resumeTimer);
-    resumeTimer = setTimeout(startRotation, 60000);
+    // Nach genau RESUME_MS wird weitergeblaettert -- NICHT: nach RESUME_MS
+    // beginnt die Standzeit der sichtbaren Seite von vorn. Sonst dauerte
+    // dieselbe Geste je nach Seite 75 s (Board, Statistik) oder 105 s
+    // (Radar), ohne dass es dafuer einen Grund gaebe. Am 27.07. am Panel
+    // mit der Stoppuhr gemessen: 75 statt der zugesagten 60.
+    resumeTimer = setTimeout(() => goTo(current + 1, true), RESUME_MS);
   }
 
   let downX = 0, downY = 0, downT = 0;

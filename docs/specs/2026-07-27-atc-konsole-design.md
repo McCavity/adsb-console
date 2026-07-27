@@ -406,8 +406,13 @@ Wischrichtung heraus (200 ms), damit sich die Geste wie eine Geste anfühlt.
 
 ### 7.2 Touch
 
-Jede Berührung pausiert die Rotation für 60 s; sie nimmt danach **von der sichtbaren
-Seite** aus wieder auf, nicht von der unterbrochenen. Waagerechter Wisch blättert; die
+Jede Berührung hält das Karussell an; **genau 60 s nach der letzten Berührung** wird
+weitergeblättert, und zwar **von der sichtbaren Seite** aus, nicht von der unterbrochenen.
+
+Der frühere Wortlaut („pausiert für 60 s, nimmt danach wieder auf") ließ zwei Lesarten
+zu, und die Umsetzung wählte die andere: Nach 60 s begann die Standzeit der sichtbaren
+Seite von vorn, sodaß dieselbe Geste je nach Seite 75 s (Board, Statistik) oder 105 s
+(Radar) wirkte. Am 27.07. am Panel mit der Stoppuhr gemessen und entschieden. Waagerechter Wisch blättert; die
 Indikatorreihe ist zugleich Direktzugriff mit 44×44-px-Zielen.
 
 Gestenhygiene, vollständig tragend: `touch-action: none` auf der Bühne **und**
