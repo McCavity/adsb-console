@@ -1,6 +1,7 @@
 import json
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -125,6 +126,105 @@ class AtomaresSchreiben(unittest.TestCase):
             p = Path(tmp) / "out.json"
             d.atomic_write_json(p, {"a": 1})
             self.assertEqual([f.name for f in Path(tmp).iterdir()], ["out.json"])
+
+
+class Rekorde(unittest.TestCase):
+    def store(self, tmp):
+        return d.RangeStore(Path(tmp) / "atc.db")
+
+    def test_erster_eintrag_wird_rekord(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            s = self.store(tmp)
+            self.assertTrue(s.update(3, 42.0, "abc123", "TEST1", 30000, "2026-07-27T15:00:00+02:00"))
+            r = {x["sector"]: x for x in s.records()}
+            self.assertAlmostEqual(r[3]["max_nm"], 42.0)
+            self.assertEqual(r[3]["callsign"], "TEST1")
+
+    def test_kleinerer_wert_ersetzt_nicht(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            s = self.store(tmp)
+            s.update(3, 42.0, "abc123", "TEST1", 30000, "2026-07-27T15:00:00+02:00")
+            self.assertFalse(s.update(3, 41.9, "def456", "TEST2", 30000, "2026-07-27T15:01:00+02:00"))
+            r = {x["sector"]: x for x in s.records()}
+            self.assertEqual(r[3]["callsign"], "TEST1")
+
+    def test_groesserer_wert_ersetzt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            s = self.store(tmp)
+            s.update(3, 42.0, "abc123", "TEST1", 30000, "2026-07-27T15:00:00+02:00")
+            self.assertTrue(s.update(3, 42.1, "def456", "TEST2", 31000, "2026-07-27T15:01:00+02:00"))
+            r = {x["sector"]: x for x in s.records()}
+            self.assertEqual(r[3]["callsign"], "TEST2")
+
+    def test_rekorde_ueberleben_den_neustart(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            s = self.store(tmp)
+            s.update(7, 55.5, "abc123", "TEST1", 30000, "2026-07-27T15:00:00+02:00")
+            del s
+            s2 = self.store(tmp)            # frische Verbindung, gleiche Datei
+            r = {x["sector"]: x for x in s2.records()}
+            self.assertAlmostEqual(r[7]["max_nm"], 55.5)
+
+
+class Stundenfenster(unittest.TestCase):
+    def test_maximum_je_sektor(self):
+        w = d.HourWindow()
+        w.add(1000.0, 2, 10.0)
+        w.add(1001.0, 2, 30.0)
+        w.add(1002.0, 5, 20.0)
+        m = w.maxima(1003.0)
+        self.assertAlmostEqual(m[2], 30.0)
+        self.assertAlmostEqual(m[5], 20.0)
+
+    def test_alte_werte_fallen_heraus(self):
+        w = d.HourWindow()
+        w.add(1000.0, 2, 90.0)
+        w.add(4000.0, 2, 10.0)          # 3000 s spaeter
+        m = w.maxima(4700.0)            # 3700 s nach dem ersten Wert
+        self.assertAlmostEqual(m[2], 10.0, msg="der 90-NM-Wert ist aelter als eine Stunde")
+
+    def test_leeres_fenster(self):
+        self.assertEqual(d.HourWindow().maxima(1000.0), {})
+
+
+class Zielfilter(unittest.TestCase):
+    # Erfundene Empfaengerposition.
+    LAT0, LON0 = 12.0, 34.0
+
+    def doc(self, aircraft):
+        return {"now": 1785156795.6, "aircraft": aircraft}
+
+    def test_ziel_ohne_position_faellt_weg(self):
+        out = d.usable_positions(self.doc([{"hex": "a", "flight": "X  "}]), self.LAT0, self.LON0)
+        self.assertEqual(out, [])
+
+    def test_mlat_ziel_faellt_weg(self):
+        # mlat ist fremde Multilateration, nicht der eigene Empfang.
+        ac = {"hex": "a", "lat": 12.1, "lon": 34.0, "mlat": ["lat", "lon"]}
+        self.assertEqual(d.usable_positions(self.doc([ac]), self.LAT0, self.LON0), [])
+
+    def test_leeres_mlat_faellt_nicht_weg(self):
+        ac = {"hex": "a", "lat": 12.1, "lon": 34.0, "mlat": []}
+        self.assertEqual(len(d.usable_positions(self.doc([ac]), self.LAT0, self.LON0)), 1)
+
+    def test_unplausible_entfernung_faellt_weg(self):
+        ac = {"hex": "a", "lat": 60.0, "lon": 34.0, "mlat": []}   # weit ueber 300 NM
+        self.assertEqual(d.usable_positions(self.doc([ac]), self.LAT0, self.LON0), [])
+
+    def test_felder_werden_berechnet(self):
+        ac = {"hex": "abc123", "flight": "TEST1   ", "alt_baro": 30000,
+              "lat": 13.0, "lon": 34.0, "mlat": []}
+        out = d.usable_positions(self.doc([ac]), self.LAT0, self.LON0)[0]
+        self.assertEqual(out["hex"], "abc123")
+        self.assertEqual(out["callsign"], "TEST1")
+        self.assertEqual(out["alt_ft"], 30000)
+        self.assertAlmostEqual(out["nm"], 60.0, delta=0.1)     # ein Breitengrad nordwaerts
+        self.assertAlmostEqual(out["bearing"], 0.0, delta=0.1)
+        self.assertEqual(out["sector"], 0)
+
+    def test_alt_baro_ground_ist_keine_hoehe(self):
+        ac = {"hex": "a", "lat": 12.1, "lon": 34.0, "alt_baro": "ground", "mlat": []}
+        self.assertIsNone(d.usable_positions(self.doc([ac]), self.LAT0, self.LON0)[0]["alt_ft"])
 
 
 if __name__ == "__main__":

@@ -126,3 +126,103 @@ def atomic_write_json(path: Path, obj) -> None:
         if os.path.exists(tmp):
             os.unlink(tmp)
         raise
+
+
+import sqlite3
+from collections import deque
+
+SECTORS = 36
+HOUR_S = 3600.0
+MAX_PLAUSIBLE_NM = 300.0     # weit ueber dem gemessenen Maximum (69 NM),
+                             # aber unterhalb offensichtlichen Unsinns
+
+
+class RangeStore:
+    """Reichweiten-Rekorde je Sektor. Eine Zeile je Sektor, nie mehr."""
+
+    def __init__(self, db_path):
+        self.path = Path(db_path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.conn = sqlite3.connect(str(self.path))
+        self.conn.row_factory = sqlite3.Row
+        schema = Path(__file__).with_name("schema.sql").read_text()
+        self.conn.executescript(schema)
+        self.conn.commit()
+
+    def update(self, sector, nm, hex_, callsign, alt_ft, seen_at) -> bool:
+        cur = self.conn.execute(
+            "SELECT max_nm FROM range_record WHERE sector = ?", (sector,))
+        row = cur.fetchone()
+        if row is not None and row["max_nm"] >= nm:
+            return False
+        self.conn.execute(
+            "INSERT INTO range_record (sector, max_nm, hex, callsign, alt_ft, seen_at) "
+            "VALUES (?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(sector) DO UPDATE SET "
+            "  max_nm = excluded.max_nm, hex = excluded.hex, "
+            "  callsign = excluded.callsign, alt_ft = excluded.alt_ft, "
+            "  seen_at = excluded.seen_at",
+            (sector, nm, hex_, callsign, alt_ft, seen_at))
+        self.conn.commit()
+        return True
+
+    def records(self) -> list[dict]:
+        return [dict(r) for r in
+                self.conn.execute("SELECT * FROM range_record ORDER BY sector")]
+
+
+class HourWindow:
+    """Maximum je Sektor ueber die letzte Stunde, im Speicher.
+
+    Der Daemon sieht die Ziele ohnehin im Sekundentakt; das Frontend soll
+    dafuer nicht 120 History-Dateien je Seitenladen holen.
+    """
+
+    def __init__(self):
+        self._items = deque()      # (ts, sector, nm), aufsteigend nach ts
+
+    def add(self, ts: float, sector: int, nm: float) -> None:
+        self._items.append((ts, sector, nm))
+
+    def maxima(self, now_ts: float) -> dict:
+        cutoff = now_ts - HOUR_S
+        while self._items and self._items[0][0] < cutoff:
+            self._items.popleft()
+        out: dict[int, float] = {}
+        for _, sector, nm in self._items:
+            if nm > out.get(sector, -1.0):
+                out[sector] = nm
+        return out
+
+
+def usable_positions(doc, lat0, lon0, max_nm=MAX_PLAUSIBLE_NM) -> list[dict]:
+    """Ziele mit eigener, plausibler Position -- angereichert um Entfernung,
+    Peilung und Sektor.
+
+    Ausgeschlossen: Ziele ohne Position, per Multilateration bestimmte Ziele
+    (fremde Rechnung, nicht der eigene Empfang) und unplausible Entfernungen.
+    """
+    out = []
+    for ac in doc.get("aircraft", []):
+        lat, lon = ac.get("lat"), ac.get("lon")
+        if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
+            continue
+        if ac.get("mlat"):          # nicht-leere Liste = per MLAT bestimmt
+            continue
+        nm = great_circle_nm(lat0, lon0, lat, lon)
+        if nm > max_nm:
+            continue
+        brg = bearing_deg(lat0, lon0, lat, lon)
+        flight = ac.get("flight")
+        alt = ac.get("alt_baro")
+        out.append({
+            "hex": ac.get("hex"),
+            # dump1090 schreibt "ground" woertlich in alt_baro -- das ist
+            # keine Hoehe und darf nicht als Zahl weitergereicht werden.
+            "alt_ft": alt if isinstance(alt, (int, float)) else None,
+            "callsign": flight.strip() if isinstance(flight, str) and flight.strip() else None,
+            "nm": nm,
+            "bearing": brg,
+            "sector": sector_of(brg, SECTORS),
+        })
+    return out
