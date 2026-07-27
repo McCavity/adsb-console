@@ -1,0 +1,45 @@
+[Unit]
+Description=ATC-Konsole (labwc + Chromium-Kiosk)
+After=lighttpd.service seatd.service atc-daemon.service
+Wants=lighttpd.service atc-daemon.service
+Requires=seatd.service
+
+[Service]
+Type=simple
+User=atc
+Group=atc
+# __SEAT_GROUP__ ist ein Platzhalter: install-console.sh ersetzt ihn durch
+# die Gruppe, die seatd auf diesem System tatsaechlich benutzt.
+SupplementaryGroups=video __SEAT_GROUP__
+
+RuntimeDirectory=atc-console
+RuntimeDirectoryMode=0700
+StateDirectory=atc-console
+StateDirectoryMode=0700
+Environment=XDG_RUNTIME_DIR=/run/atc-console
+Environment=HOME=/var/lib/atc-console
+Environment=XDG_CONFIG_HOME=/var/lib/atc-console/.config
+Environment=WLR_LIBINPUT_NO_DEVICES=0
+Environment=XCURSOR_THEME=atc-console-blank
+
+# Chromium darf das Rennen gegen lighttpd und den Daemon nicht gewinnen:
+# ohne diese Schleife zeigt das Panel beim Booten eine Verbindungsfehlerseite.
+# Gewartet wird auf beides -- die Seite laedt sonst mit leerer Systemanzeige.
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 60); do \
+  curl -sf -o /dev/null http://127.0.0.1/atc/ && \
+  curl -sf -o /dev/null http://127.0.0.1/atc/data/system.json && exit 0; \
+  sleep 2; done; exit 1'
+ExecStart=/usr/bin/labwc -s '/usr/bin/chromium \
+  --kiosk \
+  --ozone-platform=wayland \
+  --overscroll-history-navigation=0 \
+  --disable-session-crashed-bubble \
+  --disable-infobars \
+  --noerrdialogs \
+  --check-for-update-interval=31536000 \
+  --app=http://127.0.0.1/atc/'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
