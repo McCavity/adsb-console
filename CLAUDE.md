@@ -13,9 +13,14 @@ sind nicht dekorativ: Maßstab, Standzeiten und Abbruchkriterien leiten sich aus
 
 ## Nicht verhandelbar
 
-- **Die exakte Empfängerposition gehört nicht ins Repo.** Sie steht auf dem Gerät in
-  `/etc/default/dump1090-fa` und ist faktisch eine Wohnadresse. Kein Testfixture, kein
-  Beispiel-Config, kein Kommentar enthält sie; Tests verwenden erfundene Koordinaten.
+- **Die exakte Empfängerposition gehört nicht ins Repo** — sie ist faktisch eine
+  Wohnadresse. Kein Testfixture, kein Beispiel-Config, kein Kommentar enthält sie, auch
+  keine gerundete Fassung; Tests verwenden erfundene Koordinaten.
+  Gelesen wird sie zur Laufzeit aus den Argumenten `--lat`/`--lon` des laufenden
+  `dump1090-fa` (`/proc/<pid>/cmdline`) — **nicht** aus `/etc/default/dump1090-fa`: Dort
+  heißen die Schlüssel `RECEIVER_LAT`/`RECEIVER_LON` und sind auf diesem Gerät leer. Die
+  frühere Behauptung an dieser Stelle hat einen Critical gekostet; siehe
+  `docs/messungen/2026-07-27-positionsquelle.md`.
 - **Keine Fremdquelle zur Laufzeit.** Keine CDN-Schrift, keine Kartenkacheln, keine
   externe Bibliothek. Alles wird lokal ausgeliefert. Diese Eigenschaft wird bei der
   Abnahme durch Ziehen des Netzsteckers geprüft, nicht behauptet.

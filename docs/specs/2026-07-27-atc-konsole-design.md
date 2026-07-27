@@ -1,7 +1,7 @@
 # ATC-Konsole für adsapp01 — Entwurf
 
 > Datum: 2026-07-27
-> Status: freigegeben, noch nicht umgesetzt
+> Status: Stufe 1 umgesetzt und seit 27.07.2026 auf dem Gerät in Betrieb (Abnahme: `docs/abnahme/`)
 > Gerät: `adsapp01` — Raspberry Pi 4 Model B Rev 1.5 mit 7"-DSI-Touchpanel
 > Vorlage: die Wetterkonsole auf dwsapp01 (`jeelink-davis`, 25.07.2026)
 
@@ -218,8 +218,10 @@ unprivilegiert lesbar (am Gerät als uid 1000 belegt), liefert fünf Nachkommast
 ist unabhängig davon, welche Konfigurationsschicht den Wert geliefert hat — es liest, was
 der Decoder wirklich benutzt, statt einer von mehreren möglichen Quellen zu vertrauen.
 
-`receiver.json` führt die Position nur auf zwei Nachkommastellen gerundet (50.17/8.72) —
-das sind bis zu ~600 m Fehler in jeder Entfernungsangabe, für Rekorde zu ungenau.
+`receiver.json` führt die Position nur auf **zwei Nachkommastellen gerundet** — das sind bis zu
+~600 m Fehler in jeder Entfernungsangabe, für Rekorde zu ungenau. (Die gerundeten Werte standen
+hier bis zum Schluß-Review im Klartext, vier Zeilen unter der Regel, die sie verbietet. Auf ~1 km
+genau ist kein Rundungsfehler.)
 
 Diese Koordinate ist faktisch Hennings Wohnadresse. Sie wird zur Laufzeit vom Gerät
 gelesen und **niemals** ins Repo geschrieben — auch nicht in ein Testfixture, einen

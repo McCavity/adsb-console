@@ -8,8 +8,13 @@ nichts am ADS-B-Stack — der Feed ist der Zweck des Geräts, die Anzeige ist es
 
 ## Stand
 
-Entwurf freigegeben, Umsetzung noch nicht begonnen.
-Siehe [`docs/specs/2026-07-27-atc-konsole-design.md`](docs/specs/2026-07-27-atc-konsole-design.md).
+**Stufe 1 läuft seit dem 27.07.2026 auf dem Gerät** — Radar, Board und Statistik, mit
+Schreiber-Daemon und Kiosk-Autostart. Stufe 2 (Einzelziel, System, Höhenprofil) und
+Stufe 3 (Reichweiten-Polar) folgen.
+
+- Entwurf: [`docs/specs/2026-07-27-atc-konsole-design.md`](docs/specs/2026-07-27-atc-konsole-design.md)
+- Abnahme am Gerät: [`docs/abnahme/2026-07-27-stufe-1.md`](docs/abnahme/2026-07-27-stufe-1.md)
+- Messungen (Positionsquelle, Panel-Drehung, Animationskosten): [`docs/messungen/`](docs/messungen/)
 
 ## Die Idee in drei Sätzen
 
