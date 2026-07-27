@@ -1,0 +1,35 @@
+/* console/css/console.css */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 1280px; height: 720px; overflow: hidden;
+  background: #04140a; color: #b8f5cc;
+  font-family: ui-monospace, "DejaVu Sans Mono", monospace;
+  user-select: none; -webkit-user-select: none;
+  touch-action: none; cursor: none;
+}
+#app { width: 1280px; height: 720px; padding: 0 20px; display: flex; flex-direction: column; }
+#head { height: 56px; flex: 0 0 56px; display: flex; align-items: center; gap: 18px;
+        border-bottom: 1px solid #14361f; }
+#page-title { font-size: 24px; font-weight: 700; letter-spacing: .16em; color: #4e9c6a; }
+#head .spacer { flex: 1; }
+#age-wrap { display: flex; align-items: center; gap: 9px; font-size: 18px; color: #4e9c6a;
+            font-variant-numeric: tabular-nums; }
+#age-dot { width: 12px; height: 12px; border-radius: 50%; background: #3ddc84; }
+#age-dot.aging { background: #f0b429; }
+#age-dot.stale { background: #4e6b58; }
+#clock { font-size: 38px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#date { font-size: 18px; color: #4e9c6a; }
+
+#stage { flex: 1; position: relative; min-height: 0; }
+.page { position: absolute; inset: 0; padding: 16px 0 6px; display: flex; gap: 20px;
+        opacity: 0; pointer-events: none; transition: opacity 180ms linear; }
+.page.active { opacity: 1; pointer-events: auto; }
+.aging .value { opacity: .55; }
+.stale .value { opacity: .35; filter: grayscale(1); }
+
+#dots { height: 44px; flex: 0 0 44px; display: flex; align-items: center;
+        justify-content: center; gap: 12px; }
+.dotbox { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
+.dot { width: 12px; height: 12px; border-radius: 50%; background: #1d4a2e;
+       transition: width 150ms, background 150ms; }
+.dot.on { background: #3ddc84; width: 34px; border-radius: 6px; }
