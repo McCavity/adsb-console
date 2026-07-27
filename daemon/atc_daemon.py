@@ -259,57 +259,66 @@ def _vcgencmd(*args) -> str | None:
         return None
 
 
-def _load_avg() -> list[float]:
-    try:
-        return list(os.getloadavg())
-    except OSError:
-        return [0.0, 0.0, 0.0]
+# Die Parser sind von ihrer Quelle getrennt. Nicht aus Stilgruenden: Der
+# Entwicklungsrechner ist ein Mac und hat kein /proc. Waeren Lesen und
+# Parsen verschmolzen, pruefte der Test dort ausschliesslich den
+# Fehlerpfad -- ein Pruefmittel, das nur einen Teil der Zielumgebung
+# teilt, pruefte sich selbst. So laeuft der Parser ueberall gegen echtes
+# Format.
 
-
-def _mem_totals_mb() -> tuple[int, int]:
-    """(total_mb, used_mb) aus /proc/meminfo.
-
-    Auf einer Maschine ohne /proc (Entwicklungsrechner, macOS statt des
-    Zielgeraets) faellt das auf (0, 0) zurueck -- dieselbe Haltung wie beim
-    fehlenden vcgencmd: ein fehlender Teil macht nicht die ganze Datei
-    ungueltig."""
-    try:
-        mem = {}
-        for line in Path("/proc/meminfo").read_text().splitlines():
-            k, _, v = line.partition(":")
+def parse_meminfo(text: str) -> tuple[int | None, int | None]:
+    """(total_mb, used_mb) aus dem Inhalt von /proc/meminfo."""
+    mem = {}
+    for line in text.splitlines():
+        k, _, v = line.partition(":")
+        try:
             mem[k] = int(v.split()[0])          # kB
-        total_mb = mem["MemTotal"] // 1024
-        avail_mb = mem.get("MemAvailable", mem.get("MemFree", 0)) // 1024
-        return total_mb, total_mb - avail_mb
-    except (OSError, ValueError, KeyError):
-        return 0, 0
+        except (IndexError, ValueError):
+            continue
+    if "MemTotal" not in mem:
+        return None, None
+    total_mb = mem["MemTotal"] // 1024
+    avail = mem.get("MemAvailable", mem.get("MemFree"))
+    if avail is None:
+        return total_mb, None
+    return total_mb, total_mb - avail // 1024
 
 
-def _disk_totals_gb() -> tuple[float, float]:
+def parse_uptime(text: str) -> int | None:
     try:
-        st = os.statvfs("/")
-        disk_total = st.f_blocks * st.f_frsize / 1e9
-        disk_free = st.f_bavail * st.f_frsize / 1e9
-        return round(disk_total, 1), round(disk_total - disk_free, 1)
-    except OSError:
-        return 0.0, 0.0
-
-
-def _uptime_s() -> int:
-    try:
-        return int(float(Path("/proc/uptime").read_text().split()[0]))
-    except (OSError, ValueError):
-        return 0
-
-
-def _cpu_temp_c() -> float | None:
-    try:
-        return int(Path("/sys/class/thermal/thermal_zone0/temp").read_text()) / 1000
-    except (OSError, ValueError):
+        return int(float(text.split()[0]))
+    except (IndexError, ValueError):
         return None
 
 
-def _services_status() -> dict:
+# Jede dieser Quellen liefert None, wenn sie nicht lesbar ist -- NIE eine 0.
+# Eine 0 saehe aus wie ein gemessener Wert: "0 MB von 0 MB" und ein
+# Speicherbalken auf 0 % melden ein kerngesundes Geraet, waehrend in
+# Wahrheit gar nichts gelesen werden konnte. Die Anzeige stellt None als
+# Gedankenstrich dar.
+def _read_or_none(path: str):
+    try:
+        return Path(path).read_text()
+    except OSError:
+        return None
+
+
+def build_system_json(throttled_raw, vcgen_available: bool,
+                      clock_hz=None, volts=None) -> dict:
+    meminfo = _read_or_none("/proc/meminfo")
+    total_mb, used_mb = parse_meminfo(meminfo) if meminfo else (None, None)
+    uptime_text = _read_or_none("/proc/uptime")
+    try:
+        st = os.statvfs("/")
+        disk_total = round(st.f_blocks * st.f_frsize / 1e9, 1)
+        disk_used = round(disk_total - st.f_bavail * st.f_frsize / 1e9, 1)
+    except OSError:
+        disk_total = disk_used = None
+    temp_text = _read_or_none("/sys/class/thermal/thermal_zone0/temp")
+    try:
+        temp = int(temp_text) / 1000 if temp_text else None
+    except ValueError:
+        temp = None
     services = {}
     for name in SERVICES:
         try:
@@ -318,26 +327,19 @@ def _services_status() -> dict:
             services[name] = r.stdout.strip() or "unknown"
         except (OSError, subprocess.SubprocessError):
             services[name] = "unknown"
-    return services
-
-
-def build_system_json(throttled_raw, vcgen_available: bool,
-                      clock_hz=None, volts=None) -> dict:
-    total_mb, used_mb = _mem_totals_mb()
-    disk_total_gb, disk_used_gb = _disk_totals_gb()
     return {
-        "cpu_temp_c": _cpu_temp_c(),
-        "load": _load_avg(),
+        "cpu_temp_c": temp,
+        "load": list(os.getloadavg()) if hasattr(os, 'getloadavg') else [0.0, 0.0, 0.0],
         "cpu_count": os.cpu_count(),
         "mem_total_mb": total_mb,
         "mem_used_mb": used_mb,
-        "disk_total_gb": disk_total_gb,
-        "disk_used_gb": disk_used_gb,
-        "uptime_s": _uptime_s(),
+        "disk_total_gb": disk_total,
+        "disk_used_gb": disk_used,
+        "uptime_s": parse_uptime(uptime_text) if uptime_text else None,
         "core_clock_hz": clock_hz if vcgen_available else None,
         "core_volts": volts if vcgen_available else None,
         "throttle": parse_throttled(throttled_raw) if vcgen_available and throttled_raw is not None else None,
-        "services": _services_status(),
+        "services": services,
         "written_at": time.time(),
     }
 

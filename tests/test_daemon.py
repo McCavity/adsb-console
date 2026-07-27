@@ -261,10 +261,45 @@ class SystemJson(unittest.TestCase):
         s = d.build_system_json(None, vcgen_available=False)
         self.assertIsNone(s["throttle"])
         self.assertIsNone(s["core_clock_hz"])
-        # Der Rest muss trotzdem befuellt sein -- die Datei wird nie als
-        # Ganzes ungueltig, weil ein Teil fehlt.
+        # Die Datei wird nie als Ganzes ungueltig, weil ein Teil fehlt.
         self.assertIsInstance(s["load"], list)
-        self.assertIsInstance(s["mem_total_mb"], int)
+        # mem_total_mb ist auf dem Zielgeraet eine Zahl, auf einem Rechner
+        # ohne /proc None -- aber NIEMALS 0. Eine 0 saehe aus wie ein
+        # gemessener Wert und meldete ein kerngesundes Geraet.
+        self.assertTrue(s["mem_total_mb"] is None or s["mem_total_mb"] > 0)
+        self.assertTrue(s["uptime_s"] is None or s["uptime_s"] > 0)
+
+
+class ProcParser(unittest.TestCase):
+    # Echtes Format, am 27.07. von adsapp01 abgenommen -- nicht erfunden.
+    MEMINFO = ("MemTotal:        1887940 kB\n"
+               "MemFree:          713912 kB\n"
+               "MemAvailable:    1577040 kB\n"
+               "Buffers:           95436 kB\n"
+               "Cached:           831496 kB\n")
+
+    def test_meminfo(self):
+        total, used = d.parse_meminfo(self.MEMINFO)
+        self.assertEqual(total, 1843)          # 1887940 kB / 1024
+        self.assertEqual(used, 1843 - 1540)    # MemAvailable 1577040 kB / 1024
+
+    def test_meminfo_ohne_memavailable_faellt_auf_memfree_zurueck(self):
+        total, used = d.parse_meminfo("MemTotal: 1887940 kB\nMemFree: 713912 kB\n")
+        self.assertEqual(total, 1843)
+        self.assertEqual(used, 1843 - 697)
+
+    def test_meminfo_ohne_memtotal_ist_unbekannt_nicht_null(self):
+        self.assertEqual(d.parse_meminfo("Buffers: 95436 kB\n"), (None, None))
+
+    def test_meminfo_muell(self):
+        self.assertEqual(d.parse_meminfo("voelliger Unsinn\n"), (None, None))
+
+    def test_uptime(self):
+        self.assertEqual(d.parse_uptime("250613.94 928885.98\n"), 250613)
+
+    def test_uptime_muell_ist_unbekannt_nicht_null(self):
+        self.assertIsNone(d.parse_uptime(""))
+        self.assertIsNone(d.parse_uptime("keine Zahl\n"))
 
 
 class StundenfensterVorbelegung(unittest.TestCase):
