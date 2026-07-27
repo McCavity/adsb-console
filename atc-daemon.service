@@ -1,0 +1,34 @@
+[Unit]
+Description=ATC-Konsole: Schreiber-Daemon (Reichweiten-Rekorde und Systemzustand)
+After=dump1090-fa.service
+Wants=dump1090-fa.service
+
+[Service]
+Type=simple
+User=atc
+Group=atc
+# vcgencmd braucht /dev/vcio_gencmd, das udev der Gruppe video zuweist
+# (/lib/udev/rules.d/10-vc.rules, am Geraet nachgesehen: crw-rw---- root
+# video). Ohne diese Gruppe scheitert der Aufruf mit "Can't open device
+# file", und die Drosselungsfelder der Systemseite bleiben leer -- die
+# Datei ist dann gueltig, sagt aber nichts. Nicht mit /dev/vcio
+# verwechseln: das ist ein anderer Knoten und root-only.
+SupplementaryGroups=video
+# atc ist ein Systemaccount ohne Login. StateDirectory legt
+# /var/lib/atc-console mit den richtigen Rechten an, bevor ExecStart laeuft.
+StateDirectory=atc-console
+StateDirectoryMode=0750
+ExecStart=/usr/local/lib/atc-console/atc_daemon.py \
+  --out-dir /var/www/html/atc/data \
+  --db /var/lib/atc-console/atc.db
+Restart=always
+RestartSec=5
+# Der Daemon liest nur und schreibt in genau zwei Verzeichnisse.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/www/html/atc/data /var/lib/atc-console
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

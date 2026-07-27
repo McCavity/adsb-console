@@ -1,7 +1,7 @@
 # ATC-Konsole für adsapp01 — Entwurf
 
 > Datum: 2026-07-27
-> Status: freigegeben, noch nicht umgesetzt
+> Status: Stufe 1 umgesetzt und seit 27.07.2026 auf dem Gerät in Betrieb (Abnahme: `docs/abnahme/`)
 > Gerät: `adsapp01` — Raspberry Pi 4 Model B Rev 1.5 mit 7"-DSI-Touchpanel
 > Vorlage: die Wetterkonsole auf dwsapp01 (`jeelink-davis`, 25.07.2026)
 
@@ -204,10 +204,24 @@ weißen Schirm (§10.3).
 
 ### 5.1 Empfängerposition — und warum sie nicht ins Repo darf
 
-Die exakte Position steht in `/etc/default/dump1090-fa` (`LAT=`/`LON=`); von dort
-startet dump1090 mit `--lat`/`--lon`. `receiver.json` führt sie nur auf zwei
-Nachkommastellen gerundet (50.17/8.72) — das sind bis zu ~600 m Fehler in jeder
-Entfernungsangabe, für Rekorde zu ungenau.
+> **Korrektur vom 27.07., am Gerät gemessen.** Ein früherer Entwurfsstand behauptete hier,
+> die Position stehe in `/etc/default/dump1090-fa` unter `LAT=`/`LON=`. Das ist falsch in
+> zwei Punkten: Die Schlüssel heißen dort `RECEIVER_LAT`/`RECEIVER_LON`, und sie sind auf
+> diesem Gerät **leer** — dump1090-fa zieht die Position dann aus der
+> piaware-Konfiguration. Der Irrtum stammt aus einem `grep -i`, dessen Treffer `LAT=` in
+> Wahrheit das Zeilenende von `RECEIVER_LAT=` war: ein Meßmittel, das eine andere Frage
+> beantwortete als die gestellte.
+
+Maßgeblich ist die **tatsächlich wirksame** Position: die Argumente `--lat`/`--lon` des
+laufenden `dump1090-fa`-Prozesses, gelesen aus `/proc/<pid>/cmdline`. Das ist
+unprivilegiert lesbar (am Gerät als uid 1000 belegt), liefert fünf Nachkommastellen und
+ist unabhängig davon, welche Konfigurationsschicht den Wert geliefert hat — es liest, was
+der Decoder wirklich benutzt, statt einer von mehreren möglichen Quellen zu vertrauen.
+
+`receiver.json` führt die Position nur auf **zwei Nachkommastellen gerundet** — das sind bis zu
+~600 m Fehler in jeder Entfernungsangabe, für Rekorde zu ungenau. (Die gerundeten Werte standen
+hier bis zum Schluß-Review im Klartext, vier Zeilen unter der Regel, die sie verbietet. Auf ~1 km
+genau ist kein Rundungsfehler.)
 
 Diese Koordinate ist faktisch Hennings Wohnadresse. Sie wird zur Laufzeit vom Gerät
 gelesen und **niemals** ins Repo geschrieben — auch nicht in ein Testfixture, einen
@@ -394,8 +408,13 @@ Wischrichtung heraus (200 ms), damit sich die Geste wie eine Geste anfühlt.
 
 ### 7.2 Touch
 
-Jede Berührung pausiert die Rotation für 60 s; sie nimmt danach **von der sichtbaren
-Seite** aus wieder auf, nicht von der unterbrochenen. Waagerechter Wisch blättert; die
+Jede Berührung hält das Karussell an; **genau 60 s nach der letzten Berührung** wird
+weitergeblättert, und zwar **von der sichtbaren Seite** aus, nicht von der unterbrochenen.
+
+Der frühere Wortlaut („pausiert für 60 s, nimmt danach wieder auf") ließ zwei Lesarten
+zu, und die Umsetzung wählte die andere: Nach 60 s begann die Standzeit der sichtbaren
+Seite von vorn, sodaß dieselbe Geste je nach Seite 75 s (Board, Statistik) oder 105 s
+(Radar) wirkte. Am 27.07. am Panel mit der Stoppuhr gemessen und entschieden. Waagerechter Wisch blättert; die
 Indikatorreihe ist zugleich Direktzugriff mit 44×44-px-Zielen.
 
 Gestenhygiene, vollständig tragend: `touch-action: none` auf der Bühne **und**

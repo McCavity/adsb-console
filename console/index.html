@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1280, height=720, initial-scale=1, user-scalable=no">
+  <title>ATC-Konsole</title>
+  <link rel="stylesheet" href="css/console.css">
+</head>
+<body>
+  <div id="app">
+    <div id="head">
+      <div id="page-title">—</div>
+      <div class="spacer"></div>
+      <div id="age-wrap"><span id="age-dot"></span><span id="age">—</span></div>
+      <div id="clock">--:--</div>
+      <div id="date">—</div>
+    </div>
+    <div id="stage"></div>
+    <div id="dots"></div>
+  </div>
+  <script type="module">
+    import { startConsole } from './js/console.js';
+    import './js/pages/radar.js';
+    import './js/pages/board.js';
+    import './js/pages/stats.js';
+    startConsole();
+  </script>
+</body>
+</html>
