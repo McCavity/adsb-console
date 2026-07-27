@@ -1,5 +1,6 @@
 import { loadConfig } from './config.js';
 import { createDataStore, ageState } from './data.js';
+import { naechsterWechsel } from './carousel.js';
 
 const pages = new Map();          // id -> {id, title, ageSource, mount, render}
 
@@ -79,9 +80,18 @@ export async function startConsole() {
     if (rotate) startRotation();
   }
 
+  // Die eigentliche Entscheidung (welche Seite als naechstes, nach wie
+  // langer Wartezeit) sitzt rein in naechsterWechsel() (carousel.js) und ist
+  // dort getestet (tests/test_carousel.mjs) -- hier bleiben nur DOM-seitige
+  // Nebenwirkungen: Timer setzen und goTo() aufrufen.
   function startRotation() {
     clearTimeout(rotateTimer);
-    rotateTimer = setTimeout(() => goTo(current + 1, true), dwellFor(order[current]));
+    const { seiteIndex, inMs } = naechsterWechsel({
+      seiteIndex: current, seitenzahl: order.length,
+      dwellMs: dwellFor(order[current]), resumeMs: RESUME_MS,
+      ausloeser: 'automatisch',
+    });
+    rotateTimer = setTimeout(() => goTo(seiteIndex, true), inMs);
   }
 
   // Jede Beruehrung pausiert die Rotation; sie nimmt danach von der
@@ -89,12 +99,12 @@ export async function startConsole() {
   function takeOver() {
     clearTimeout(rotateTimer);
     clearTimeout(resumeTimer);
-    // Nach genau RESUME_MS wird weitergeblaettert -- NICHT: nach RESUME_MS
-    // beginnt die Standzeit der sichtbaren Seite von vorn. Sonst dauerte
-    // dieselbe Geste je nach Seite 75 s (Board, Statistik) oder 105 s
-    // (Radar), ohne dass es dafuer einen Grund gaebe. Am 27.07. am Panel
-    // mit der Stoppuhr gemessen: 75 statt der zugesagten 60.
-    resumeTimer = setTimeout(() => goTo(current + 1, true), RESUME_MS);
+    const { seiteIndex, inMs } = naechsterWechsel({
+      seiteIndex: current, seitenzahl: order.length,
+      dwellMs: dwellFor(order[current]), resumeMs: RESUME_MS,
+      ausloeser: 'beruehrung',
+    });
+    resumeTimer = setTimeout(() => goTo(seiteIndex, true), inMs);
   }
 
   let downX = 0, downY = 0, downT = 0;
