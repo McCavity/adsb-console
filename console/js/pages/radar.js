@@ -326,7 +326,15 @@ function renderSide(root, cfg, state, targets, auswahl) {
         <span class="med amber">${naechstes.nm.toFixed(1)}<span class="unit-s">NM</span></span>
         <span class="med slate">${formatBearing(naechstes.brg)}</span>
       </div>
-      <div class="sub-d" style="margin-top:10px">${steig}${naechstes.squawk ? ' · Squawk ' + naechstes.squawk : ''}</div>
+      <div class="row" style="gap:18px;margin-top:12px">
+        ${flugzeugSymbol(naechstes.track)}
+        <span class="sub">${typeof naechstes.gs === 'number'
+          ? Math.round(naechstes.gs) + '<span class="unit-s">kt</span>' : '—'}</span>
+        <span class="sub">${formatBearing(naechstes.track)}<span class="unit-s">Kurs</span></span>
+        <span class="sub-d" style="margin-left:auto">${steig}</span>
+      </div>
+      ${naechstes.squawk && !naechstes.emergency
+        ? `<div class="sub-d" style="margin-top:8px">Squawk ${naechstes.squawk}</div>` : ''}
     </div>
     <div class="grid2" style="flex:1">
       ${sideTile('Ziele mit Position', mitPosition, '', `von ${gesamt} empfangen`)}
@@ -336,6 +344,24 @@ function renderSide(root, cfg, state, targets, auswahl) {
       ${sideTile('Maßstab', cfg.radar.range_nm, 'NM',
                  `Ringe ${cfg.radar.rings_nm.join(' · ')}`)}
     </div>`;
+}
+
+// Ein Flugzeug von oben, in Flugrichtung gedreht. Entfernung und Peilung
+// sagen, WO das Ziel ist -- nicht, wohin es geht. Der Vektor steht als
+// Strich auf dem Schirm, hier steht er als Zahl daneben, und das Symbol
+// macht die Richtung ohne Rechnen ablesbar. Bei 0 Grad zeigt die Nase
+// nach oben, also nach Norden; rotate() dreht im Uhrzeigersinn wie die
+// Kompassrose.
+function flugzeugSymbol(track) {
+  if (typeof track !== 'number' || !Number.isFinite(track)) {
+    return '<svg class="ac unbekannt" viewBox="0 0 24 24" aria-hidden="true"></svg>';
+  }
+  return `<svg class="ac" viewBox="0 0 24 24" aria-hidden="true"
+               style="transform:rotate(${track.toFixed(0)}deg)">
+      <path d="M12 1.6 L13.7 10.6 L22.2 15.2 L22.2 17.1 L13.7 14.9 L13.7 19.9
+               L16.6 21.8 L16.6 22.9 L12 21.4 L7.4 22.9 L7.4 21.8 L10.3 19.9
+               L10.3 14.9 L1.8 17.1 L1.8 15.2 L10.3 10.6 Z"/>
+    </svg>`;
 }
 
 function sideTile(label, wert, einheit, sub) {
