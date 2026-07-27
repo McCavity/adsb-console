@@ -15,8 +15,17 @@ const OWN = 'data/';
 // Ohne diesen Haken laesst sich der Notfall-Squawk nicht herstellen, ohne in
 // den produktiven Datenpfad /run/dump1090-fa/ zu schreiben -- und ein Pfad,
 // den man nie ausloesen kann, ist unkalibriert (Spec 10.3).
-const AIRCRAFT_URL =
-  new URLSearchParams(location.search).get('source') || DATA + 'aircraft.json';
+// Erst beim Abruf ausgewertet, nicht beim Laden des Moduls: `location`
+// gibt es nur im Browser. Auf Modulebene gelesen macht es jeden Node-Test
+// unmoeglich, der dieses Modul auch nur mittelbar importiert -- und alle
+// Seitenmodule importieren es ueber console.js. Am 27.07. genau so
+// aufgetreten, als das erste Seitenmodul dazukam.
+function aircraftUrl() {
+  const override = typeof location === 'undefined'
+    ? null
+    : new URLSearchParams(location.search).get('source');
+  return override || DATA + 'aircraft.json';
+}
 
 export function createDataStore(onUpdate) {
   const state = {
@@ -29,7 +38,7 @@ export function createDataStore(onUpdate) {
   };
 
   async function pollAircraft() {
-    const d = await getJSON(AIRCRAFT_URL);
+    const d = await getJSON(aircraftUrl());
     if (d) {
       state.aircraft = d.aircraft || [];
       // now stammt vom selben Host wie der Browser -- kein Uhrenversatz.
