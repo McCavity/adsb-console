@@ -1,4 +1,5 @@
 import json
+import stat
 import sys
 import tempfile
 import time
@@ -126,6 +127,18 @@ class AtomaresSchreiben(unittest.TestCase):
             p = Path(tmp) / "out.json"
             d.atomic_write_json(p, {"a": 1})
             self.assertEqual([f.name for f in Path(tmp).iterdir()], ["out.json"])
+
+    def test_datei_ist_fuer_fremde_prozesse_lesbar(self):
+        # Der Zweck dieser Dateien ist, dass ein ANDERER Prozess sie liest
+        # (lighttpd als www-data). mkstemp legt mit 0600 an und os.replace
+        # behaelt den Modus -- ohne chmod antwortet der Webserver mit 403,
+        # obwohl die Datei einwandfrei geschrieben wurde. Genau so am
+        # 27.07. auf dem Geraet aufgetreten; kein Test hatte es gefangen,
+        # weil alle als derselbe Benutzer zuruecklesen.
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "out.json"
+            d.atomic_write_json(p, {"a": 1})
+            self.assertEqual(stat.S_IMODE(p.stat().st_mode), 0o644)
 
 
 class Rekorde(unittest.TestCase):
