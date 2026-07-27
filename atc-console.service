@@ -22,13 +22,24 @@ Environment=XDG_CONFIG_HOME=/var/lib/atc-console/.config
 Environment=WLR_LIBINPUT_NO_DEVICES=0
 Environment=XCURSOR_THEME=atc-console-blank
 
-# Chromium darf das Rennen gegen lighttpd und den Daemon nicht gewinnen:
-# ohne diese Schleife zeigt das Panel beim Booten eine Verbindungsfehlerseite.
-# Gewartet wird auf beides -- die Seite laedt sonst mit leerer Systemanzeige.
-ExecStartPre=/bin/sh -c 'for i in $(seq 1 60); do \
-  curl -sf -o /dev/null http://127.0.0.1/atc/ && \
-  curl -sf -o /dev/null http://127.0.0.1/atc/data/system.json && exit 0; \
-  sleep 2; done; exit 1'
+# Chromium darf das Rennen gegen lighttpd nicht gewinnen: ohne Wartezeit auf
+# /atc/ zeigt das Panel beim Booten eine Verbindungsfehlerseite. Das Warten
+# darauf ist deshalb hart -- ohne das Frontend ist der Kiosk sinnlos, und
+# der Abbruch (exit 1) ist hier richtig.
+#
+# Auf /atc/data/system.json wird dagegen NICHT hart gewartet und ihr Fehlen
+# darf ExecStartPre nicht zum Scheitern bringen: der Schreiber-Daemon
+# (atc-daemon.service) kann legitim ausbleiben oder wirft, wenn das laufende
+# dump1090-fa keine Position traegt -- und laut Spec §4 haengen Radar, Board
+# und Statistik direkt an dump1090, nicht am Daemon, und laufen ohne ihn
+# weiter. Mit Restart=always wuerde ein toedlicher Abbruch hier aus einem
+# fehlenden system.json eine Neustart-Endlosschleife mit schwarzem Panel
+# machen -- also nur kurz und unverbindlich pruefen, dann so oder so starten.
+ExecStartPre=/bin/sh -c '\
+  for i in $(seq 1 60); do curl -sf -o /dev/null http://127.0.0.1/atc/ && break; sleep 2; done; \
+  curl -sf -o /dev/null http://127.0.0.1/atc/ || exit 1; \
+  for i in $(seq 1 10); do curl -sf -o /dev/null http://127.0.0.1/atc/data/system.json && break; sleep 2; done; \
+  exit 0'
 ExecStart=/usr/bin/labwc -s '/usr/bin/chromium \
   --kiosk \
   --ozone-platform=wayland \
