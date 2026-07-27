@@ -112,7 +112,7 @@ registerPage({
     // Drei Ebenen: eine gezeichnete (Hintergrund) und zwei, die der
     // Compositor bewegt. Kein requestAnimationFrame, keine Bildschleife.
     el.innerHTML = `
-      <div class="radar-wrap">
+      <div class="radar-wrap value">
         <canvas class="bg" width="${SIZE}" height="${SIZE}"></canvas>
         <div class="sweep"></div>
         <div class="blips"></div>
@@ -127,6 +127,7 @@ registerPage({
       // gegen diesen Zeitpunkt, nicht gegen seine eigene Entstehung.
       sweepStart: performance.now(),
     };
+    installDecayKeyframes(cfg);
     loadAirports().then(() => { el._ctx.drawnBg = false; });
   },
   render(el, cfg, state) {
@@ -145,7 +146,8 @@ registerPage({
           callsign: formatCallsign(a.flight), fl: flightLevel(a.alt_baro),
           squawk: a.squawk || null, gs: a.gs, track: a.track,
           rate: typeof a.baro_rate === 'number' ? a.baro_rate : null,
-          heavy: a.category === 'A5', emergency: isEmergency(a),
+          heavy: a.category === 'A5',
+          emergency: cfg.emergency.highlight && isEmergency(a),
         };
       })
       .filter(t => t.nm <= cfg.radar.range_nm) : [];
@@ -167,11 +169,18 @@ registerPage({
 const MIN_RESYNC_DEG = 5;
 
 function renderBlips(root, cfg, targets, sweepStart) {
+  // Zuordnung ueber eine Map statt ueber einen Selector-String: Ein hex
+  // mit einem Anfuehrungszeichen oder einer eckigen Klammer -- etwa aus
+  // einer praeparierten Testquelle -- wuerde querySelector mitten in der
+  // Schleife werfen und damit ALLE weiteren Blips einfrieren, lautlos und
+  // ohne sichtbaren Fehler. Nebenbei entfaellt die quadratische Suche.
+  const vorhanden = new Map();
+  for (const el of root.children) vorhanden.set(el.dataset.hex, el);
   const gesehen = new Set();
   for (const t of targets) {
     if (!t.hex) continue;
     gesehen.add(t.hex);
-    let el = root.querySelector(`[data-hex="${t.hex}"]`);
+    let el = vorhanden.get(t.hex);
     if (!el) {
       el = document.createElement('div');
       el.dataset.hex = t.hex;
@@ -182,6 +191,7 @@ function renderBlips(root, cfg, targets, sweepStart) {
       el.innerHTML = '<i class="dot"></i><i class="vec"></i><span class="lab"></span>';
       el.querySelector('.dot').style.animationDuration = cfg.radar.sweep_s + 's';
       root.appendChild(el);
+      vorhanden.set(t.hex, el);
       setPhase(el, cfg, t.brg, sweepStart);
     } else if (Math.abs(angleDiff(Number(el.dataset.brg), t.brg)) >= MIN_RESYNC_DEG) {
       setPhase(el, cfg, t.brg, sweepStart);
@@ -237,6 +247,33 @@ function setPhase(el, cfg, brg, sweepStart) {
   const delay = (brg / 360) * T - seitStart;
   el.querySelector('.dot').style.animationDelay = delay.toFixed(3) + 's';
   el.dataset.brg = String(brg);
+}
+
+// decay_s aus der Konfiguration wirksam machen. Die Zerfallskurve steckte
+// als feste Prozentwerte im CSS-Keyframe -- wer decay_s in console.json
+// aenderte, bewirkte nichts. Ein Konfigfeld, das nichts tut, ist schlimmer
+// als keines: Es verspricht eine Stellschraube, die es nicht gibt.
+function installDecayKeyframes(cfg) {
+  const id = 'atc-blip-keyframes';
+  let st = document.getElementById(id);
+  if (!st) {
+    st = document.createElement('style');
+    st.id = id;
+    document.head.appendChild(st);   // nach dem Stylesheet -- gewinnt
+  }
+  // Anteil eines Umlaufs, ueber den der Blip verglimmt. Bei decay_s
+  // groesser als sweep_s ist der Blip noch nicht ganz dunkel, wenn die
+  // Keule wiederkommt -- genau die gewollte Anmutung; gedeckelt, damit
+  // der letzte Keyframe nicht auf 100 Prozent faellt.
+  const anteil = Math.min(0.98, cfg.radar.decay_s / cfg.radar.sweep_s);
+  const mitte = (anteil * 40).toFixed(1);
+  const ende = (anteil * 100).toFixed(1);
+  st.textContent = `@keyframes blip-phosphor {
+    0% { opacity: 1; }
+    ${mitte}% { opacity: .45; }
+    ${ende}% { opacity: .18; }
+    100% { opacity: .18; }
+  }`;
 }
 
 // Der Datenblock rechts neben dem Schirm. Er ergaenzt das Bild, statt es
