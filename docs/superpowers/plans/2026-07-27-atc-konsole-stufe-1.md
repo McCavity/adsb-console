@@ -920,10 +920,45 @@ class SystemJson(unittest.TestCase):
         s = d.build_system_json(None, vcgen_available=False)
         self.assertIsNone(s["throttle"])
         self.assertIsNone(s["core_clock_hz"])
-        # Der Rest muss trotzdem befuellt sein -- die Datei wird nie als
-        # Ganzes ungueltig, weil ein Teil fehlt.
+        # Die Datei wird nie als Ganzes ungueltig, weil ein Teil fehlt.
         self.assertIsInstance(s["load"], list)
-        self.assertIsInstance(s["mem_total_mb"], int)
+        # mem_total_mb ist auf dem Zielgeraet eine Zahl, auf einem Rechner
+        # ohne /proc None -- aber NIEMALS 0. Eine 0 saehe aus wie ein
+        # gemessener Wert und meldete ein kerngesundes Geraet.
+        self.assertTrue(s["mem_total_mb"] is None or s["mem_total_mb"] > 0)
+        self.assertTrue(s["uptime_s"] is None or s["uptime_s"] > 0)
+
+
+class ProcParser(unittest.TestCase):
+    # Echtes Format, am 27.07. von adsapp01 abgenommen -- nicht erfunden.
+    MEMINFO = ("MemTotal:        1887940 kB\n"
+               "MemFree:          713912 kB\n"
+               "MemAvailable:    1577040 kB\n"
+               "Buffers:           95436 kB\n"
+               "Cached:           831496 kB\n")
+
+    def test_meminfo(self):
+        total, used = d.parse_meminfo(self.MEMINFO)
+        self.assertEqual(total, 1843)          # 1887940 kB / 1024
+        self.assertEqual(used, 1843 - 1540)    # MemAvailable 1577040 kB / 1024
+
+    def test_meminfo_ohne_memavailable_faellt_auf_memfree_zurueck(self):
+        total, used = d.parse_meminfo("MemTotal: 1887940 kB\nMemFree: 713912 kB\n")
+        self.assertEqual(total, 1843)
+        self.assertEqual(used, 1843 - 697)
+
+    def test_meminfo_ohne_memtotal_ist_unbekannt_nicht_null(self):
+        self.assertEqual(d.parse_meminfo("Buffers: 95436 kB\n"), (None, None))
+
+    def test_meminfo_muell(self):
+        self.assertEqual(d.parse_meminfo("voelliger Unsinn\n"), (None, None))
+
+    def test_uptime(self):
+        self.assertEqual(d.parse_uptime("250613.94 928885.98\n"), 250613)
+
+    def test_uptime_muell_ist_unbekannt_nicht_null(self):
+        self.assertIsNone(d.parse_uptime(""))
+        self.assertIsNone(d.parse_uptime("keine Zahl\n"))
 
 
 class StundenfensterVorbelegung(unittest.TestCase):
@@ -1000,37 +1035,83 @@ def _vcgencmd(*args) -> str | None:
         return None
 
 
+# Die Parser sind von ihrer Quelle getrennt. Nicht aus Stilgruenden: Der
+# Entwicklungsrechner ist ein Mac und hat kein /proc. Waeren Lesen und
+# Parsen verschmolzen, pruefte der Test dort ausschliesslich den
+# Fehlerpfad -- ein Pruefmittel, das nur einen Teil der Zielumgebung
+# teilt, pruefte sich selbst. So laeuft der Parser ueberall gegen echtes
+# Format.
+
+def parse_meminfo(text: str) -> tuple[int | None, int | None]:
+    """(total_mb, used_mb) aus dem Inhalt von /proc/meminfo."""
+    mem = {}
+    for line in text.splitlines():
+        k, _, v = line.partition(":")
+        try:
+            mem[k] = int(v.split()[0])          # kB
+        except (IndexError, ValueError):
+            continue
+    if "MemTotal" not in mem:
+        return None, None
+    total_mb = mem["MemTotal"] // 1024
+    avail = mem.get("MemAvailable", mem.get("MemFree"))
+    if avail is None:
+        return total_mb, None
+    return total_mb, total_mb - avail // 1024
+
+
+def parse_uptime(text: str) -> int | None:
+    try:
+        return int(float(text.split()[0]))
+    except (IndexError, ValueError):
+        return None
+
+
+# Jede dieser Quellen liefert None, wenn sie nicht lesbar ist -- NIE eine 0.
+# Eine 0 saehe aus wie ein gemessener Wert: "0 MB von 0 MB" und ein
+# Speicherbalken auf 0 % melden ein kerngesundes Geraet, waehrend in
+# Wahrheit gar nichts gelesen werden konnte. Die Anzeige stellt None als
+# Gedankenstrich dar.
+def _read_or_none(path: str):
+    try:
+        return Path(path).read_text()
+    except OSError:
+        return None
+
+
 def build_system_json(throttled_raw, vcgen_available: bool,
                       clock_hz=None, volts=None) -> dict:
-    load1, load5, load15 = os.getloadavg()
-    mem = {}
-    for line in Path("/proc/meminfo").read_text().splitlines():
-        k, _, v = line.partition(":")
-        mem[k] = int(v.split()[0])          # kB
-    total_mb = mem["MemTotal"] // 1024
-    avail_mb = mem.get("MemAvailable", mem["MemFree"]) // 1024
-    st = os.statvfs("/")
-    disk_total = st.f_blocks * st.f_frsize / 1e9
-    disk_free = st.f_bavail * st.f_frsize / 1e9
-    temp = None
+    meminfo = _read_or_none("/proc/meminfo")
+    total_mb, used_mb = parse_meminfo(meminfo) if meminfo else (None, None)
+    uptime_text = _read_or_none("/proc/uptime")
     try:
-        temp = int(Path("/sys/class/thermal/thermal_zone0/temp").read_text()) / 1000
-    except (OSError, ValueError):
-        pass
+        st = os.statvfs("/")
+        disk_total = round(st.f_blocks * st.f_frsize / 1e9, 1)
+        disk_used = round(disk_total - st.f_bavail * st.f_frsize / 1e9, 1)
+    except OSError:
+        disk_total = disk_used = None
+    temp_text = _read_or_none("/sys/class/thermal/thermal_zone0/temp")
+    try:
+        temp = int(temp_text) / 1000 if temp_text else None
+    except ValueError:
+        temp = None
     services = {}
     for name in SERVICES:
-        r = subprocess.run(["systemctl", "is-active", name],
-                           capture_output=True, text=True)
-        services[name] = r.stdout.strip() or "unknown"
+        try:
+            r = subprocess.run(["systemctl", "is-active", name],
+                               capture_output=True, text=True)
+            services[name] = r.stdout.strip() or "unknown"
+        except (OSError, subprocess.SubprocessError):
+            services[name] = "unknown"
     return {
         "cpu_temp_c": temp,
-        "load": [load1, load5, load15],
+        "load": list(os.getloadavg()),
         "cpu_count": os.cpu_count(),
         "mem_total_mb": total_mb,
-        "mem_used_mb": total_mb - avail_mb,
-        "disk_total_gb": round(disk_total, 1),
-        "disk_used_gb": round(disk_total - disk_free, 1),
-        "uptime_s": int(float(Path("/proc/uptime").read_text().split()[0])),
+        "mem_used_mb": used_mb,
+        "disk_total_gb": disk_total,
+        "disk_used_gb": disk_used,
+        "uptime_s": parse_uptime(uptime_text) if uptime_text else None,
         "core_clock_hz": clock_hz if vcgen_available else None,
         "core_volts": volts if vcgen_available else None,
         "throttle": parse_throttled(throttled_raw) if vcgen_available and throttled_raw is not None else None,
@@ -1169,7 +1250,7 @@ if __name__ == "__main__":
 - [ ] **Schritt 4: Test laufen lassen, Bestehen bestätigen**
 
 Ausführen: `python3 -m unittest discover -s tests -v`
-Erwartet: PASS, 36 Tests.
+Erwartet: PASS, 42 Tests.
 
 - [ ] **Schritt 5: Die Unit schreiben**
 
@@ -2879,7 +2960,7 @@ Erwartet: PASS, 6 Tests.
 
 Ausführen: `node --test tests/*.mjs && python3 -m unittest discover -s tests -v`
 Erwartet: 34 JavaScript-Tests (11 geo, 6 config, 3 airports, 4 radar, 4 board, 6 stats)
-und 36 Python-Tests, alle grün.
+und 42 Python-Tests, alle grün.
 
 - [ ] **Schritt 6: Commit**
 
