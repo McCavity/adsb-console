@@ -135,6 +135,7 @@ SECTORS = 36
 HOUR_S = 3600.0
 MAX_PLAUSIBLE_NM = 300.0     # weit ueber dem gemessenen Maximum (69 NM),
                              # aber unterhalb offensichtlichen Unsinns
+MAX_WINDOW_ITEMS = 200_000   # Notbremse gegen unbegrenztes Wachstum, s. HourWindow
 
 
 class RangeStore:
@@ -178,8 +179,14 @@ class HourWindow:
     dafuer nicht 120 History-Dateien je Seitenladen holen.
     """
 
-    def __init__(self):
-        self._items = deque()      # (ts, sector, nm), aufsteigend nach ts
+    def __init__(self, max_items: int = MAX_WINDOW_ITEMS):
+        # maxlen ist eine Notbremse, keine Fachlogik: Aufgeraeumt wird nach
+        # Zeit in maxima(). Ruft die Hauptschleife maxima() aber laenger nicht
+        # auf -- Fehlerpfad, haengende Schleife --, waechst die Struktur sonst
+        # unbegrenzt weiter, und zwar auf einem Geraet mit 1843 MB RAM.
+        # 200.000 Eintraege sind rund anderthalb Stunden bei 36 Zielen je
+        # Sekunde (das Maximum der Messung), also weit jenseits des Normalen.
+        self._items = deque(maxlen=max_items)   # (ts, sector, nm)
 
     def add(self, ts: float, sector: int, nm: float) -> None:
         self._items.append((ts, sector, nm))

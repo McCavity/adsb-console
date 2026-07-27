@@ -148,6 +148,16 @@ class Rekorde(unittest.TestCase):
             r = {x["sector"]: x for x in s.records()}
             self.assertEqual(r[3]["callsign"], "TEST1")
 
+    def test_gleichstand_ersetzt_nicht(self):
+        # Bindende Randbedingung: bei Gleichstand bleibt der alte Rekord --
+        # sonst wechselt der Rekordhalter bei jedem gleich weiten Ziel.
+        with tempfile.TemporaryDirectory() as tmp:
+            s = self.store(tmp)
+            s.update(3, 42.0, "abc123", "TEST1", 30000, "2026-07-27T15:00:00+02:00")
+            self.assertFalse(s.update(3, 42.0, "def456", "TEST2", 30000, "2026-07-27T15:01:00+02:00"))
+            r = {x["sector"]: x for x in s.records()}
+            self.assertEqual(r[3]["callsign"], "TEST1")
+
     def test_groesserer_wert_ersetzt(self):
         with tempfile.TemporaryDirectory() as tmp:
             s = self.store(tmp)
@@ -185,6 +195,17 @@ class Stundenfenster(unittest.TestCase):
 
     def test_leeres_fenster(self):
         self.assertEqual(d.HourWindow().maxima(1000.0), {})
+
+    def test_waechst_nicht_unbegrenzt_ohne_maxima_aufruf(self):
+        # Aufgeraeumt wird nach Zeit in maxima(). Bleibt dieser Aufruf aus,
+        # muss eine Notbremse greifen -- sonst frisst ein Fehlerpfad in der
+        # Hauptschleife den Speicher eines 1843-MB-Geraets auf.
+        w = d.HourWindow(max_items=10)
+        for i in range(50):
+            w.add(1000.0 + i, 0, float(i))
+        self.assertEqual(len(w._items), 10)
+        # Die juengsten Werte ueberleben, nicht die aeltesten.
+        self.assertAlmostEqual(w.maxima(1050.0)[0], 49.0)
 
 
 class Zielfilter(unittest.TestCase):
