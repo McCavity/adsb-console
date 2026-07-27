@@ -640,6 +640,16 @@ class Rekorde(unittest.TestCase):
             r = {x["sector"]: x for x in s.records()}
             self.assertEqual(r[3]["callsign"], "TEST1")
 
+    def test_gleichstand_ersetzt_nicht(self):
+        # Bindende Randbedingung: bei Gleichstand bleibt der alte Rekord --
+        # sonst wechselt der Rekordhalter bei jedem gleich weiten Ziel.
+        with tempfile.TemporaryDirectory() as tmp:
+            s = self.store(tmp)
+            s.update(3, 42.0, "abc123", "TEST1", 30000, "2026-07-27T15:00:00+02:00")
+            self.assertFalse(s.update(3, 42.0, "def456", "TEST2", 30000, "2026-07-27T15:01:00+02:00"))
+            r = {x["sector"]: x for x in s.records()}
+            self.assertEqual(r[3]["callsign"], "TEST1")
+
     def test_groesserer_wert_ersetzt(self):
         with tempfile.TemporaryDirectory() as tmp:
             s = self.store(tmp)
@@ -677,6 +687,17 @@ class Stundenfenster(unittest.TestCase):
 
     def test_leeres_fenster(self):
         self.assertEqual(d.HourWindow().maxima(1000.0), {})
+
+    def test_waechst_nicht_unbegrenzt_ohne_maxima_aufruf(self):
+        # Aufgeraeumt wird nach Zeit in maxima(). Bleibt dieser Aufruf aus,
+        # muss eine Notbremse greifen -- sonst frisst ein Fehlerpfad in der
+        # Hauptschleife den Speicher eines 1843-MB-Geraets auf.
+        w = d.HourWindow(max_items=10)
+        for i in range(50):
+            w.add(1000.0 + i, 0, float(i))
+        self.assertEqual(len(w._items), 10)
+        # Die juengsten Werte ueberleben, nicht die aeltesten.
+        self.assertAlmostEqual(w.maxima(1050.0)[0], 49.0)
 
 
 class Zielfilter(unittest.TestCase):
@@ -747,6 +768,7 @@ SECTORS = 36
 HOUR_S = 3600.0
 MAX_PLAUSIBLE_NM = 300.0     # weit ueber dem gemessenen Maximum (69 NM),
                              # aber unterhalb offensichtlichen Unsinns
+MAX_WINDOW_ITEMS = 200_000   # Notbremse gegen unbegrenztes Wachstum, s. HourWindow
 
 
 class RangeStore:
@@ -790,8 +812,14 @@ class HourWindow:
     dafuer nicht 120 History-Dateien je Seitenladen holen.
     """
 
-    def __init__(self):
-        self._items = deque()      # (ts, sector, nm), aufsteigend nach ts
+    def __init__(self, max_items: int = MAX_WINDOW_ITEMS):
+        # maxlen ist eine Notbremse, keine Fachlogik: Aufgeraeumt wird nach
+        # Zeit in maxima(). Ruft die Hauptschleife maxima() aber laenger nicht
+        # auf -- Fehlerpfad, haengende Schleife --, waechst die Struktur sonst
+        # unbegrenzt weiter, und zwar auf einem Geraet mit 1843 MB RAM.
+        # 200.000 Eintraege sind rund anderthalb Stunden bei 36 Zielen je
+        # Sekunde (das Maximum der Messung), also weit jenseits des Normalen.
+        self._items = deque(maxlen=max_items)   # (ts, sector, nm)
 
     def add(self, ts: float, sector: int, nm: float) -> None:
         self._items.append((ts, sector, nm))
@@ -843,7 +871,7 @@ def usable_positions(doc, lat0, lon0, max_nm=MAX_PLAUSIBLE_NM) -> list[dict]:
 - [ ] **Schritt 4: Test laufen lassen, Bestehen bestätigen**
 
 Ausführen: `python3 -m unittest discover -s tests -v`
-Erwartet: PASS, 29 Tests.
+Erwartet: PASS, 31 Tests.
 
 - [ ] **Schritt 5: Den Fensterschnitt absichtlich rot machen**
 
@@ -911,6 +939,21 @@ class StundenfensterVorbelegung(unittest.TestCase):
             n = d.seed_hour_window(w, run, 12.0, 34.0)
             self.assertEqual(n, 3)
             self.assertIn(0, w.maxima(1002.0))
+
+    def test_fuegt_chronologisch_ein_nicht_nach_dateinamen(self):
+        # history_10 sortiert lexikographisch VOR history_2, ist hier aber
+        # juenger. Wer nach Dateinamen einfuegt, verletzt die aufsteigende
+        # Ordnung, auf die HourWindow beim Aufraeumen baut.
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp)
+            for name, ts in (("history_2.json", 1000.0), ("history_10.json", 2000.0)):
+                (run / name).write_text(json.dumps({
+                    "now": ts,
+                    "aircraft": [{"hex": "a", "lat": 13.0, "lon": 34.0, "mlat": []}],
+                }))
+            w = d.HourWindow()
+            d.seed_hour_window(w, run, 12.0, 34.0)
+            self.assertEqual([ts for ts, _, _ in w._items], [1000.0, 2000.0])
 
     def test_kaputte_history_datei_wird_uebersprungen(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1025,8 +1068,13 @@ def seed_hour_window(window: HourWindow, run_dir: Path, lat0, lon0) -> int:
     Nur beim Start. Danach fuellt die Hauptschleife es fort. Eine kaputte
     Datei wird uebersprungen, nicht zum Abbruch erklaert.
     """
-    count = 0
-    for path in sorted(Path(run_dir).glob("history_*.json")):
+    # Erst alle Dateien einlesen, dann NACH ZEITSTEMPEL sortiert einfuegen.
+    # Nach Dateinamen zu sortieren waere falsch: history_0, history_1,
+    # history_10, history_100 ... ist lexikographisch, nicht chronologisch.
+    # HourWindow raeumt von links auf und setzt aufsteigende Zeitstempel
+    # voraus -- unsortiert eingefuegt blieben alte Eintraege liegen.
+    snapshots = []
+    for path in Path(run_dir).glob("history_*.json"):
         try:
             doc = json.loads(path.read_text())
         except (OSError, ValueError):
@@ -1034,10 +1082,12 @@ def seed_hour_window(window: HourWindow, run_dir: Path, lat0, lon0) -> int:
         ts = doc.get("now")
         if not isinstance(ts, (int, float)):
             continue
+        snapshots.append((ts, doc))
+    snapshots.sort(key=lambda pair: pair[0])
+    for ts, doc in snapshots:
         for t in usable_positions(doc, lat0, lon0):
             window.add(ts, t["sector"], t["nm"])
-        count += 1
-    return count
+    return len(snapshots)
 
 
 def build_range_json(store: RangeStore, window: HourWindow, now: float) -> dict:
@@ -1119,7 +1169,7 @@ if __name__ == "__main__":
 - [ ] **Schritt 4: Test laufen lassen, Bestehen bestätigen**
 
 Ausführen: `python3 -m unittest discover -s tests -v`
-Erwartet: PASS, 33 Tests.
+Erwartet: PASS, 36 Tests.
 
 - [ ] **Schritt 5: Die Unit schreiben**
 
@@ -2829,7 +2879,7 @@ Erwartet: PASS, 6 Tests.
 
 Ausführen: `node --test tests/*.mjs && python3 -m unittest discover -s tests -v`
 Erwartet: 34 JavaScript-Tests (11 geo, 6 config, 3 airports, 4 radar, 4 board, 6 stats)
-und 33 Python-Tests, alle grün.
+und 36 Python-Tests, alle grün.
 
 - [ ] **Schritt 6: Commit**
 
