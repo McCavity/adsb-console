@@ -248,5 +248,65 @@ class Zielfilter(unittest.TestCase):
         self.assertIsNone(d.usable_positions(self.doc([ac]), self.LAT0, self.LON0)[0]["alt_ft"])
 
 
+class SystemJson(unittest.TestCase):
+    def test_pflichtschluessel_vorhanden(self):
+        s = d.build_system_json(0x0, vcgen_available=True)
+        for key in ("cpu_temp_c", "load", "cpu_count", "mem_total_mb", "mem_used_mb",
+                    "disk_total_gb", "disk_used_gb", "uptime_s", "throttle", "services"):
+            self.assertIn(key, s)
+        self.assertIn("now", s["throttle"])
+        self.assertIn("ever", s["throttle"])
+
+    def test_ohne_vcgencmd_bleiben_die_felder_null_statt_zu_scheitern(self):
+        s = d.build_system_json(None, vcgen_available=False)
+        self.assertIsNone(s["throttle"])
+        self.assertIsNone(s["core_clock_hz"])
+        # Der Rest muss trotzdem befuellt sein -- die Datei wird nie als
+        # Ganzes ungueltig, weil ein Teil fehlt.
+        self.assertIsInstance(s["load"], list)
+        self.assertIsInstance(s["mem_total_mb"], int)
+
+
+class StundenfensterVorbelegung(unittest.TestCase):
+    def test_liest_history_dateien(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp)
+            for i in range(3):
+                (run / f"history_{i}.json").write_text(json.dumps({
+                    "now": 1000.0 + i,
+                    "aircraft": [{"hex": "a", "lat": 13.0, "lon": 34.0, "mlat": []}],
+                }))
+            w = d.HourWindow()
+            n = d.seed_hour_window(w, run, 12.0, 34.0)
+            self.assertEqual(n, 3)
+            self.assertIn(0, w.maxima(1002.0))
+
+    def test_fuegt_chronologisch_ein_nicht_nach_dateinamen(self):
+        # history_10 sortiert lexikographisch VOR history_2, ist hier aber
+        # juenger. Wer nach Dateinamen einfuegt, verletzt die aufsteigende
+        # Ordnung, auf die HourWindow beim Aufraeumen baut.
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp)
+            for name, ts in (("history_2.json", 1000.0), ("history_10.json", 2000.0)):
+                (run / name).write_text(json.dumps({
+                    "now": ts,
+                    "aircraft": [{"hex": "a", "lat": 13.0, "lon": 34.0, "mlat": []}],
+                }))
+            w = d.HourWindow()
+            d.seed_hour_window(w, run, 12.0, 34.0)
+            self.assertEqual([ts for ts, _, _ in w._items], [1000.0, 2000.0])
+
+    def test_kaputte_history_datei_wird_uebersprungen(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp)
+            (run / "history_0.json").write_text("{kaputt")
+            (run / "history_1.json").write_text(json.dumps({
+                "now": 1000.0,
+                "aircraft": [{"hex": "a", "lat": 13.0, "lon": 34.0, "mlat": []}],
+            }))
+            w = d.HourWindow()
+            self.assertEqual(d.seed_hour_window(w, run, 12.0, 34.0), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

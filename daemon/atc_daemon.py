@@ -233,3 +233,237 @@ def usable_positions(doc, lat0, lon0, max_nm=MAX_PLAUSIBLE_NM) -> list[dict]:
             "sector": sector_of(brg, SECTORS),
         })
     return out
+
+
+import argparse
+import shutil
+import signal
+import subprocess
+import time
+from datetime import datetime
+
+SERVICES = ("dump1090-fa", "piaware", "fr24feed", "telegraf", "lighttpd")
+RUN_DIR = Path("/run/dump1090-fa")
+POLL_S = 1.0
+SYSTEM_EVERY_S = 10.0
+RANGE_EVERY_S = 60.0
+_VCGEN_CACHE = {"at": 0.0, "data": {}}
+
+
+def _vcgencmd(*args) -> str | None:
+    try:
+        r = subprocess.run(["vcgencmd", *args], capture_output=True,
+                           text=True, timeout=5)
+        return r.stdout.strip() if r.returncode == 0 else None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def _load_avg() -> list[float]:
+    try:
+        return list(os.getloadavg())
+    except OSError:
+        return [0.0, 0.0, 0.0]
+
+
+def _mem_totals_mb() -> tuple[int, int]:
+    """(total_mb, used_mb) aus /proc/meminfo.
+
+    Auf einer Maschine ohne /proc (Entwicklungsrechner, macOS statt des
+    Zielgeraets) faellt das auf (0, 0) zurueck -- dieselbe Haltung wie beim
+    fehlenden vcgencmd: ein fehlender Teil macht nicht die ganze Datei
+    ungueltig."""
+    try:
+        mem = {}
+        for line in Path("/proc/meminfo").read_text().splitlines():
+            k, _, v = line.partition(":")
+            mem[k] = int(v.split()[0])          # kB
+        total_mb = mem["MemTotal"] // 1024
+        avail_mb = mem.get("MemAvailable", mem.get("MemFree", 0)) // 1024
+        return total_mb, total_mb - avail_mb
+    except (OSError, ValueError, KeyError):
+        return 0, 0
+
+
+def _disk_totals_gb() -> tuple[float, float]:
+    try:
+        st = os.statvfs("/")
+        disk_total = st.f_blocks * st.f_frsize / 1e9
+        disk_free = st.f_bavail * st.f_frsize / 1e9
+        return round(disk_total, 1), round(disk_total - disk_free, 1)
+    except OSError:
+        return 0.0, 0.0
+
+
+def _uptime_s() -> int:
+    try:
+        return int(float(Path("/proc/uptime").read_text().split()[0]))
+    except (OSError, ValueError):
+        return 0
+
+
+def _cpu_temp_c() -> float | None:
+    try:
+        return int(Path("/sys/class/thermal/thermal_zone0/temp").read_text()) / 1000
+    except (OSError, ValueError):
+        return None
+
+
+def _services_status() -> dict:
+    services = {}
+    for name in SERVICES:
+        try:
+            r = subprocess.run(["systemctl", "is-active", name],
+                               capture_output=True, text=True)
+            services[name] = r.stdout.strip() or "unknown"
+        except (OSError, subprocess.SubprocessError):
+            services[name] = "unknown"
+    return services
+
+
+def build_system_json(throttled_raw, vcgen_available: bool,
+                      clock_hz=None, volts=None) -> dict:
+    total_mb, used_mb = _mem_totals_mb()
+    disk_total_gb, disk_used_gb = _disk_totals_gb()
+    return {
+        "cpu_temp_c": _cpu_temp_c(),
+        "load": _load_avg(),
+        "cpu_count": os.cpu_count(),
+        "mem_total_mb": total_mb,
+        "mem_used_mb": used_mb,
+        "disk_total_gb": disk_total_gb,
+        "disk_used_gb": disk_used_gb,
+        "uptime_s": _uptime_s(),
+        "core_clock_hz": clock_hz if vcgen_available else None,
+        "core_volts": volts if vcgen_available else None,
+        "throttle": parse_throttled(throttled_raw) if vcgen_available and throttled_raw is not None else None,
+        "services": _services_status(),
+        "written_at": time.time(),
+    }
+
+
+def read_vcgencmd_cached(now: float) -> dict:
+    """vcgencmd kostet einen Unterprozess -- fuenf Sekunden Cache genuegen."""
+    if now - _VCGEN_CACHE["at"] < 5.0:
+        return _VCGEN_CACHE["data"]
+    data = {"available": shutil.which("vcgencmd") is not None,
+            "throttled": None, "clock_hz": None, "volts": None}
+    if data["available"]:
+        t = _vcgencmd("get_throttled")           # "throttled=0x0"
+        if t and "=" in t:
+            try:
+                data["throttled"] = int(t.split("=")[1], 16)
+            except ValueError:
+                data["available"] = False
+        c = _vcgencmd("measure_clock", "arm")    # "frequency(48)=1800457088"
+        if c and "=" in c:
+            data["clock_hz"] = int(c.split("=")[1])
+        v = _vcgencmd("measure_volts", "core")   # "volt=0.9000V"
+        if v and "=" in v:
+            data["volts"] = float(v.split("=")[1].rstrip("V"))
+    _VCGEN_CACHE.update(at=now, data=data)
+    return data
+
+
+def seed_hour_window(window: HourWindow, run_dir: Path, lat0, lon0) -> int:
+    """Das Stundenfenster einmalig aus den History-Dateien vorbelegen.
+
+    Nur beim Start. Danach fuellt die Hauptschleife es fort. Eine kaputte
+    Datei wird uebersprungen, nicht zum Abbruch erklaert.
+    """
+    # Erst alle Dateien einlesen, dann NACH ZEITSTEMPEL sortiert einfuegen.
+    # Nach Dateinamen zu sortieren waere falsch: history_0, history_1,
+    # history_10, history_100 ... ist lexikographisch, nicht chronologisch.
+    # HourWindow raeumt von links auf und setzt aufsteigende Zeitstempel
+    # voraus -- unsortiert eingefuegt blieben alte Eintraege liegen.
+    snapshots = []
+    for path in Path(run_dir).glob("history_*.json"):
+        try:
+            doc = json.loads(path.read_text())
+        except (OSError, ValueError):
+            continue
+        ts = doc.get("now")
+        if not isinstance(ts, (int, float)):
+            continue
+        snapshots.append((ts, doc))
+    snapshots.sort(key=lambda pair: pair[0])
+    for ts, doc in snapshots:
+        for t in usable_positions(doc, lat0, lon0):
+            window.add(ts, t["sector"], t["nm"])
+    return len(snapshots)
+
+
+def build_range_json(store: RangeStore, window: HourWindow, now: float) -> dict:
+    hour = window.maxima(now)
+    return {
+        "written_at": now,
+        "sectors": SECTORS,
+        "records": store.records(),
+        "hour_max": {str(k): round(v, 2) for k, v in sorted(hour.items())},
+    }
+
+
+_running = True
+
+
+def _stop(signum, frame):
+    global _running
+    _running = False
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description="ATC-Konsole: Schreiber-Daemon")
+    ap.add_argument("--out-dir", default="/var/www/html/atc/data")
+    ap.add_argument("--db", default="/var/lib/atc-console/atc.db")
+    ap.add_argument("--run-dir", default=str(RUN_DIR))
+    args = ap.parse_args(argv)
+
+    # Signale ueber eine Variable leiten, damit die Schleife sauber austritt
+    # und keine halb geschriebene Datei zuruecklaesst.
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
+
+    # Die wirksame Position des laufenden dump1090-fa (siehe Aufgabe 2).
+    # Kein Konfigpfad als Argument: die Konfigdatei ist auf dem Zielgeraet
+    # an dieser Stelle leer, und ein Argument, das zur falschen Quelle
+    # zeigen kann, ist schlimmer als keines.
+    lat0, lon0 = read_receiver_position()
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = Path(args.run_dir)
+    store = RangeStore(args.db)
+    window = HourWindow()
+    seeded = seed_hour_window(window, run_dir, lat0, lon0)
+    print(f"Stundenfenster aus {seeded} History-Dateien vorbelegt", flush=True)
+
+    last_system = 0.0
+    last_range = 0.0
+    while _running:
+        now = time.time()
+        try:
+            doc = json.loads((run_dir / "aircraft.json").read_text())
+        except (OSError, ValueError):
+            doc = None
+        if doc:
+            stamp = datetime.now().astimezone().isoformat(timespec="seconds")
+            for t in usable_positions(doc, lat0, lon0):
+                window.add(now, t["sector"], t["nm"])
+                store.update(t["sector"], t["nm"], t["hex"],
+                             t["callsign"], t["alt_ft"], stamp)
+        if now - last_system >= SYSTEM_EVERY_S:
+            v = read_vcgencmd_cached(now)
+            atomic_write_json(out_dir / "system.json",
+                              build_system_json(v["throttled"], v["available"],
+                                                v["clock_hz"], v["volts"]))
+            last_system = now
+        if now - last_range >= RANGE_EVERY_S:
+            atomic_write_json(out_dir / "range.json",
+                              build_range_json(store, window, now))
+            last_range = now
+        time.sleep(POLL_S)
+    print("beendet", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
