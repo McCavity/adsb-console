@@ -331,9 +331,17 @@ function renderSide(root, cfg, state, targets, auswahl) {
     ? (naechstes.rate > 0 ? '↑' : '↓') + ' ' + Math.abs(Math.round(naechstes.rate)) + ' ft/min'
     : '→ level';
 
+  // isEmergency() (geo.js) greift auch ueber ein aussagekraeftiges
+  // "emergency"-Feld ohne einen der drei Sonder-Squawks -- dann ist
+  // naechstes.squawk null (siehe Feldaufbau in render() oben), und
+  // "Squawk " + null schriebe woertlich "Squawk null" an die Wand. Der
+  // Squawk-Teil erscheint deshalb nur, wenn einer vorhanden ist; die
+  // Ueberschrift bleibt sonst schlicht "NOTFALL".
   root.innerHTML = `
     <div class="tile${naechstes.emergency ? ' emg' : ''}" style="flex:0 0 250px">
-      <div class="lbl">${naechstes.emergency ? 'NOTFALL · Squawk ' + naechstes.squawk : 'Nächstes Ziel'}</div>
+      <div class="lbl">${naechstes.emergency
+        ? 'NOTFALL' + (naechstes.squawk ? ' · Squawk ' + naechstes.squawk : '')
+        : 'Nächstes Ziel'}</div>
       <div class="huge ${naechstes.emergency ? 'red' : 'em'} value" style="font-size:78px;margin:6px 0 10px">
         ${naechstes.callsign || '——'}${naechstes.heavy ? '<span class="hv"> HEAVY</span>' : ''}</div>
       <div class="row" style="gap:26px">
