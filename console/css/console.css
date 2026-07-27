@@ -33,3 +33,20 @@ html, body {
 .dot { width: 12px; height: 12px; border-radius: 50%; background: #1d4a2e;
        transition: width 150ms, background 150ms; }
 .dot.on { background: #3ddc84; width: 34px; border-radius: 6px; }
+
+.board { flex: 1; display: flex; flex-direction: column; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 26px;
+       font-variant-numeric: tabular-nums; }
+.tbl th { font-size: 16px; letter-spacing: .12em; color: #4e9c6a;
+          text-align: right; padding: 0 14px 8px; font-weight: 600; }
+.tbl th:first-child, .tbl td:first-child { text-align: left; }
+.tbl td { text-align: right; padding: 5px 14px; }
+.tbl tr.emg td { color: #ff5a5a; }
+.hv { font-size: 16px; color: #f0b429; }
+.nopos { margin-top: auto; padding-top: 10px; border-top: 1px solid #14361f;
+         font-size: 20px; color: #4e9c6a; }
+.nopos-list { color: #2f6b45; margin-left: 12px; font-size: 17px; }
+.empty { display: flex; flex-direction: column; align-items: center;
+         justify-content: center; flex: 1; font-size: 34px; letter-spacing: .1em;
+         color: #3a8f57; }
+.empty-sub { font-size: 20px; margin-top: 14px; color: #2f6b45; }
