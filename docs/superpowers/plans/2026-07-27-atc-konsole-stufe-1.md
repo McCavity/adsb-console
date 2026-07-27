@@ -2354,11 +2354,32 @@ git commit -m "Flugplatz- und Bahngeometrie aus OurAirports eingefroren"
 - Liefert: `projectToCanvas(nm, bearingDeg, rangeNm, radiusPx) -> {x, y}` (exportiert und
   getestet) sowie die registrierte Seite `radar`.
 
-**Vor dem Beginn:** In `docs/messungen/2026-07-27-canvas-spike.md` nachsehen, welche
-Variante entschieden wurde. **Variante A** (Canvas-Phosphor) ist unten ausgeführt;
-**Variante B** ersetzt nur die Phosphor-Ebene durch ein CSS-rotiertes Verlaufselement
-(`transform: rotate()` mit `animation`), während Blips und Overlays im 1-Sekunden-Takt
-gezeichnet werden — Hintergrund- und Overlay-Ebene sind in beiden Varianten identisch.
+**Entschieden ist Variante B.** Der Meß-Spike vom 27.07. riß das dritte Kriterium: Die
+absichtlich teurer gebaute Canvas-Fassung erreichte 72,0 °C bei einer Grenze von 72 °C
+(`samples_dropped` und `throttled` hielten). Nach der vorab vereinbarten Regel gilt
+damit Variante B, ohne Nachverhandlung — siehe `docs/messungen/2026-07-27-canvas-spike.md`.
+
+**Wie Variante B die Anmutung erhält, ohne die CPU zu belasten.** Der teure Teil von
+Variante A war die Bildschleife: 30-mal je Sekunde die ganze Fläche abdunkeln und neu
+zeichnen. Variante B verlagert die Bewegung in den Compositor, wo die GPU sie ohne
+JavaScript ausführt:
+
+| Ebene | Technik | Kosten |
+|---|---|---|
+| Hintergrund (Ringe, Peilstrahlen, Flugplätze) | Canvas, **einmal** gezeichnet | einmalig |
+| Sweep mit Nachlauf | ein `div` mit `conic-gradient`, CSS-`animation: rotate` | GPU, kein JS |
+| Blips mit Nachglühen | je ein `div`, CSS-`animation` mit **phasenversetztem** `animation-delay` | GPU, kein JS |
+| Beschriftung, Track-Vektoren | dieselben `div`s, konstant hell | 1×/s neu gesetzt |
+
+Der Kunstgriff steckt im `animation-delay`: Beide Animationen laufen mit derselben
+Dauer `sweep_s`. Ein Blip bei der Peilung θ bekommt `animation-delay: θ/360 · sweep_s`
+und ist damit **genau dann** am hellsten, wenn die Keule seinen Azimut überstreicht —
+ohne daß JavaScript die beiden je synchronisieren müßte. Das Nachglühen ist der
+Abfall innerhalb derselben Keyframe-Folge. JavaScript läuft nur noch einmal je
+Sekunde, wenn neue Zieldaten eintreffen.
+
+Die Fiktion aus §6.1 der Spec bleibt damit erhalten: Ein Ziel leuchtet auf, wenn der
+Balken es passiert, und verglüht danach.
 
 - [ ] **Schritt 1: Den Geometrie-Test schreiben**
 
@@ -2424,9 +2445,11 @@ export function projectToCanvas(nm, brg, rangeNm, radiusPx) {
   return { x: r * Math.sin(a), y: -r * Math.cos(a) };
 }
 
+// Nur die Farben der gezeichneten Ebene. Keule, Blips und Beschriftung
+// bekommen ihre Farben in der CSS-Datei -- sie werden nicht gezeichnet,
+// sondern vom Compositor bewegt.
 const COL = {
-  ring: '#1c5c33', ringText: '#3a8f57', sweep: '#7dfba1',
-  blip: '#b8ffcf', label: '#8fe6ab', emergency: '#ff5a5a',
+  ring: '#1c5c33', ringText: '#3a8f57',
   airport: '#4fb0d8', runway: '#6fd0f0',
 };
 
@@ -2508,18 +2531,20 @@ registerPage({
   title: 'Radar',
   ageSource: 'aircraft',
   mount(el, cfg) {
+    // Drei Ebenen: eine gezeichnete (Hintergrund) und zwei, die der
+    // Compositor bewegt. Kein requestAnimationFrame, keine Bildschleife.
     el.innerHTML = `
       <div class="radar-wrap">
-        <canvas class="bg"      width="${SIZE}" height="${SIZE}"></canvas>
-        <canvas class="phosphor" width="${SIZE}" height="${SIZE}"></canvas>
-        <canvas class="overlay"  width="${SIZE}" height="${SIZE}"></canvas>
+        <canvas class="bg" width="${SIZE}" height="${SIZE}"></canvas>
+        <div class="sweep"></div>
+        <div class="blips"></div>
       </div>
       <div class="radar-side value"></div>`;
+    el.querySelector('.sweep').style.animationDuration = cfg.radar.sweep_s + 's';
     el._ctx = {
       bg: el.querySelector('.bg').getContext('2d'),
-      ph: el.querySelector('.phosphor').getContext('2d'),
-      ov: el.querySelector('.overlay').getContext('2d'),
-      angle: 0, raf: null, targets: [], drawnBg: false,
+      blips: el.querySelector('.blips'),
+      drawnBg: false,
     };
     loadAirports().then(() => { el._ctx.drawnBg = false; });
   },
@@ -2529,12 +2554,7 @@ registerPage({
       drawBackground(c.bg, cfg, state.receiver);
       c.drawnBg = true;
     }
-    // painted merkt sich, ob die Keule dieses Ziel schon ueberstrichen hat.
-    // Die Zielliste wird jede Sekunde neu gebaut -- ohne Uebernahme des
-    // Merkers verschwaenden alle Labels bei jedem Datenabruf und kaemen erst
-    // beim naechsten Sweep zurueck. Das saehe am Panel wie ein Flackern aus.
-    const wasPainted = new Map((c.targets || []).map(t => [t.hex, t.painted]));
-    c.targets = state.receiver ? state.aircraft
+    const targets = state.receiver ? state.aircraft
       .filter(a => typeof a.lat === 'number' && typeof a.lon === 'number')
       .map(a => {
         const nm = haversineNm(state.receiver.lat, state.receiver.lon, a.lat, a.lon);
@@ -2544,97 +2564,60 @@ registerPage({
           callsign: formatCallsign(a.flight), fl: flightLevel(a.alt_baro),
           squawk: a.squawk || null, gs: a.gs, track: a.track,
           heavy: a.category === 'A5', emergency: isEmergency(a),
-          painted: wasPainted.get(a.hex) || false,
         };
       })
       .filter(t => t.nm <= cfg.radar.range_nm) : [];
-
-    // Die Animation laeuft nur, solange die Seite sichtbar ist. Eine
-    // unsichtbare Canvas zu rendern ist auf diesem Geraet auch eine
-    // thermische Verschwendung.
-    const visible = el.classList.contains('active');
-    if (visible && !c.raf) c.raf = requestAnimationFrame(() => step(el, cfg));
-    if (!visible && c.raf) { cancelAnimationFrame(c.raf); c.raf = null; }
+    renderBlips(c.blips, cfg, targets);
   },
 });
 
-function step(el, cfg) {
-  const c = el._ctx;
-  if (!el.classList.contains('active')) { c.raf = null; return; }
-  const dt = 1 / 30;
-  const prev = c.angle;
-  c.angle = (c.angle + 360 * dt / cfg.radar.sweep_s) % 360;
-
-  // Phosphor: die ganze Flaeche leicht abdunkeln statt jedes Blip einzeln zu
-  // verrechnen -- das ist die klassische und billige Loesung.
-  const fade = 1 - Math.exp(-dt / cfg.radar.decay_s * 3);
-  c.ph.globalCompositeOperation = 'destination-out';
-  c.ph.fillStyle = `rgba(0,0,0,${fade.toFixed(3)})`;
-  c.ph.fillRect(0, 0, SIZE, SIZE);
-  c.ph.globalCompositeOperation = 'source-over';
-
-  c.ph.save();
-  c.ph.translate(CENTER, CENTER);
-  const a = c.angle * Math.PI / 180;
-  c.ph.strokeStyle = COL.sweep;
-  c.ph.lineWidth = 2;
-  c.ph.beginPath();
-  c.ph.moveTo(0, 0);
-  c.ph.lineTo(R * Math.sin(a), -R * Math.cos(a));
-  c.ph.stroke();
-
-  // Ein Blip wird gesetzt, wenn die Keule seinen Azimut in diesem Bild
-  // ueberstreicht -- die Keule ist der Verschluss (siehe Spec 6.1).
-  for (const t of c.targets) {
-    const passed = prev <= c.angle
-      ? (t.brg > prev && t.brg <= c.angle)
-      : (t.brg > prev || t.brg <= c.angle);
-    if (!passed) continue;
-    const p = projectToCanvas(t.nm, t.brg, cfg.radar.range_nm, R);
-    c.ph.fillStyle = t.emergency ? COL.emergency : COL.blip;
-    c.ph.beginPath();
-    c.ph.arc(p.x, p.y, t.heavy ? 5 : 3.5, 0, Math.PI * 2);
-    c.ph.fill();
-    t.painted = true;
-  }
-  c.ph.restore();
-
-  drawOverlay(c.ov, cfg, c.targets);
-  c.raf = requestAnimationFrame(() => step(el, cfg));
-}
-
-function drawOverlay(ctx, cfg, targets) {
-  ctx.clearRect(0, 0, SIZE, SIZE);
-  ctx.save();
-  ctx.translate(CENTER, CENTER);
-  ctx.font = '13px ui-monospace, monospace';
+// Ein Blip je Ziel, als positioniertes Element. Das Aufleuchten beim
+// Ueberstreichen und das Verglimmen danach macht die CSS-Animation; ihr
+// animation-delay wird aus der Peilung berechnet, sodass sie mit der
+// Keule zusammenfaellt, ohne dass hier jemals synchronisiert wird.
+function renderBlips(root, cfg, targets) {
+  root.innerHTML = '';
+  const frag = document.createDocumentFragment();
   for (const t of targets) {
-    if (!t.painted) continue;          // noch nicht ueberstrichen
     const p = projectToCanvas(t.nm, t.brg, cfg.radar.range_nm, R);
+    const el = document.createElement('div');
+    el.className = 'blip' + (t.heavy ? ' heavy' : '') + (t.emergency ? ' emg' : '');
+    el.style.left = (CENTER + p.x) + 'px';
+    el.style.top = (CENTER + p.y) + 'px';
+    el.style.animationDuration = cfg.radar.sweep_s + 's';
+    // Die Keule beginnt bei 000 und laeuft im Uhrzeigersinn. Ein Ziel bei
+    // der Peilung brg wird nach brg/360 einer Umdrehung ueberstrichen --
+    // genau dann soll der Keyframe bei 0 Prozent stehen.
+    el.style.animationDelay = (t.brg / 360 * cfg.radar.sweep_s).toFixed(3) + 's';
+
     if (typeof t.gs === 'number' && typeof t.track === 'number') {
       // Track-Vektor: wo das Ziel in leader_s Sekunden waere.
       const len = t.gs * (cfg.radar.leader_s / 3600) / cfg.radar.range_nm * R;
-      const dir = t.track * Math.PI / 180;
-      ctx.strokeStyle = t.emergency ? COL.emergency : COL.label;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-      ctx.lineTo(p.x + len * Math.sin(dir), p.y - len * Math.cos(dir));
-      ctx.stroke();
+      const v = document.createElement('i');
+      v.className = 'vec';
+      v.style.height = Math.max(0, len) + 'px';
+      v.style.transform = `rotate(${t.track}deg)`;
+      el.appendChild(v);
     }
-    ctx.fillStyle = t.emergency ? COL.emergency : COL.label;
+
     const lines = [];
-    if (cfg.radar.labels.includes('callsign')) lines.push(t.callsign || '——');
+    if (cfg.radar.labels.includes('callsign')) {
+      lines.push((t.callsign || '——') + (t.heavy ? ' H' : ''));
+    }
     const second = [];
     if (cfg.radar.labels.includes('fl')) second.push(t.fl);
     if (cfg.radar.labels.includes('squawk') && t.squawk) second.push(t.squawk);
     if (second.length) lines.push(second.join(' '));
-    if (t.heavy) lines[0] += ' H';
-    lines.forEach((line, i) => ctx.fillText(line, p.x + 9, p.y + 5 + i * 15));
+    if (lines.length) {
+      const lab = document.createElement('span');
+      lab.className = 'lab';
+      lab.textContent = lines.join('\n');
+      el.appendChild(lab);
+    }
+    frag.appendChild(el);
   }
-  ctx.restore();
+  root.appendChild(frag);
 }
-```
 
 Dazu in `console/css/console.css` ergänzen:
 
@@ -2642,7 +2625,48 @@ Dazu in `console/css/console.css` ergänzen:
 .radar-wrap { position: relative; width: 620px; height: 620px; flex: 0 0 620px; }
 .radar-wrap canvas { position: absolute; inset: 0; }
 .radar-side { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+
+/* Die Keule: ein einziges Element, vom Compositor gedreht. Der
+   conic-gradient ist der Nachlauf -- hell an der Vorderkante, dann
+   auslaufend. Kein JavaScript beteiligt. */
+.sweep { position: absolute; inset: 0; border-radius: 50%;
+         background: conic-gradient(from 0deg,
+           rgba(125,251,161,.55) 0deg, rgba(125,251,161,.18) 12deg,
+           rgba(125,251,161,.06) 40deg, rgba(125,251,161,0) 90deg,
+           rgba(125,251,161,0) 360deg);
+         animation: sweep-rot 5s linear infinite;
+         will-change: transform; pointer-events: none; }
+@keyframes sweep-rot { to { transform: rotate(360deg); } }
+
+.blips { position: absolute; inset: 0; pointer-events: none; }
+/* Jeder Blip leuchtet auf, wenn die Keule ihn passiert, und verglimmt --
+   phasengleich ueber animation-delay, ohne Synchronisation im Code. */
+.blip { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
+        border-radius: 50%; background: #b8ffcf;
+        animation: blip-phosphor 5s linear infinite; will-change: opacity; }
+.blip.heavy { width: 10px; height: 10px; margin: -5px 0 0 -5px; }
+.blip.emg   { background: #ff5a5a; }
+@keyframes blip-phosphor {
+  0%   { opacity: 1; }
+  24%  { opacity: .45; }   /* entspricht decay_s = 6 bei sweep_s = 5 */
+  60%  { opacity: .18; }
+  100% { opacity: .18; }
+}
+/* Beschriftung und Track-Vektor bleiben konstant hell -- sie sind
+   Zusatzinformation, kein Radarecho. */
+.blip .lab { position: absolute; left: 10px; top: -4px; white-space: pre;
+             font-size: 13px; line-height: 1.15; color: #8fe6ab;
+             font-family: ui-monospace, monospace; opacity: 1; }
+.blip.emg .lab { color: #ff5a5a; }
+.blip .vec { position: absolute; left: 50%; bottom: 50%; width: 1.5px;
+             background: #8fe6ab; transform-origin: 50% 100%; opacity: 1; }
+.blip.emg .vec { background: #ff5a5a; }
 ```
+
+**Warum die Beschriftung eine eigene Deckkraft braucht:** Sie sitzt im selben Element
+wie der Blip und würde dessen Verglimmen sonst mitmachen. Die Spec verlangt aber
+konstant helle Overlays — ein Callsign, das im Takt der Keule pulsiert, wäre auf einem
+Wanddisplay unlesbar.
 
 - [ ] **Schritt 4: Test laufen lassen, Bestehen bestätigen**
 
