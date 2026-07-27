@@ -1,0 +1,436 @@
+#!/usr/bin/env bash
+# install-console.sh — kiosk display for the ATC touch console.
+#
+# Run from the repository root on the machine with the touch panel attached:
+#   sudo ./install-console.sh [--rotate 90] [--output DSI-1]
+#
+# Separate from the atc-daemon installation on purpose: the daemon writes data
+# files into an existing lighttpd docroot and needs no display at all, while
+# this script only adds the kiosk that shows them. The service user (atc,
+# created when atc-daemon.service was installed) is a plain system account
+# with no login shell and no PAM/logind session. A Wayland compositor still
+# needs a "seat" to reach the GPU and touch input without running as root, so
+# this installs and enables seatd — a seat-management daemon built for
+# exactly that case — and adds the service user to whichever group seatd
+# created for seat access on this system. That group name is not the same
+# across distributions/packagings, so it is discovered here rather than
+# assumed.
+
+set -euo pipefail
+
+SERVICE_USER=atc
+SERVICE_FILE=atc-console.service
+CONSOLE_STATE_DIR=/var/lib/atc-console
+# 90 is the value MEASURED for this panel (adsapp01, 7" DSI touch panel) and
+# its current mounting — both by eye (the labelled corner read correctly) and
+# by touch (all four corners tapped, each registered where tapped); see
+# docs/messungen/2026-07-27-panel-rotation.md. This default is a real,
+# verified value for THIS device, not a placeholder carried over from a
+# sibling project — but it does not transfer to different hardware or a
+# different mounting of this same panel. There, re-measure and pass
+# --rotate explicitly rather than trusting this default: labwc rotates the
+# output but not touch input (see the calibrationMatrix derivation below),
+# so a wrong value produces an image that looks perfectly correct while
+# every tap lands on the wrong spot.
+ROTATE=90
+OUTPUT=DSI-1
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --rotate) ROTATE="$2"; shift 2 ;;
+        --output) OUTPUT="$2"; shift 2 ;;
+        *) echo "unknown option: $1" >&2; exit 1 ;;
+    esac
+done
+
+if [[ $EUID -ne 0 ]]; then
+    echo "ERROR: run as root or with sudo." >&2
+    exit 1
+fi
+
+if [[ ! -f "$SERVICE_FILE" || ! -d console ]]; then
+    echo "ERROR: run this script from the repository root (need $SERVICE_FILE and console/)." >&2
+    exit 1
+fi
+
+if ! id "$SERVICE_USER" > /dev/null 2>&1; then
+    echo "ERROR: user '$SERVICE_USER' does not exist — install atc-daemon.service first (it creates the system user)." >&2
+    exit 1
+fi
+
+# --rotate goes verbatim into a generated autostart shell script, and it also
+# selects the libinput touch calibrationMatrix written below — labwc does not
+# rotate touch input with the output transform (its own manual: "To rotate
+# touch events with output rotation, use the libinput calibrationMatrix
+# setting"), so the two must be derived from the same value or the image and
+# the touch surface end up rotated against each other. Restricted to the four
+# plain rotations wlr-randr and the calibration-matrix derivation below both
+# understand — the flipped-* transforms have no corresponding matrix here.
+case "$ROTATE" in
+    0|90|180|270) ;;
+    *)
+        echo "ERROR: --rotate '$ROTATE' is not a valid rotation." >&2
+        echo "  Valid values: 0 90 180 270" >&2
+        exit 1
+        ;;
+esac
+
+# --output names a connector (e.g. DSI-1, HDMI-A-1); keep it to that shape —
+# it also goes verbatim into the generated autostart shell script.
+if [[ ! "$OUTPUT" =~ ^[A-Za-z0-9-]+$ ]]; then
+    echo "ERROR: --output '$OUTPUT' is not a plain connector name." >&2
+    exit 1
+fi
+
+echo "Installing labwc, wlr-randr, chromium, seatd, curl and a colour emoji font …"
+apt-get update -qq
+apt-get install -y --no-install-recommends labwc wlr-randr chromium seatd curl fonts-noto-color-emoji
+
+echo "Enabling seatd …"
+systemctl enable --now seatd.service
+
+# The group that actually grants seat access is not a fixed name across
+# distributions/packagings — on Debian 13 seatd runs as `seatd -g video` and
+# there is no dedicated seat group at all (getent group has nothing matching
+# "seat"). The authoritative answer is whichever group owns seatd's own
+# socket once it is up, so read that rather than guessing from a name list.
+# The socket does not appear instantly after `systemctl enable --now`, so
+# wait for it briefly — bounded, so a seatd that never creates a socket
+# doesn't hang this script forever.
+SEAT_SOCKET=/run/seatd.sock
+SEAT_GROUP=""
+for _ in 1 2 3 4 5; do
+    [[ -S "$SEAT_SOCKET" ]] && break
+    sleep 1
+done
+
+if [[ -S "$SEAT_SOCKET" ]]; then
+    SEAT_GROUP="$(stat -c '%G' "$SEAT_SOCKET")"
+    echo "Found $SEAT_SOCKET, owned by group '$SEAT_GROUP' …"
+else
+    echo "WARNING: $SEAT_SOCKET did not appear within 5s; falling back to a candidate group name list." >&2
+    for candidate in seat _seatd seatd video; do
+        if getent group "$candidate" > /dev/null 2>&1; then
+            SEAT_GROUP="$candidate"
+            break
+        fi
+    done
+fi
+
+if [[ -z "$SEAT_GROUP" ]]; then
+    echo "ERROR: could not find the group seatd uses for seat access." >&2
+    echo "  Checked: $SEAT_SOCKET (never appeared), then candidate groups seat, _seatd, seatd, video — none exist on this system." >&2
+    echo "  Find the real one with: getent group | grep -i seat" >&2
+    echo "  then either add '$SERVICE_USER' to it yourself:" >&2
+    echo "    usermod -aG <group> $SERVICE_USER" >&2
+    echo "  and replace __SEAT_GROUP__ in $SERVICE_FILE with <group> by hand," >&2
+    echo "  or add <group> to the candidate list in this script and re-run." >&2
+    exit 1
+fi
+echo "Using seat group '$SEAT_GROUP' …"
+
+# The render node (/dev/dri/renderD128) is a separate device from the
+# card0/card1 nodes seat access covers above, and on a stock Debian install
+# it belongs to a different group ('render'). Without membership in it, the
+# compositor can get seat access but still fails to open the render node
+# and falls back to (or fails at) software rendering. Exactly like
+# SEAT_GROUP above, the group name is a distribution convention, not a
+# guarantee, so read it from the node's actual group owner instead of
+# hardcoding 'render'.
+#
+# Unlike the seat group, a render node is genuinely optional: a machine
+# with no GPU, or one that exposes a differently-named device, still runs
+# the kiosk fine under software rendering — so its absence is a warning,
+# not the fatal abort SEAT_GROUP gets above.
+RENDER_NODE=/dev/dri/renderD128
+RENDER_GROUP=""
+if [[ -e "$RENDER_NODE" ]]; then
+    RENDER_GROUP="$(stat -c '%G' "$RENDER_NODE")"
+    echo "Found $RENDER_NODE, owned by group '$RENDER_GROUP' …"
+else
+    echo "WARNING: $RENDER_NODE not found; skipping render-group setup." >&2
+    echo "  The kiosk will still run, falling back to software rendering." >&2
+fi
+
+# vcgencmd needs /dev/vcio_gencmd, which udev grants to group 'video'.
+# Without this the System page's throttling tiles stay empty. video, the
+# seat group and the render group can all turn out to be the same group
+# (e.g. Debian 13, where seatd's group *is* 'video') or pairwise distinct —
+# collect the set of distinct group names first, then add each exactly
+# once, so usermod isn't called redundantly and the generated unit below
+# doesn't get a duplicated group name.
+GROUPS_TO_ADD=(video)
+group_in_list() {
+    local needle="$1"
+    shift
+    local g
+    for g in "$@"; do
+        [[ "$g" == "$needle" ]] && return 0
+    done
+    return 1
+}
+group_in_list "$SEAT_GROUP" "${GROUPS_TO_ADD[@]}" || GROUPS_TO_ADD+=("$SEAT_GROUP")
+if [[ -n "$RENDER_GROUP" ]] && ! group_in_list "$RENDER_GROUP" "${GROUPS_TO_ADD[@]}"; then
+    GROUPS_TO_ADD+=("$RENDER_GROUP")
+fi
+
+echo "Adding '$SERVICE_USER' to group(s): ${GROUPS_TO_ADD[*]} …"
+for group in "${GROUPS_TO_ADD[@]}"; do
+    usermod -aG "$group" "$SERVICE_USER"
+done
+
+echo "Configuring a ${ROTATE}° output transform for $OUTPUT …"
+# This has to live where the unit's HOME/XDG_CONFIG_HOME point (see
+# atc-console.service): labwc looks its autostart file up relative to
+# $XDG_CONFIG_HOME/labwc, falling back to $HOME/.config/labwc. atc has no
+# home directory (created with --no-create-home), so this uses the same
+# StateDirectory the unit does instead of /home/atc.
+# install -d's -o/-g flags only guarantee ownership for the directories
+# named explicitly as arguments here — GNU install does not propagate them
+# to ancestor directories it has to create implicitly along the way (that
+# is exactly how .config ended up root-owned on real hardware in the
+# sibling project: it was an implicit ancestor of .config/labwc below, not
+# a named argument). Naming .config explicitly closes that gap.
+install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 0700 "$CONSOLE_STATE_DIR"
+install -d -o "$SERVICE_USER" -g "$SERVICE_USER" "$CONSOLE_STATE_DIR/.config" "$CONSOLE_STATE_DIR/.config/labwc"
+cat > "$CONSOLE_STATE_DIR/.config/labwc/autostart" <<EOF
+wlr-randr --output $OUTPUT --transform $ROTATE &
+EOF
+chown "$SERVICE_USER:$SERVICE_USER" "$CONSOLE_STATE_DIR/.config/labwc/autostart"
+chmod +x "$CONSOLE_STATE_DIR/.config/labwc/autostart"
+
+# labwc does not rotate touch input along with the output transform above —
+# its manual says so explicitly ("To rotate touch events with output
+# rotation, use the libinput calibrationMatrix setting"). Without this, a
+# rotated image and an unrotated touch surface disagree about where the
+# screen's corners are: taps land on the wrong part of the display. The
+# matrix is derived from $ROTATE rather than hardcoded, so the script stays
+# correct if the panel is ever mounted a different way. The 90 case below
+# has now been verified on THIS panel — measured at the device by eye and
+# by touch (all four corners tapped, each registered where tapped); see
+# docs/messungen/2026-07-27-panel-rotation.md. 0/180/270 follow from the
+# same rotation-matrix derivation and carry that reasoning, not independent
+# verification on this hardware — if this panel is ever mounted a
+# different way, verify the new value the same way: read whether the
+# on-screen labelling (page title, clock) appears upright, then tap all
+# four corners of the touch surface and confirm each tap's effect lands
+# where expected (e.g. the leftmost/rightmost page dot selects the
+# first/last page). There is no dedicated corner-test page for this
+# anymore — console/index.html now serves the real console.
+case "$ROTATE" in
+    0)   CALIBRATION_MATRIX="1 0 0 0 1 0" ;;
+    90)  CALIBRATION_MATRIX="0 -1 1 1 0 0" ;;
+    180) CALIBRATION_MATRIX="-1 0 1 0 -1 1" ;;
+    270) CALIBRATION_MATRIX="0 1 0 -1 0 1" ;;
+esac
+cat > "$CONSOLE_STATE_DIR/.config/labwc/rc.xml" <<EOF
+<?xml version="1.0"?>
+<labwc_config>
+  <libinput>
+    <device category="touch">
+      <calibrationMatrix>$CALIBRATION_MATRIX</calibrationMatrix>
+    </device>
+  </libinput>
+</labwc_config>
+EOF
+chown "$SERVICE_USER:$SERVICE_USER" "$CONSOLE_STATE_DIR/.config/labwc/rc.xml"
+
+# The console page hides its own pointer with CSS `cursor: none`, but that
+# only reaches inside the page — the compositor draws its own cursor on top,
+# and the panel's Goodix touchscreen also registers with the kernel as
+# mouse0, so labwc always has a pointer device and parks its cursor in the
+# top-left corner, where it sits motionless forever since nobody uses a
+# mouse. labwc 0.9.8 has no way to configure this away (checked: `man 5
+# labwc-config` on the target has no <cursor> element at all), and unclutter
+# is an X11-only tool that does nothing under Wayland. So instead: generate a
+# fully transparent XCursor theme and point XCURSOR_THEME at it in the unit
+# below — libxcursor, which wlroots uses to resolve cursor themes by name,
+# picks it up from the standard icon directories.
+#
+# Unlike SEAT_GROUP above — where nothing renders without it, so aborting is
+# right — a cursor stuck in the corner is a cosmetic blemish, not a reason to
+# abandon a kiosk installation. So this generates the theme in a subshell
+# with its own errexit, captures whether that subshell succeeded, and only
+# warns on failure rather than exiting. (`set +e` / capture / `set -e`
+# because a bare failing subshell would otherwise trip this script's own
+# errexit, and — a genuine bash gotcha, verified empirically — a subshell
+# used directly as an `if`/`||` condition silently ignores its own inner
+# `set -e`, so the exit status has to be captured as a separate step first.)
+echo "Generating a fully transparent cursor theme (hides the compositor's static pointer) …"
+XCURSOR_THEME_NAME=atc-console-blank
+XCURSOR_THEME_DIR="$CONSOLE_STATE_DIR/.icons/$XCURSOR_THEME_NAME"
+# Cursor names a compositor or Chromium is likely to request; all resolve to
+# the same 1x1 transparent image so no lookup falls through to another
+# theme's (visible) cursor.
+XCURSOR_NAMES=(
+    left_ptr default arrow top_left_arrow left_arrow X_cursor
+    hand1 hand2 pointer grab grabbing
+    text xterm ibeam
+    wait watch progress
+    crosshair cross plus
+    move fleur size_all
+    question_arrow help whats_this
+    no-drop not-allowed dnd-none
+)
+
+generate_cursor_theme() {
+    rm -rf "$XCURSOR_THEME_DIR"
+    install -d -o "$SERVICE_USER" -g "$SERVICE_USER" "$XCURSOR_THEME_DIR/cursors"
+    cat > "$XCURSOR_THEME_DIR/index.theme" <<'EOF'
+[Icon Theme]
+Name=ATC Console Blank Cursor
+Comment=Fully transparent 1x1 cursor; this kiosk is touch-only, no mouse in use.
+EOF
+    # Hand-rolled XCursor file: magic, header size 16, version 1.0, one
+    # table-of-contents entry pointing at one image chunk (header size 36,
+    # 1x1, hotspot 0,0, delay 0), followed by a single ARGB pixel that is
+    # fully transparent (0x00000000). No xcursorgen dependency, no binary
+    # blob committed to the repo — this is generated on install.
+    python3 - "$XCURSOR_THEME_DIR/cursors/left_ptr" <<'PY'
+import struct
+import sys
+
+path = sys.argv[1]
+width = height = 1
+xhot = yhot = 0
+delay = 0
+image_type = 0xfffd0002
+subtype = 1  # nominal size
+toc_count = 1
+chunk_position = 16 + toc_count * 12  # header (16B) + this one 12B TOC entry
+
+header = struct.pack('<4sIII', b'Xcur', 16, 0x00010000, toc_count)
+toc = struct.pack('<III', image_type, subtype, chunk_position)
+chunk = struct.pack('<IIIIIIIII', 36, image_type, subtype, 1,
+                     width, height, xhot, yhot, delay)
+pixel = struct.pack('<I', 0x00000000)  # fully transparent ARGB
+
+with open(path, 'wb') as f:
+    f.write(header + toc + chunk + pixel)
+PY
+    local name
+    for name in "${XCURSOR_NAMES[@]}"; do
+        [[ "$name" == left_ptr ]] && continue
+        ln -sf left_ptr "$XCURSOR_THEME_DIR/cursors/$name"
+    done
+    chown -R "$SERVICE_USER:$SERVICE_USER" "$XCURSOR_THEME_DIR"
+}
+
+set +e
+( set -e; generate_cursor_theme )
+CURSOR_THEME_STATUS=$?
+set -e
+
+if [[ $CURSOR_THEME_STATUS -eq 0 ]]; then
+    echo "Transparent cursor theme '$XCURSOR_THEME_NAME' installed."
+else
+    echo "WARNING: could not generate the transparent cursor theme; the" >&2
+    echo "  compositor's cursor may remain visible in a corner of the display." >&2
+    echo "  Continuing anyway — a visible cursor is cosmetic, unlike the seat" >&2
+    echo "  group above, without which nothing renders at all." >&2
+fi
+
+# Belt and braces: an installation from before this fix (or one interrupted
+# partway through) can already have part of this tree owned by root. This
+# script is meant to be idempotent, so a re-run must repair that, not just
+# avoid making it worse on a fresh install — chown the whole tree
+# unconditionally on every run.
+chown -R "$SERVICE_USER:$SERVICE_USER" "$CONSOLE_STATE_DIR"
+
+# The frontend lives in the docroot of the lighttpd that is already running
+# for the daemon's output files — there is no separate web server of its
+# own. Prove instead of assume that the path actually gets served before the
+# kiosk is started against it.
+echo "Frontend nach /var/www/html/atc/ kopieren ..."
+install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 0755 /var/www/html/atc /var/www/html/atc/data
+cp -r console/. /var/www/html/atc/
+chown -R "$SERVICE_USER:$SERVICE_USER" /var/www/html/atc
+
+CODE="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/atc/)"
+if [[ "$CODE" != "200" ]]; then
+    echo "ERROR: http://127.0.0.1/atc/ antwortet mit $CODE statt 200." >&2
+    echo "  Der Kiosk wuerde eine Fehlerseite zeigen. Abbruch." >&2
+    exit 1
+fi
+echo "http://127.0.0.1/atc/ antwortet mit 200."
+
+# console.json wird bewusst nur installiert, wenn sie noch nicht existiert --
+# ein Update darf die am Geraet getroffene Seitenauswahl nicht zuruecksetzen.
+if [[ ! -f /var/www/html/atc/console.json ]]; then
+    install -m 0644 config/console.json /var/www/html/atc/console.json
+else
+    echo "console.json existiert bereits -- bestehende Auswahl bleibt unangetastet."
+fi
+
+# Der Uebersetzungs-Chip laesst sich mit Kommandozeilenflags nicht
+# abstellen: Weder --disable-infobars noch --disable-features=Translate
+# noch --lang=de haben ihn am 27.07. auf dem Panel verschwinden lassen
+# (das Flag war im laufenden Prozess nachweislich gesetzt). Chromium bietet
+# fuer genau diesen Fall eine verwaltete Richtlinie; die greift, weil sie
+# nicht am Start haengt, sondern an der Profil-Konfiguration.
+#
+# Die Seite deklariert bewusst weiterhin lang="de". Sie stattdessen als
+# englisch auszugeben wuerde den Chip zwar auch vertreiben, waere aber eine
+# Falschangabe, an der sich Silbentrennung und Screenreader orientieren.
+echo "Uebersetzungs-Richtlinie hinterlegen …"
+POLICY_DIR=/etc/chromium/policies/managed
+install -d -m 0755 "$POLICY_DIR"
+cat > "$POLICY_DIR/atc-console.json" <<'EOF'
+{
+  "TranslateEnabled": false
+}
+EOF
+chmod 0644 "$POLICY_DIR/atc-console.json"
+
+echo "Installing systemd service …"
+# GROUPS_TO_ADD above is already the deduplicated set (video, seat group,
+# and render group where one was found) — reuse it verbatim rather than
+# recomputing which groups the unit needs a second time.
+SUPPLEMENTARY_GROUPS="${GROUPS_TO_ADD[*]}"
+
+# Anchored to the specific directive line, not a blind whole-file replace:
+# $SERVICE_FILE also *explains* the __SEAT_GROUP__ placeholder in a comment
+# above it, and an unanchored substitution corrupts that comment too.
+sed -e "s|^SupplementaryGroups=video __SEAT_GROUP__\$|SupplementaryGroups=$SUPPLEMENTARY_GROUPS|" \
+    "$SERVICE_FILE" > "/etc/systemd/system/$SERVICE_FILE"
+systemctl daemon-reload
+systemctl enable "$SERVICE_FILE"
+systemctl restart "$SERVICE_FILE"
+
+echo ""
+echo "Console kiosk installed."
+echo "  systemctl status $SERVICE_FILE"
+echo "  journalctl -u $SERVICE_FILE -f"
+echo ""
+echo "The service user was added to group(s): ${GROUPS_TO_ADD[*]}; the"
+echo "restart above already picks that up — systemd resolves group"
+echo "membership fresh each time it starts the service, unlike an"
+echo "interactive login session."
+if [[ -z "$RENDER_GROUP" ]]; then
+    echo ""
+    echo "No render node was found, so no render-group membership was added;"
+    echo "the kiosk will run under software rendering."
+fi
+echo ""
+# There is no dedicated corner-test page to point at anymore —
+# console/index.html now serves the real console — so verification uses the
+# console's own on-screen elements instead: the page title/clock for the
+# eye check, the page dots for the touch check.
+if [[ "$ROTATE" == "90" ]]; then
+    echo "--rotate was 90 — this is the value MEASURED for THIS panel (see"
+    echo "docs/messungen/2026-07-27-panel-rotation.md), not a placeholder."
+    echo "It still can't be assumed to hold if this exact panel is ever"
+    echo "remounted differently, or on different hardware. To verify: check"
+    echo "that the header (page title, clock) reads upright, then tap all"
+    echo "four corners of the touch surface and confirm each tap lands where"
+    echo "expected — e.g. the leftmost/rightmost page dot selects the"
+    echo "first/last page."
+else
+    echo "--rotate was $ROTATE, which differs from the 90 measured for THIS"
+    echo "panel (see docs/messungen/2026-07-27-panel-rotation.md) and has NOT"
+    echo "been verified here. Verify it now: check that the header (page"
+    echo "title, clock) reads upright, then tap all four corners of the touch"
+    echo "surface and confirm each tap lands where expected — e.g. the"
+    echo "leftmost/rightmost page dot selects the first/last page. If it"
+    echo "doesn't, re-run with --rotate 0, 90, 180 or 270 until it does."
+fi

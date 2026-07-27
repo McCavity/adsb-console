@@ -1,0 +1,57 @@
+[Unit]
+Description=ATC-Konsole (labwc + Chromium-Kiosk)
+After=lighttpd.service seatd.service atc-daemon.service
+Wants=lighttpd.service atc-daemon.service
+Requires=seatd.service
+
+[Service]
+Type=simple
+User=atc
+Group=atc
+# __SEAT_GROUP__ ist ein Platzhalter: install-console.sh ersetzt ihn durch
+# die Gruppe, die seatd auf diesem System tatsaechlich benutzt.
+SupplementaryGroups=video __SEAT_GROUP__
+
+RuntimeDirectory=atc-console
+RuntimeDirectoryMode=0700
+StateDirectory=atc-console
+StateDirectoryMode=0700
+Environment=XDG_RUNTIME_DIR=/run/atc-console
+Environment=HOME=/var/lib/atc-console
+Environment=XDG_CONFIG_HOME=/var/lib/atc-console/.config
+Environment=WLR_LIBINPUT_NO_DEVICES=0
+Environment=XCURSOR_THEME=atc-console-blank
+
+# Chromium darf das Rennen gegen lighttpd nicht gewinnen: ohne Wartezeit auf
+# /atc/ zeigt das Panel beim Booten eine Verbindungsfehlerseite. Das Warten
+# darauf ist deshalb hart -- ohne das Frontend ist der Kiosk sinnlos, und
+# der Abbruch (exit 1) ist hier richtig.
+#
+# Auf /atc/data/system.json wird dagegen NICHT hart gewartet und ihr Fehlen
+# darf ExecStartPre nicht zum Scheitern bringen: der Schreiber-Daemon
+# (atc-daemon.service) kann legitim ausbleiben oder wirft, wenn das laufende
+# dump1090-fa keine Position traegt -- und laut Spec §4 haengen Radar, Board
+# und Statistik direkt an dump1090, nicht am Daemon, und laufen ohne ihn
+# weiter. Mit Restart=always wuerde ein toedlicher Abbruch hier aus einem
+# fehlenden system.json eine Neustart-Endlosschleife mit schwarzem Panel
+# machen -- also nur kurz und unverbindlich pruefen, dann so oder so starten.
+ExecStartPre=/bin/sh -c '\
+  for i in $(seq 1 60); do curl -sf -o /dev/null http://127.0.0.1/atc/ && break; sleep 2; done; \
+  curl -sf -o /dev/null http://127.0.0.1/atc/ || exit 1; \
+  for i in $(seq 1 10); do curl -sf -o /dev/null http://127.0.0.1/atc/data/system.json && break; sleep 2; done; \
+  exit 0'
+ExecStart=/usr/bin/labwc -s '/usr/bin/chromium \
+  --kiosk \
+  --ozone-platform=wayland \
+  --overscroll-history-navigation=0 \
+  --disable-session-crashed-bubble \
+  --disable-infobars \
+  --noerrdialogs \
+  --check-for-update-interval=31536000 \
+  --lang=de \
+  --app=http://127.0.0.1/atc/'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

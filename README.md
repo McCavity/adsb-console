@@ -8,8 +8,13 @@ nichts am ADS-B-Stack — der Feed ist der Zweck des Geräts, die Anzeige ist es
 
 ## Stand
 
-Entwurf freigegeben, Umsetzung noch nicht begonnen.
-Siehe [`docs/specs/2026-07-27-atc-konsole-design.md`](docs/specs/2026-07-27-atc-konsole-design.md).
+**Stufe 1 läuft seit dem 27.07.2026 auf dem Gerät** — Radar, Board und Statistik, mit
+Schreiber-Daemon und Kiosk-Autostart. Stufe 2 (Einzelziel, System, Höhenprofil) und
+Stufe 3 (Reichweiten-Polar) folgen.
+
+- Entwurf: [`docs/specs/2026-07-27-atc-konsole-design.md`](docs/specs/2026-07-27-atc-konsole-design.md)
+- Abnahme am Gerät: [`docs/abnahme/2026-07-27-stufe-1.md`](docs/abnahme/2026-07-27-stufe-1.md)
+- Messungen (Positionsquelle, Panel-Drehung, Animationskosten): [`docs/messungen/`](docs/messungen/)
 
 ## Die Idee in drei Sätzen
 
@@ -32,6 +37,35 @@ zur Laufzeit. Ein Chromium-Kiosk unter labwc zeigt es auf dem Panel.
 | System | Temperatur, Load, Speicher, Drosselung, Dienste |
 
 Jede Seite läßt sich in `config/console.json` einzeln abschalten.
+
+## Installation
+
+Auf dem Gerät, aus dem Repository-Wurzelverzeichnis, **in dieser Reihenfolge** — der
+Kiosk-Installer verweigert sich ohne den Systembenutzer, den erst der Daemon-Installer
+anlegt:
+
+**1. Daemon** (legt den Systembenutzer `atc`, `/var/www/html/atc/` und
+`/var/lib/atc-console/` an, installiert und startet `atc-daemon.service`, weist am Ende
+per HTTP nach, daß `system.json` tatsächlich geschrieben wird):
+
+```bash
+sudo ./install-daemon.sh
+```
+
+**2. Konsole** (Panel angeschlossen), Kiosk-Installation:
+
+```bash
+sudo ./install-console.sh --rotate 90 --output DSI-1
+```
+
+**Der Wert `90` ist für dieses Panel am Gerät gemessen** — Beschriftung gelesen *und*
+alle vier Ecken angetippt (siehe [`docs/messungen/2026-07-27-panel-rotation.md`](docs/messungen/2026-07-27-panel-rotation.md)).
+Auf anderer Hardware ist er neu zu bestimmen und nicht zu übernehmen: labwc dreht
+Toucheingaben nicht mit der Ausgabe mit, und ein gedrehtes Bild über einer ungedrehten
+Touchfläche sieht mit den Augen völlig richtig aus.
+
+Der Schreiber-Daemon läuft unabhängig vom Kiosk weiter, auch wenn dieser neu installiert
+oder neugestartet wird.
 
 ## Lizenz
 

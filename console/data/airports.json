@@ -1,0 +1,654 @@
+{
+ "generated": "2026-07-27",
+ "source": "OurAirports (public domain), davidmegginson.github.io/ourairports-data",
+ "bbox": [
+  49.2,
+  7.6,
+  51.2,
+  9.9
+ ],
+ "airports": [
+  {
+   "icao": "EDDF",
+   "name": "Frankfurt Main Airport",
+   "lat": 50.02671,
+   "lon": 8.55835,
+   "type": "large_airport",
+   "runways": [
+    {
+     "le_ident": "07C",
+     "he_ident": "25C",
+     "le_lat": 50.03260040283203,
+     "le_lon": 8.534629821777344,
+     "he_lat": 50.045101165771484,
+     "he_lon": 8.586979866027832,
+     "length_ft": 13123
+    },
+    {
+     "le_ident": "07L",
+     "he_ident": "25R",
+     "le_lat": 50.03710174560547,
+     "le_lon": 8.497079849243164,
+     "he_lat": 50.045799255371094,
+     "he_lon": 8.533720016479492,
+     "length_ft": 9186
+    },
+    {
+     "le_ident": "07R",
+     "he_ident": "25L",
+     "le_lat": 50.02750015258789,
+     "le_lon": 8.534170150756836,
+     "he_lat": 50.04010009765625,
+     "he_lon": 8.586529731750488,
+     "length_ft": 13123
+    },
+    {
+     "le_ident": "18",
+     "he_ident": "36",
+     "le_lat": 50.034154,
+     "le_lon": 8.525944,
+     "he_lat": 49.998493,
+     "he_lon": 8.526297,
+     "length_ft": 13123
+    }
+   ]
+  },
+  {
+   "icao": "EDEH",
+   "name": "Herrenteich Airfield",
+   "lat": 49.345,
+   "lon": 8.48778,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDEL",
+   "name": "Langenlonsheim Airfield",
+   "lat": 49.90833,
+   "lon": 7.90778,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDEM",
+   "name": "Mosenberg Airfeld",
+   "lat": 51.06275,
+   "lon": 9.42201,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDEN",
+   "name": "Bad Hersfeld Airfield",
+   "lat": 50.84405,
+   "lon": 9.70722,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDEP",
+   "name": "Heppenheim Glider Field",
+   "lat": 49.62194,
+   "lon": 8.62444,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "15L",
+     "he_ident": "33R",
+     "le_lat": 49.625458,
+     "le_lon": 8.622375,
+     "he_lat": 49.617298,
+     "he_lon": 8.629639,
+     "length_ft": 3435
+    },
+    {
+     "le_ident": "15R",
+     "he_ident": "33L",
+     "le_lat": 49.625664,
+     "le_lon": 8.620239,
+     "he_lat": 49.617085,
+     "he_lon": 8.627869,
+     "length_ft": 3612
+    }
+   ]
+  },
+  {
+   "icao": "EDEW",
+   "name": "Walld\u00fcrn Airfield",
+   "lat": 49.58167,
+   "lon": 9.40222,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDFA",
+   "name": "Anspach-Taunus Airfield",
+   "lat": 50.28833,
+   "lon": 8.53389,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDFB",
+   "name": "Reichelsheim Airfield",
+   "lat": 50.33797,
+   "lon": 8.87898,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDFC",
+   "name": "Aschaffenburg Airfield",
+   "lat": 49.93881,
+   "lon": 9.06278,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDFE",
+   "name": "Frankfurt-Egelsbach Airport",
+   "lat": 49.96,
+   "lon": 8.64304,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "08",
+     "he_ident": "26",
+     "le_lat": 49.96027,
+     "le_lon": 8.629638,
+     "he_lat": 49.961282,
+     "he_lon": 8.651211,
+     "length_ft": 4593
+    },
+    {
+     "le_ident": "08R",
+     "he_ident": "26L",
+     "le_lat": 49.959446,
+     "le_lon": 8.641075,
+     "he_lat": 49.95986,
+     "he_lon": 8.650835,
+     "length_ft": 2198
+    }
+   ]
+  },
+  {
+   "icao": "EDFG",
+   "name": "Gelnhausen Airfield",
+   "lat": 50.19674,
+   "lon": 9.16706,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDFI",
+   "name": "Hirzenhain Airfield",
+   "lat": 50.78778,
+   "lon": 8.39278,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDFJ",
+   "name": "Lager Hammelburg Airfield",
+   "lat": 50.09852,
+   "lon": 9.8839,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDFL",
+   "name": "Gie\u00dfen-L\u00fctzellinden Airfield",
+   "lat": 50.54479,
+   "lon": 8.59275,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDFM",
+   "name": "Mannheim-City Airport",
+   "lat": 49.47306,
+   "lon": 8.51417,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "09",
+     "he_ident": "27",
+     "le_lat": 49.472999572753906,
+     "le_lon": 8.506030082702637,
+     "he_lat": 49.47249984741211,
+     "he_lon": 8.520700454711914,
+     "length_ft": 3497
+    },
+    {
+     "le_ident": "09C",
+     "he_ident": "27C",
+     "le_lat": 49.473696,
+     "le_lon": 8.50932,
+     "he_lat": 49.473285,
+     "he_lon": 8.52127,
+     "length_ft": 2756
+    },
+    {
+     "le_ident": "09L",
+     "he_ident": "27R",
+     "le_lat": 49.47471,
+     "le_lon": 8.51041,
+     "he_lat": 49.474518,
+     "he_lon": 8.520937,
+     "length_ft": 2626
+    }
+   ]
+  },
+  {
+   "icao": "EDFN",
+   "name": "Marburg-Sch\u00f6nstadt Airfield",
+   "lat": 50.87444,
+   "lon": 8.815,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "03",
+     "he_ident": "21",
+     "le_lat": 50.871441,
+     "le_lon": 8.811961,
+     "he_lat": 50.877216,
+     "he_lon": 8.817608,
+     "length_ft": 2461
+    }
+   ]
+  },
+  {
+   "icao": "EDFO",
+   "name": "Michelstadt-Odenwald Airfield",
+   "lat": 49.67847,
+   "lon": 8.97161,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDFP",
+   "name": "Ober-M\u00f6rlen Airfield",
+   "lat": 50.3622,
+   "lon": 8.71164,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDFQ",
+   "name": "Allendorf-Eder Airfield",
+   "lat": 51.03527,
+   "lon": 8.681,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "11",
+     "he_ident": "29",
+     "le_lat": 51.037601,
+     "le_lon": 8.67275,
+     "he_lat": 51.0331,
+     "he_lon": 8.68897,
+     "length_ft": 4068
+    }
+   ]
+  },
+  {
+   "icao": "EDFT",
+   "name": "Lauterbach Airfield",
+   "lat": 50.68367,
+   "lon": 9.4117,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDFU",
+   "name": "Mainbullau Airfield",
+   "lat": 49.69504,
+   "lon": 9.18236,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDFV",
+   "name": "Worms Airfield",
+   "lat": 49.60695,
+   "lon": 8.36833,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "06",
+     "he_ident": "24",
+     "le_lat": 49.604939,
+     "le_lon": 8.36338,
+     "he_lat": 49.608166,
+     "he_lon": 8.373269,
+     "length_ft": 2625
+    },
+    {
+     "le_ident": "06G",
+     "he_ident": "24G",
+     "le_lat": 49.605202,
+     "le_lon": 8.36176,
+     "he_lat": 49.6092,
+     "he_lon": 8.3729,
+     "length_ft": 3018
+    }
+   ]
+  },
+  {
+   "icao": "EDFW",
+   "name": "W\u00fcrzburg-Schenkenturm Airfield",
+   "lat": 49.81778,
+   "lon": 9.8975,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDFX",
+   "name": "Hockenheim Airfield",
+   "lat": 49.32528,
+   "lon": 8.52861,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDFY",
+   "name": "Limburg-Elz Airfield",
+   "lat": 50.42695,
+   "lon": 8.01111,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDFZ",
+   "name": "Mainz-Finthen Airfield",
+   "lat": 49.9675,
+   "lon": 8.14722,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "07",
+     "he_ident": "25",
+     "le_lat": 49.967954,
+     "le_lon": 8.141126,
+     "he_lat": 49.970317,
+     "he_lon": 8.154438,
+     "length_ft": 3281
+    },
+    {
+     "le_ident": "07R",
+     "he_ident": "25L",
+     "le_lat": 49.965953,
+     "le_lon": 8.142402,
+     "he_lat": 49.967924,
+     "he_lon": 8.15529,
+     "length_ft": 3281
+    }
+   ]
+  },
+  {
+   "icao": "EDGA",
+   "name": "Ailertchen Airfield",
+   "lat": 50.59306,
+   "lon": 7.945,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDGB",
+   "name": "Breitscheid Airfield",
+   "lat": 50.67639,
+   "lon": 8.16944,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDGF",
+   "name": "Fulda-Jossa Airfield",
+   "lat": 50.47528,
+   "lon": 9.44322,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDGH",
+   "name": "Hettstadt Airfield",
+   "lat": 49.79861,
+   "lon": 9.83667,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDGI",
+   "name": "Ingelfingen-B\u00fchlhof Airfield",
+   "lat": 49.32167,
+   "lon": 9.66306,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDGM",
+   "name": "Mosbach-Lohrbach Airfield",
+   "lat": 49.39889,
+   "lon": 9.12389,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDGP",
+   "name": "Oppenheim Airfield",
+   "lat": 49.84167,
+   "lon": 8.37667,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDGQ",
+   "name": "Schameder Airfield",
+   "lat": 51.00027,
+   "lon": 8.30914,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDGR",
+   "name": "Gie\u00dfen-Reiskirchen Airfield",
+   "lat": 50.56638,
+   "lon": 8.86916,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDGS",
+   "name": "Siegerland Airport",
+   "lat": 50.7077,
+   "lon": 8.08297,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "04",
+     "he_ident": "22",
+     "le_lat": 50.703792,
+     "le_lon": 8.083611,
+     "he_lat": 50.707407,
+     "he_lon": 8.088062,
+     "length_ft": 1640
+    },
+    {
+     "le_ident": "12G",
+     "he_ident": "30G",
+     "le_lat": 50.711357,
+     "le_lon": 8.079268,
+     "he_lat": 50.709969,
+     "he_lon": 8.082075,
+     "length_ft": 984
+    },
+    {
+     "le_ident": "13",
+     "he_ident": "31",
+     "le_lat": 50.712777,
+     "le_lon": 8.072645,
+     "he_lat": 50.70378,
+     "he_lon": 8.090757,
+     "length_ft": 5315
+    },
+    {
+     "le_ident": "13G",
+     "he_ident": "31G",
+     "le_lat": 50.714178,
+     "le_lon": 8.073666,
+     "he_lat": 50.712771,
+     "he_lon": 8.076439,
+     "length_ft": 820
+    },
+    {
+     "le_ident": "13L",
+     "he_ident": "31R",
+     "le_lat": 50.712678,
+     "le_lon": 8.075293,
+     "he_lat": 50.70902,
+     "he_lon": 8.082653,
+     "length_ft": 1969
+    }
+   ]
+  },
+  {
+   "icao": "EDGT",
+   "name": "Bottenhorn Airfield",
+   "lat": 50.79528,
+   "lon": 8.45833,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDGU",
+   "name": "Untersch\u00fcpf Airfield",
+   "lat": 49.51584,
+   "lon": 9.66944,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDGX",
+   "name": "Walldorf Airfield",
+   "lat": 49.30306,
+   "lon": 8.65889,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDGZ",
+   "name": "Weinheim/Bergstra\u00dfe Airfield",
+   "lat": 49.56676,
+   "lon": 8.61145,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDKF",
+   "name": "Bergneustadt-Auf dem D\u00fcmpel Airfield",
+   "lat": 51.05209,
+   "lon": 7.70683,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDKH",
+   "name": "H\u00fcnsborn Airfield",
+   "lat": 50.92861,
+   "lon": 7.89917,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDKI",
+   "name": "Betzdorf-Kirchen Airfield",
+   "lat": 50.81722,
+   "lon": 7.83056,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDKP",
+   "name": "Plettenberg-H\u00fcinghausen Airfield",
+   "lat": 51.19188,
+   "lon": 7.79098,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDKR",
+   "name": "Schmallenberg-Rennefeld Airfield",
+   "lat": 51.1615,
+   "lon": 8.26067,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDKU",
+   "name": "Attendorn-Finnentrop Airfield",
+   "lat": 51.14583,
+   "lon": 7.93667,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDRF",
+   "name": "Bad D\u00fcrkheim Airfield",
+   "lat": 49.4728,
+   "lon": 8.19574,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDRL",
+   "name": "Flugplatz Lachen-Speyerdorf",
+   "lat": 49.33083,
+   "lon": 8.20972,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDRS",
+   "name": "Bad Sobernheim-Domberg Airfield",
+   "lat": 49.79083,
+   "lon": 7.66611,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDRW",
+   "name": "Dierdorf-Wienau Airfield",
+   "lat": 50.56611,
+   "lon": 7.65333,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EDRY",
+   "name": "Speyer Airfield",
+   "lat": 49.30472,
+   "lon": 8.45139,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "16",
+     "he_ident": "34",
+     "le_lat": 49.309396,
+     "le_lon": 8.449897,
+     "he_lat": 49.294835,
+     "he_lon": 8.455793,
+     "length_ft": 5501
+    },
+    {
+     "le_ident": "16R",
+     "he_ident": "34L",
+     "le_lat": 49.30491,
+     "le_lon": 8.450938,
+     "he_lat": 49.300729,
+     "he_lon": 8.45263,
+     "length_ft": 3281
+    }
+   ]
+  }
+ ]
+}
