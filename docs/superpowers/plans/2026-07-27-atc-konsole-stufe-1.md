@@ -1287,6 +1287,13 @@ Wants=dump1090-fa.service
 Type=simple
 User=atc
 Group=atc
+# vcgencmd braucht /dev/vcio_gencmd, das udev der Gruppe video zuweist
+# (/lib/udev/rules.d/10-vc.rules, am Geraet nachgesehen: crw-rw---- root
+# video). Ohne diese Gruppe scheitert der Aufruf mit "Can't open device
+# file", und die Drosselungsfelder der Systemseite bleiben leer -- die
+# Datei ist dann gueltig, sagt aber nichts. Nicht mit /dev/vcio
+# verwechseln: das ist ein anderer Knoten und root-only.
+SupplementaryGroups=video
 # atc ist ein Systemaccount ohne Login. StateDirectory legt
 # /var/lib/atc-console mit den richtigen Rechten an, bevor ExecStart laeuft.
 StateDirectory=atc-console
