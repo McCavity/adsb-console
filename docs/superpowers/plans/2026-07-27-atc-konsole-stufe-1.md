@@ -2538,9 +2538,18 @@ function drawAirports(ctx, cfg, receiver) {
       ctx.fillStyle = COL.airport;
       ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
     }
+    // Die Kennung weicht auf die Seite aus, auf der Platz ist. Die
+    // Leinwand ist genau so breit wie der Kreis -- ein Platz am oestlichen
+    // Rand sitzt damit an der Kante, und eine stur nach rechts gezeichnete
+    // Beschriftung laeuft aus dem Bild (am 27.07. an EDFJ gesehen, dessen
+    // Kennung bis auf das J abgeschnitten war).
     ctx.fillStyle = COL.airport;
     ctx.font = '12px ui-monospace, monospace';
-    ctx.fillText(ap.icao, p.x + 6, p.y - 6);
+    const breite = ctx.measureText(ap.icao).width;
+    const passtRechts = p.x + 6 + breite <= CENTER - 2;
+    ctx.textAlign = passtRechts ? 'left' : 'right';
+    ctx.fillText(ap.icao, p.x + (passtRechts ? 6 : -6), p.y - 6);
+    ctx.textAlign = 'left';
   }
 }
 
