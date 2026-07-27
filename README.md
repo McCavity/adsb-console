@@ -33,6 +33,22 @@ zur Laufzeit. Ein Chromium-Kiosk unter labwc zeigt es auf dem Panel.
 
 Jede Seite läßt sich in `config/console.json` einzeln abschalten.
 
+## Installation
+
+Auf dem Gerät mit angeschlossenem Panel, aus dem Repository-Wurzelverzeichnis:
+
+```bash
+sudo ./install-console.sh --rotate 90 --output DSI-1
+```
+
+**Der Wert `90` ist für dieses Panel am Gerät gemessen** — Beschriftung gelesen *und*
+alle vier Ecken angetippt (siehe [`docs/messungen/2026-07-27-panel-rotation.md`](docs/messungen/2026-07-27-panel-rotation.md)).
+Auf anderer Hardware ist er neu zu bestimmen und nicht zu übernehmen: labwc dreht
+Toucheingaben nicht mit der Ausgabe mit, und ein gedrehtes Bild über einer ungedrehten
+Touchfläche sieht mit den Augen völlig richtig aus.
+
+Der Schreiber-Daemon wird separat installiert; er läuft unabhängig vom Kiosk.
+
 ## Lizenz
 
 MIT — siehe [LICENSE](LICENSE).
