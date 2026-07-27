@@ -1,25 +1,29 @@
 <!DOCTYPE html>
-<html lang="de"><head><meta charset="utf-8"><title>ATC-Konsole</title>
-<style>
-  html,body{margin:0;width:1280px;height:720px;overflow:hidden;background:#04140a;
-            color:#7dfba1;font:600 40px/1.2 monospace;cursor:none}
-  .e{position:absolute;padding:18px}
-  #ol{top:0;left:0}#or{top:0;right:0}#ul{bottom:0;left:0}#ur{bottom:0;right:0}
-  #tr{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:30px}
-</style></head><body>
-  <div class="e" id="ol">OBEN LINKS</div>
-  <div class="e" id="or">OBEN RECHTS</div>
-  <div class="e" id="ul">UNTEN LINKS</div>
-  <div class="e" id="ur">UNTEN RECHTS</div>
-  <div id="tr">bitte eine Ecke antippen</div>
-  <script>
-    // Zeigt an, WO der Finger wirklich landet -- eine gedrehte Anzeige ueber
-    // einer ungedrehten Touchflaeche sieht voellig richtig aus und ist falsch.
-    addEventListener('pointerup', e => {
-      const v = e.clientY < 360 ? 'OBEN' : 'UNTEN';
-      const h = e.clientX < 640 ? 'LINKS' : 'RECHTS';
-      document.getElementById('tr').textContent =
-        `Treffer: ${v} ${h} (${Math.round(e.clientX)}, ${Math.round(e.clientY)})`;
-    });
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1280, height=720, initial-scale=1, user-scalable=no">
+  <title>ATC-Konsole</title>
+  <link rel="stylesheet" href="css/console.css">
+</head>
+<body>
+  <div id="app">
+    <div id="head">
+      <div id="page-title">—</div>
+      <div class="spacer"></div>
+      <div id="age-wrap"><span id="age-dot"></span><span id="age">—</span></div>
+      <div id="clock">--:--</div>
+      <div id="date">—</div>
+    </div>
+    <div id="stage"></div>
+    <div id="dots"></div>
+  </div>
+  <script type="module">
+    import { startConsole } from './js/console.js';
+    import './js/pages/radar.js';
+    import './js/pages/board.js';
+    import './js/pages/stats.js';
+    startConsole();
   </script>
-</body></html>
+</body>
+</html>
