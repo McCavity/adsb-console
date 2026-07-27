@@ -204,10 +204,22 @@ weißen Schirm (§10.3).
 
 ### 5.1 Empfängerposition — und warum sie nicht ins Repo darf
 
-Die exakte Position steht in `/etc/default/dump1090-fa` (`LAT=`/`LON=`); von dort
-startet dump1090 mit `--lat`/`--lon`. `receiver.json` führt sie nur auf zwei
-Nachkommastellen gerundet (50.17/8.72) — das sind bis zu ~600 m Fehler in jeder
-Entfernungsangabe, für Rekorde zu ungenau.
+> **Korrektur vom 27.07., am Gerät gemessen.** Ein früherer Entwurfsstand behauptete hier,
+> die Position stehe in `/etc/default/dump1090-fa` unter `LAT=`/`LON=`. Das ist falsch in
+> zwei Punkten: Die Schlüssel heißen dort `RECEIVER_LAT`/`RECEIVER_LON`, und sie sind auf
+> diesem Gerät **leer** — dump1090-fa zieht die Position dann aus der
+> piaware-Konfiguration. Der Irrtum stammt aus einem `grep -i`, dessen Treffer `LAT=` in
+> Wahrheit das Zeilenende von `RECEIVER_LAT=` war: ein Meßmittel, das eine andere Frage
+> beantwortete als die gestellte.
+
+Maßgeblich ist die **tatsächlich wirksame** Position: die Argumente `--lat`/`--lon` des
+laufenden `dump1090-fa`-Prozesses, gelesen aus `/proc/<pid>/cmdline`. Das ist
+unprivilegiert lesbar (am Gerät als uid 1000 belegt), liefert fünf Nachkommastellen und
+ist unabhängig davon, welche Konfigurationsschicht den Wert geliefert hat — es liest, was
+der Decoder wirklich benutzt, statt einer von mehreren möglichen Quellen zu vertrauen.
+
+`receiver.json` führt die Position nur auf zwei Nachkommastellen gerundet (50.17/8.72) —
+das sind bis zu ~600 m Fehler in jeder Entfernungsangabe, für Rekorde zu ungenau.
 
 Diese Koordinate ist faktisch Hennings Wohnadresse. Sie wird zur Laufzeit vom Gerät
 gelesen und **niemals** ins Repo geschrieben — auch nicht in ein Testfixture, einen
