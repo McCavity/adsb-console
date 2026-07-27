@@ -7,10 +7,10 @@ Standardbibliothek -- auf dem Geraet gibt es kein venv und soll keines geben.
 """
 from __future__ import annotations
 
+import glob
 import json
 import math
 import os
-import re
 import tempfile
 from pathlib import Path
 
@@ -37,19 +37,52 @@ def parse_throttled(value: int) -> dict:
     }
 
 
-def read_receiver_position(path: str = "/etc/default/dump1090-fa") -> tuple[float, float]:
-    """Die exakte Position des Empfaengers vom Geraet lesen.
+def parse_position_from_cmdline(argv: list[str]) -> tuple[float, float] | None:
+    """--lat/--lon aus einer Argumentliste ziehen, oder None."""
+    found = {}
+    for i, a in enumerate(argv):
+        if a in ("--lat", "--lon") and i + 1 < len(argv):
+            try:
+                found[a] = float(argv[i + 1])
+            except ValueError:
+                return None
+    if "--lat" not in found or "--lon" not in found:
+        return None
+    return found["--lat"], found["--lon"]
 
-    Bleibt im Speicher. Sie wird nie in eine Ausgabedatei geschrieben und
-    gehoert nicht ins Repo -- receiver.json fuehrt sie ohnehin gerundet, und
-    das Frontend benutzt jene gerundete Fassung.
+
+def _iter_proc_cmdlines():
+    for path in glob.glob("/proc/[0-9]*/cmdline"):
+        try:
+            yield Path(path).read_bytes()
+        except OSError:
+            continue        # Prozess ist zwischen glob und Lesen verschwunden
+
+
+def read_receiver_position(cmdlines=None) -> tuple[float, float]:
+    """Die WIRKSAME Position des laufenden dump1090-fa.
+
+    Gelesen aus /proc/<pid>/cmdline statt aus einer Konfigdatei: Auf dem
+    Zielgeraet sind RECEIVER_LAT/RECEIVER_LON in /etc/default/dump1090-fa
+    leer, und dump1090 bezieht die Position aus der piaware-Konfiguration.
+    Die Prozessargumente sind die einzige Quelle, die unabhaengig davon
+    stimmt, welche Schicht den Wert geliefert hat -- und sie sind
+    unprivilegiert lesbar (am Geraet als uid 1000 belegt).
+
+    Die Position bleibt im Speicher. Sie wird nie in eine Ausgabedatei
+    geschrieben und gehoert nicht ins Repo; das Frontend benutzt die
+    gerundete Fassung aus receiver.json.
     """
-    text = Path(path).read_text()
-    lat = re.search(r"^\s*LAT=([-\d.]+)", text, re.MULTILINE)
-    lon = re.search(r"^\s*LON=([-\d.]+)", text, re.MULTILINE)
-    if not lat or not lon:
-        raise ValueError(f"{path} enthaelt kein LAT/LON")
-    return float(lat.group(1)), float(lon.group(1))
+    for raw in (cmdlines if cmdlines is not None else _iter_proc_cmdlines()):
+        argv = [a.decode("utf-8", "replace") for a in raw.split(b"\0") if a]
+        if not argv or "dump1090" not in argv[0]:
+            continue
+        pos = parse_position_from_cmdline(argv)
+        if pos is not None:
+            return pos
+    raise RuntimeError(
+        "kein laufender dump1090-Prozess mit --lat/--lon gefunden -- "
+        "laeuft dump1090-fa, und ist eine Position konfiguriert?")
 
 
 def great_circle_nm(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
