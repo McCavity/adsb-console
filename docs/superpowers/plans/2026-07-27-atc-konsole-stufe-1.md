@@ -40,6 +40,11 @@ Diese gelten für **jede** Aufgabe, auch wo sie nicht wiederholt werden.
 - **Kein Umbau am ADS-B-Stack.** `dump1090-fa`, `piaware`, `fr24feed` und die
   lighttpd-Konfiguration werden nicht angefaßt.
 - **Jeder Test wird einmal absichtlich rot gesehen**, bevor ihm geglaubt wird.
+- **Testbefehl immer mit Dateimuster:** `node --test tests/*.mjs`. Ein blankes
+  `node --test` findet in diesem Repo **keine** Testdatei (Node sucht nach
+  `test.mjs`/`test-*.mjs` bzw. einem Verzeichnis `test/`, nicht nach `tests/test_*.mjs`)
+  und meldet trotzdem `fail 0` — ein grünes Instrument, das nichts mißt. `node --test tests/`
+  scheitert unter Node 26 mit `Cannot find module`. Beides am 27.07. empirisch geprüft.
 - SSH: `ssh adsapp01` meldet sich als Benutzer **`pi`** an (NOPASSWD-sudo). Einen
   Benutzer `hhalfpap` gibt es auf diesem Gerät **nicht**, auch wenn ältere Notizen das
   behaupten.
@@ -1873,7 +1878,7 @@ sofort.
 
 - [ ] **Schritt 7: Beide Testdateien laufen lassen**
 
-Ausführen: `node --test tests/`
+Ausführen: `node --test tests/*.mjs`
 Erwartet: PASS, 17 Tests (11 aus `test_geo.mjs`, 6 aus `test_config.mjs`).
 
 - [ ] **Schritt 8: Commit**
@@ -2738,7 +2743,7 @@ Erwartet: PASS, 6 Tests.
 
 - [ ] **Schritt 5: Alle Tests zusammen laufen lassen**
 
-Ausführen: `node --test tests/ && python3 -m unittest discover -s tests -v`
+Ausführen: `node --test tests/*.mjs && python3 -m unittest discover -s tests -v`
 Erwartet: 34 JavaScript-Tests (11 geo, 6 config, 3 airports, 4 radar, 4 board, 6 stats)
 und 28 Python-Tests, alle grün.
 
