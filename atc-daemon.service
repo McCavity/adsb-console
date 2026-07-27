@@ -1,0 +1,27 @@
+[Unit]
+Description=ATC-Konsole: Schreiber-Daemon (Reichweiten-Rekorde und Systemzustand)
+After=dump1090-fa.service
+Wants=dump1090-fa.service
+
+[Service]
+Type=simple
+User=atc
+Group=atc
+# atc ist ein Systemaccount ohne Login. StateDirectory legt
+# /var/lib/atc-console mit den richtigen Rechten an, bevor ExecStart laeuft.
+StateDirectory=atc-console
+StateDirectoryMode=0750
+ExecStart=/usr/local/lib/atc-console/atc_daemon.py \
+  --out-dir /var/www/html/atc/data \
+  --db /var/lib/atc-console/atc.db
+Restart=always
+RestartSec=5
+# Der Daemon liest nur und schreibt in genau zwei Verzeichnisse.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/www/html/atc/data /var/lib/atc-console
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
