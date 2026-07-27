@@ -1457,6 +1457,15 @@ fi
 echo "http://127.0.0.1/atc/ antwortet mit 200."
 ```
 
+**Ebenfalls neu — die Übersetzungs-Richtlinie.** Chromium blendet auf einer Seite mit
+`lang="de"` unter englischer Oberfläche einen Übersetzungs-Chip ein. Am 27.07. am Panel
+geprüft: Weder `--disable-infobars` noch `--disable-features=Translate` noch `--lang=de`
+vertreiben ihn (die Flags waren im laufenden Prozeß nachweislich gesetzt). Das Skript
+hinterlegt deshalb `/etc/chromium/policies/managed/atc-console.json` mit
+`{"TranslateEnabled": false}`. Die Seite bleibt bei `lang="de"` — sie als englisch
+auszugeben würde den Chip zwar auch vertreiben, wäre aber eine Falschangabe, an der sich
+Silbentrennung und Screenreader orientieren.
+
 **Achtung bei einem Wiederholungslauf:** `cp -r console/.` überschreibt, löscht aber
 nicht. `console.json` wird bewußt nur installiert, wenn sie noch nicht existiert —
 ein Update darf die Auswahl am Gerät nicht zurücksetzen:
