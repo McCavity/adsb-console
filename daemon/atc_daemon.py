@@ -111,9 +111,17 @@ def sector_of(deg: float, count: int = 36) -> int:
     return int((deg % 360 + 360) % 360 // (360 / count))
 
 
-def atomic_write_json(path: Path, obj) -> None:
+def atomic_write_json(path: Path, obj, mode: int = 0o644) -> None:
     """Schreiben und umbenennen. Ein halb geschriebenes JSON darf das
-    Frontend nie sehen."""
+    Frontend nie sehen.
+
+    Der chmod ist nicht kosmetisch: mkstemp legt mit 0600 an, und
+    os.replace behaelt diesen Modus bei. Der Sinn dieser Dateien ist
+    aber, dass ein ANDERER Prozess sie liest -- lighttpd als www-data.
+    Ohne chmod liefert der Webserver 403, waehrend die Datei tadellos
+    dasteht und jeder Test gruen ist, weil er als derselbe Benutzer
+    zurueckliest (am 27.07. am Geraet genau so aufgetreten).
+    """
     path = Path(path)
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=".tmp-")
     try:
@@ -121,6 +129,7 @@ def atomic_write_json(path: Path, obj) -> None:
             json.dump(obj, f, separators=(",", ":"))
             f.flush()
             os.fsync(f.fileno())
+        os.chmod(tmp, mode)
         os.replace(tmp, path)
     except BaseException:
         if os.path.exists(tmp):
