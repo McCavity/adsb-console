@@ -114,6 +114,9 @@ registerPage({
       bg: el.querySelector('.bg').getContext('2d'),
       blips: el.querySelector('.blips'),
       drawnBg: false,
+      // Startzeit der Keule. Jeder Blip rechnet sein animation-delay
+      // gegen diesen Zeitpunkt, nicht gegen seine eigene Entstehung.
+      sweepStart: performance.now(),
     };
     loadAirports().then(() => { el._ctx.drawnBg = false; });
   },
@@ -136,24 +139,23 @@ registerPage({
         };
       })
       .filter(t => t.nm <= cfg.radar.range_nm) : [];
-    renderBlips(c.blips, cfg, targets);
+    renderBlips(c.blips, cfg, targets, c.sweepStart);
   },
 });
 
-// Blips werden WIEDERVERWENDET, nicht neu gebaut. Das ist der Kern: Ein neu
-// erzeugtes Element startet seine CSS-Animation von vorn, und da render()
-// im Sekundentakt laeuft, blinkte vorher der ganze Schirm synchron im
-// Sekundentakt, statt dass jeder Blip auf seine eigene Keulenpassage
-// wartet. Am 27.07. am Panel gesehen.
+// Blips werden WIEDERVERWENDET, nicht neu gebaut. Ein neu erzeugtes
+// Element startet seine CSS-Animation von vorn, und da render() im
+// Sekundentakt laeuft, blinkte sonst der ganze Schirm synchron.
 //
-// Auch das animation-delay wird nur bei Bedarf angefasst: Es aus der
-// Peilung neu zu setzen wuerde die Animation ebenfalls neu starten. Erst
-// ab MIN_RESYNC_DEG lohnt die Korrektur -- 5 Grad sind bei sweep_s = 5
-// rund 70 ms Phasenfehler, unsichtbar, waehrend ein Ziel dafuer meist
-// Minuten braucht.
+// Die Animation sitzt auf einem eigenen Punkt-Element, NICHT auf dem
+// Behaelter: Deckkraft multipliziert sich auf alle Kinder, ein Kind kann
+// seinen Vater nicht ueberstrahlen. Laege die Animation auf dem
+// Behaelter, pulsierten Beschriftung und Track-Vektor mit -- und ein
+// Callsign, das im Takt der Keule blinkt, ist auf einem Wanddisplay
+// unlesbar. Am 27.07. am Panel gesehen.
 const MIN_RESYNC_DEG = 5;
 
-function renderBlips(root, cfg, targets) {
+function renderBlips(root, cfg, targets, sweepStart) {
   const gesehen = new Set();
   for (const t of targets) {
     if (!t.hex) continue;
@@ -162,12 +164,16 @@ function renderBlips(root, cfg, targets) {
     if (!el) {
       el = document.createElement('div');
       el.dataset.hex = t.hex;
-      el.innerHTML = '<i class="vec"></i><span class="lab"></span>';
-      el.style.animationDuration = cfg.radar.sweep_s + 's';
-      setPhase(el, cfg, t.brg);
+      // Entstehungszeit merken: Die CSS-Animation rechnet ihre Phase ab
+      // diesem Moment, das animation-delay muss den Versatz zur Keule
+      // ausgleichen (siehe setPhase).
+      el.dataset.tc = String(performance.now());
+      el.innerHTML = '<i class="dot"></i><i class="vec"></i><span class="lab"></span>';
+      el.querySelector('.dot').style.animationDuration = cfg.radar.sweep_s + 's';
       root.appendChild(el);
+      setPhase(el, cfg, t.brg, sweepStart);
     } else if (Math.abs(angleDiff(Number(el.dataset.brg), t.brg)) >= MIN_RESYNC_DEG) {
-      setPhase(el, cfg, t.brg);
+      setPhase(el, cfg, t.brg, sweepStart);
     }
 
     el.className = 'blip' + (t.heavy ? ' heavy' : '') + (t.emergency ? ' emg' : '');
@@ -202,11 +208,23 @@ function renderBlips(root, cfg, targets) {
   }
 }
 
-// Die Keule beginnt bei 000 und laeuft im Uhrzeigersinn. Ein Ziel bei der
-// Peilung brg wird nach brg/360 einer Umdrehung ueberstrichen -- genau
-// dann soll der Keyframe bei 0 Prozent stehen.
-function setPhase(el, cfg, brg) {
-  el.style.animationDelay = (brg / 360 * cfg.radar.sweep_s).toFixed(3) + 's';
+// Die Keule laeuft ab `sweepStart` im Uhrzeigersinn, ein Umlauf dauert
+// sweep_s. Ein Ziel bei der Peilung brg wird nach brg/360 einer Umdrehung
+// ueberstrichen.
+//
+// Der Haken: Eine CSS-Animation zaehlt ihre Zeit ab dem Moment, in dem ihr
+// Element entstand -- und ein Blip entsteht, wenn sein Ziel auftaucht,
+// nicht wenn die Seite laedt. Ohne Ausgleich passen nur die Ziele, die
+// beim Laden schon da waren; alle spaeteren laufen um die verstrichene
+// Zeit versetzt und leuchten nie unter der Keule auf. Genau das war am
+// 27.07. am Panel zu sehen. Das Delay zieht diesen Versatz ab und darf
+// dabei negativ werden -- ein negatives animation-delay bedeutet, die
+// Animation laeuft, als sei sie bereits eine Weile gelaufen.
+function setPhase(el, cfg, brg, sweepStart) {
+  const T = cfg.radar.sweep_s;
+  const seitStart = ((Number(el.dataset.tc) - sweepStart) / 1000) % T;
+  const delay = (brg / 360) * T - seitStart;
+  el.querySelector('.dot').style.animationDelay = delay.toFixed(3) + 's';
   el.dataset.brg = String(brg);
 }
 

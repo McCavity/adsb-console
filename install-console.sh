@@ -353,6 +353,26 @@ else
     echo "console.json existiert bereits -- bestehende Auswahl bleibt unangetastet."
 fi
 
+# Der Uebersetzungs-Chip laesst sich mit Kommandozeilenflags nicht
+# abstellen: Weder --disable-infobars noch --disable-features=Translate
+# noch --lang=de haben ihn am 27.07. auf dem Panel verschwinden lassen
+# (das Flag war im laufenden Prozess nachweislich gesetzt). Chromium bietet
+# fuer genau diesen Fall eine verwaltete Richtlinie; die greift, weil sie
+# nicht am Start haengt, sondern an der Profil-Konfiguration.
+#
+# Die Seite deklariert bewusst weiterhin lang="de". Sie stattdessen als
+# englisch auszugeben wuerde den Chip zwar auch vertreiben, waere aber eine
+# Falschangabe, an der sich Silbentrennung und Screenreader orientieren.
+echo "Uebersetzungs-Richtlinie hinterlegen …"
+POLICY_DIR=/etc/chromium/policies/managed
+install -d -m 0755 "$POLICY_DIR"
+cat > "$POLICY_DIR/atc-console.json" <<'EOF'
+{
+  "TranslateEnabled": false
+}
+EOF
+chmod 0644 "$POLICY_DIR/atc-console.json"
+
 echo "Installing systemd service …"
 # GROUPS_TO_ADD above is already the deduplicated set (video, seat group,
 # and render group where one was found) — reuse it verbatim rather than
