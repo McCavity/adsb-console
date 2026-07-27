@@ -377,6 +377,30 @@ class Position(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             d.read_receiver_position([b"/usr/bin/dump1090-fa\x00--max-range\x00360\x00"])
 
+    def test_unlesbarer_eintrag_wird_uebersprungen(self):
+        # Der einzige Pfad, der eine echte Race Condition abfaengt: ein
+        # Prozess verschwindet zwischen glob und Lesen, oder sein Eintrag ist
+        # nicht lesbar. Ohne diesen Test existiert die Schutzlogik nur als
+        # Behauptung. (Als root wuerde der Test zu Recht scheitern -- dann
+        # ist der unlesbare Eintrag naemlich lesbar.)
+        with tempfile.TemporaryDirectory() as tmp:
+            good = Path(tmp) / "1" / "cmdline"
+            bad = Path(tmp) / "2" / "cmdline"
+            for f in (good, bad):
+                f.parent.mkdir()
+            good.write_bytes(b"/usr/bin/dump1090-fa\x00--lat\x0012.34567\x00"
+                             b"--lon\x00-4.56789\x00")
+            bad.write_bytes(b"/usr/bin/dump1090-fa\x00--lat\x0099.9\x00--lon\x0099.9\x00")
+            bad.chmod(0o000)
+            try:
+                pattern = str(Path(tmp) / "[0-9]*" / "cmdline")
+                self.assertEqual(len(list(d._iter_proc_cmdlines(pattern))), 1)
+                self.assertEqual(
+                    d.read_receiver_position(d._iter_proc_cmdlines(pattern)),
+                    (12.34567, -4.56789))
+            finally:
+                bad.chmod(0o600)        # sonst schlaegt das Aufraeumen fehl
+
 
 class Geometrie(unittest.TestCase):
     def test_ein_breitengrad_sind_60_nm(self):
@@ -475,12 +499,19 @@ def parse_position_from_cmdline(argv: list[str]) -> tuple[float, float] | None:
     return found["--lat"], found["--lon"]
 
 
-def _iter_proc_cmdlines():
-    for path in glob.glob("/proc/[0-9]*/cmdline"):
+PROC_CMDLINE_GLOB = "/proc/[0-9]*/cmdline"
+
+
+def _iter_proc_cmdlines(pattern: str = PROC_CMDLINE_GLOB):
+    """cmdline-Puffer aller Prozesse. Das Muster ist ein Parameter, damit der
+    Ueberspring-Pfad unten testbar ist statt nur behauptet."""
+    for path in glob.glob(pattern):
         try:
             yield Path(path).read_bytes()
         except OSError:
-            continue        # Prozess ist zwischen glob und Lesen verschwunden
+            continue        # Prozess zwischen glob und Lesen verschwunden,
+                            # oder Eintrag nicht lesbar -- beides kein Grund
+                            # aufzugeben, es gibt weitere Kandidaten
 
 
 def read_receiver_position(cmdlines=None) -> tuple[float, float]:
@@ -548,8 +579,8 @@ def atomic_write_json(path: Path, obj) -> None:
 - [ ] **Schritt 4: Test laufen lassen, Bestehen bestätigen**
 
 Ausführen: `python3 -m unittest discover -s tests -v`
-Erwartet: PASS, 15 Tests
-(3 Drosselung, 7 Position, 3 Geometrie, 2 atomares Schreiben).
+Erwartet: PASS, 16 Tests
+(3 Drosselung, 8 Position, 3 Geometrie, 2 atomares Schreiben).
 
 - [ ] **Schritt 5: Den Drosselungs-Test absichtlich rot machen**
 
@@ -812,7 +843,7 @@ def usable_positions(doc, lat0, lon0, max_nm=MAX_PLAUSIBLE_NM) -> list[dict]:
 - [ ] **Schritt 4: Test laufen lassen, Bestehen bestätigen**
 
 Ausführen: `python3 -m unittest discover -s tests -v`
-Erwartet: PASS, 28 Tests.
+Erwartet: PASS, 29 Tests.
 
 - [ ] **Schritt 5: Den Fensterschnitt absichtlich rot machen**
 
@@ -1088,7 +1119,7 @@ if __name__ == "__main__":
 - [ ] **Schritt 4: Test laufen lassen, Bestehen bestätigen**
 
 Ausführen: `python3 -m unittest discover -s tests -v`
-Erwartet: PASS, 32 Tests.
+Erwartet: PASS, 33 Tests.
 
 - [ ] **Schritt 5: Die Unit schreiben**
 
@@ -2798,7 +2829,7 @@ Erwartet: PASS, 6 Tests.
 
 Ausführen: `node --test tests/*.mjs && python3 -m unittest discover -s tests -v`
 Erwartet: 34 JavaScript-Tests (11 geo, 6 config, 3 airports, 4 radar, 4 board, 6 stats)
-und 32 Python-Tests, alle grün.
+und 33 Python-Tests, alle grün.
 
 - [ ] **Schritt 6: Commit**
 
