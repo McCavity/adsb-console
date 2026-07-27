@@ -141,3 +141,9 @@ html, body {
 .blip.sel.emg .vec { background: #ff5a5a; }
 .radar-side .tile.emg { border-color: #7a1d1d; background: #240d0d; }
 .radar-side .red { color: #ff5a5a; }
+
+/* Flugzeugsymbol im Datenblock, in Flugrichtung gedreht */
+.radar-side .ac { width: 32px; height: 32px; fill: #8fb8a0; flex: 0 0 32px;
+                  transform-origin: 50% 50%; }
+.radar-side .ac.unbekannt { opacity: .25; }
+.radar-side .sub { font-size: 26px; color: #b8f5cc; font-variant-numeric: tabular-nums; }
