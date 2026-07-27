@@ -21,12 +21,17 @@ set -euo pipefail
 SERVICE_USER=atc
 SERVICE_FILE=atc-console.service
 CONSOLE_STATE_DIR=/var/lib/atc-console
-# The correct value for THIS panel and its mounting is not yet known — it is
-# measured at the device in the next step of the plan (tap all four labelled
-# corners in console/index.html and read which one lights up). 90 here is
-# only a placeholder carried over from a sibling project's install script
-# (jeelink-davis) on different hardware; it must not be trusted for this
-# panel and is expected to be overridden on the actual install run.
+# 90 is the value MEASURED for this panel (adsapp01, 7" DSI touch panel) and
+# its current mounting — both by eye (the labelled corner read correctly) and
+# by touch (all four corners tapped, each registered where tapped); see
+# docs/messungen/2026-07-27-panel-rotation.md. This default is a real,
+# verified value for THIS device, not a placeholder carried over from a
+# sibling project — but it does not transfer to different hardware or a
+# different mounting of this same panel. There, re-measure and pass
+# --rotate explicitly rather than trusting this default: labwc rotates the
+# output but not touch input (see the calibrationMatrix derivation below),
+# so a wrong value produces an image that looks perfectly correct while
+# every tap lands on the wrong spot.
 ROTATE=90
 OUTPUT=DSI-1
 
@@ -200,14 +205,18 @@ chmod +x "$CONSOLE_STATE_DIR/.config/labwc/autostart"
 # rotated image and an unrotated touch surface disagree about where the
 # screen's corners are: taps land on the wrong part of the display. The
 # matrix is derived from $ROTATE rather than hardcoded, so the script stays
-# correct if the panel is ever mounted a different way. Only the 90 case
-# below has actually been verified on real hardware in the sibling project
-# (reproduced the mismatch, fixed it by hand with this exact matrix, then
-# confirmed the leftmost/rightmost page dots select the first/last page);
-# 0/180/270 follow from the same rotation-matrix derivation and carry that
-# reasoning, not independent verification — and none of the four have been
-# verified on THIS panel yet, which is exactly what the corner-tap test in
-# console/index.html is for.
+# correct if the panel is ever mounted a different way. The 90 case below
+# has now been verified on THIS panel — measured at the device by eye and
+# by touch (all four corners tapped, each registered where tapped); see
+# docs/messungen/2026-07-27-panel-rotation.md. 0/180/270 follow from the
+# same rotation-matrix derivation and carry that reasoning, not independent
+# verification on this hardware — if this panel is ever mounted a
+# different way, verify the new value the same way: read whether the
+# on-screen labelling (page title, clock) appears upright, then tap all
+# four corners of the touch surface and confirm each tap's effect lands
+# where expected (e.g. the leftmost/rightmost page dot selects the
+# first/last page). There is no dedicated corner-test page for this
+# anymore — console/index.html now serves the real console.
 case "$ROTATE" in
     0)   CALIBRATION_MATRIX="1 0 0 0 1 0" ;;
     90)  CALIBRATION_MATRIX="0 -1 1 1 0 0" ;;
@@ -403,9 +412,25 @@ if [[ -z "$RENDER_GROUP" ]]; then
     echo "the kiosk will run under software rendering."
 fi
 echo ""
-echo "--rotate was $ROTATE — this is a PLACEHOLDER carried over from a"
-echo "different device, not a measured value for this panel. Read the four"
-echo "labelled corners on the panel now; if the image is upside down or"
-echo "mirrored, re-run with --rotate 0, 180 or 270 until the corners read"
-echo "correctly, then confirm by tapping each corner and checking that the"
-echo "on-screen message names the corner actually touched."
+# There is no dedicated corner-test page to point at anymore —
+# console/index.html now serves the real console — so verification uses the
+# console's own on-screen elements instead: the page title/clock for the
+# eye check, the page dots for the touch check.
+if [[ "$ROTATE" == "90" ]]; then
+    echo "--rotate was 90 — this is the value MEASURED for THIS panel (see"
+    echo "docs/messungen/2026-07-27-panel-rotation.md), not a placeholder."
+    echo "It still can't be assumed to hold if this exact panel is ever"
+    echo "remounted differently, or on different hardware. To verify: check"
+    echo "that the header (page title, clock) reads upright, then tap all"
+    echo "four corners of the touch surface and confirm each tap lands where"
+    echo "expected — e.g. the leftmost/rightmost page dot selects the"
+    echo "first/last page."
+else
+    echo "--rotate was $ROTATE, which differs from the 90 measured for THIS"
+    echo "panel (see docs/messungen/2026-07-27-panel-rotation.md) and has NOT"
+    echo "been verified here. Verify it now: check that the header (page"
+    echo "title, clock) reads upright, then tap all four corners of the touch"
+    echo "surface and confirm each tap lands where expected — e.g. the"
+    echo "leftmost/rightmost page dot selects the first/last page. If it"
+    echo "doesn't, re-run with --rotate 0, 90, 180 or 270 until it does."
+fi
