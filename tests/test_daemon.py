@@ -70,6 +70,30 @@ class Position(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             d.read_receiver_position([b"/usr/bin/dump1090-fa\x00--max-range\x00360\x00"])
 
+    def test_unlesbarer_eintrag_wird_uebersprungen(self):
+        # Der einzige Pfad, der eine echte Race Condition abfaengt: ein
+        # Prozess verschwindet zwischen glob und Lesen, oder sein Eintrag ist
+        # nicht lesbar. Ohne diesen Test existiert die Schutzlogik nur als
+        # Behauptung. (Als root wuerde der Test zu Recht scheitern -- dann
+        # ist der unlesbare Eintrag naemlich lesbar.)
+        with tempfile.TemporaryDirectory() as tmp:
+            good = Path(tmp) / "1" / "cmdline"
+            bad = Path(tmp) / "2" / "cmdline"
+            for f in (good, bad):
+                f.parent.mkdir()
+            good.write_bytes(b"/usr/bin/dump1090-fa\x00--lat\x0012.34567\x00"
+                             b"--lon\x00-4.56789\x00")
+            bad.write_bytes(b"/usr/bin/dump1090-fa\x00--lat\x0099.9\x00--lon\x0099.9\x00")
+            bad.chmod(0o000)
+            try:
+                pattern = str(Path(tmp) / "[0-9]*" / "cmdline")
+                self.assertEqual(len(list(d._iter_proc_cmdlines(pattern))), 1)
+                self.assertEqual(
+                    d.read_receiver_position(d._iter_proc_cmdlines(pattern)),
+                    (12.34567, -4.56789))
+            finally:
+                bad.chmod(0o600)        # sonst schlaegt das Aufraeumen fehl
+
 
 class Geometrie(unittest.TestCase):
     def test_ein_breitengrad_sind_60_nm(self):
