@@ -344,6 +344,21 @@ class StundenfensterVorbelegung(unittest.TestCase):
             d.seed_hour_window(w, run, 12.0, 34.0)
             self.assertEqual([ts for ts, _, _ in w._items], [1000.0, 2000.0])
 
+    def test_ausnahme_im_durchlauf_toetet_den_dienst_nicht(self):
+        # Volle Platte, SQLite-Fehler, unerwartete Datenform: Der Dienst
+        # laeuft weiter und meldet den Fehler, statt abzustuerzen und alle
+        # paar Sekunden aus 120 History-Dateien neu vorzubelegen.
+        def explodiert(*args, **kwargs):
+            raise RuntimeError("kein Platz mehr auf dem Geraet")
+        orig = d._tick
+        d._tick = explodiert
+        try:
+            self.assertEqual(
+                d._safe_tick(None, None, None, None, 0.0, 0.0, 5.0, 7.0),
+                (5.0, 7.0))          # Zeitmarken bleiben unveraendert
+        finally:
+            d._tick = orig
+
     def test_kaputte_history_datei_wird_uebersprungen(self):
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp)
