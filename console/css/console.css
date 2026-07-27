@@ -105,3 +105,22 @@ html, body {
 .blip .vec { position: absolute; left: 50%; bottom: 50%; width: 1.5px;
              background: #8fe6ab; transform-origin: 50% 100%; opacity: 1; }
 .blip.emg .vec { background: #ff5a5a; }
+
+/* Datenblock rechts neben dem Schirm */
+.radar-side .tile { background:#0b1f13; border:1px solid #14361f; border-radius:12px;
+                    padding:14px 18px; display:flex; flex-direction:column;
+                    justify-content:center; min-width:0; }
+.radar-side .tile.ctr { align-items:center; text-align:center; }
+.radar-side .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.radar-side .lbl { font-size:16px; text-transform:uppercase; letter-spacing:.11em;
+                   color:#4e9c6a; font-weight:600; }
+.radar-side .huge { line-height:.9; font-weight:300; letter-spacing:-.02em; }
+.radar-side .big { font-size:56px; line-height:1; font-weight:300;
+                   font-variant-numeric:tabular-nums; }
+.radar-side .med { font-size:38px; line-height:1; font-weight:300;
+                   font-variant-numeric:tabular-nums; }
+.radar-side .unit-s { font-size:18px; color:#4e9c6a; margin-left:5px; }
+.radar-side .sub-d { font-size:17px; color:#4e9c6a; font-variant-numeric:tabular-nums; }
+.radar-side .row { display:flex; align-items:baseline; }
+.radar-side .em { color:#3ddc84; } .radar-side .sky { color:#67d5f5; }
+.radar-side .amber { color:#f0b429; } .radar-side .slate { color:#8fb8a0; }
