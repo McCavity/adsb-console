@@ -306,6 +306,7 @@ git commit -m "Reine Rechenfunktionen mit unabhaengig kalibrierten Tests"
 ```python
 # tests/test_daemon.py
 import json
+import stat
 import sys
 import tempfile
 import unittest
@@ -433,6 +434,18 @@ class AtomaresSchreiben(unittest.TestCase):
             d.atomic_write_json(p, {"a": 1})
             self.assertEqual([f.name for f in Path(tmp).iterdir()], ["out.json"])
 
+    def test_datei_ist_fuer_fremde_prozesse_lesbar(self):
+        # Der Zweck dieser Dateien ist, dass ein ANDERER Prozess sie liest
+        # (lighttpd als www-data). mkstemp legt mit 0600 an und os.replace
+        # behaelt den Modus -- ohne chmod antwortet der Webserver mit 403,
+        # obwohl die Datei einwandfrei geschrieben wurde. Genau so am
+        # 27.07. auf dem Geraet aufgetreten; kein Test hatte es gefangen,
+        # weil alle als derselbe Benutzer zuruecklesen.
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "out.json"
+            d.atomic_write_json(p, {"a": 1})
+            self.assertEqual(stat.S_IMODE(p.stat().st_mode), 0o644)
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -559,9 +572,17 @@ def sector_of(deg: float, count: int = 36) -> int:
     return int((deg % 360 + 360) % 360 // (360 / count))
 
 
-def atomic_write_json(path: Path, obj) -> None:
+def atomic_write_json(path: Path, obj, mode: int = 0o644) -> None:
     """Schreiben und umbenennen. Ein halb geschriebenes JSON darf das
-    Frontend nie sehen."""
+    Frontend nie sehen.
+
+    Der chmod ist nicht kosmetisch: mkstemp legt mit 0600 an, und
+    os.replace behaelt diesen Modus bei. Der Sinn dieser Dateien ist
+    aber, dass ein ANDERER Prozess sie liest -- lighttpd als www-data.
+    Ohne chmod liefert der Webserver 403, waehrend die Datei tadellos
+    dasteht und jeder Test gruen ist, weil er als derselbe Benutzer
+    zurueckliest (am 27.07. am Geraet genau so aufgetreten).
+    """
     path = Path(path)
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=".tmp-")
     try:
@@ -569,6 +590,7 @@ def atomic_write_json(path: Path, obj) -> None:
             json.dump(obj, f, separators=(",", ":"))
             f.flush()
             os.fsync(f.fileno())
+        os.chmod(tmp, mode)
         os.replace(tmp, path)
     except BaseException:
         if os.path.exists(tmp):
@@ -579,8 +601,8 @@ def atomic_write_json(path: Path, obj) -> None:
 - [ ] **Schritt 4: Test laufen lassen, Bestehen bestätigen**
 
 Ausführen: `python3 -m unittest discover -s tests -v`
-Erwartet: PASS, 16 Tests
-(3 Drosselung, 8 Position, 3 Geometrie, 2 atomares Schreiben).
+Erwartet: PASS, 17 Tests
+(3 Drosselung, 8 Position, 3 Geometrie, 3 atomares Schreiben).
 
 - [ ] **Schritt 5: Den Drosselungs-Test absichtlich rot machen**
 
@@ -871,7 +893,7 @@ def usable_positions(doc, lat0, lon0, max_nm=MAX_PLAUSIBLE_NM) -> list[dict]:
 - [ ] **Schritt 4: Test laufen lassen, Bestehen bestätigen**
 
 Ausführen: `python3 -m unittest discover -s tests -v`
-Erwartet: PASS, 31 Tests.
+Erwartet: PASS, 32 Tests.
 
 - [ ] **Schritt 5: Den Fensterschnitt absichtlich rot machen**
 
@@ -1250,7 +1272,7 @@ if __name__ == "__main__":
 - [ ] **Schritt 4: Test laufen lassen, Bestehen bestätigen**
 
 Ausführen: `python3 -m unittest discover -s tests -v`
-Erwartet: PASS, 42 Tests.
+Erwartet: PASS, 43 Tests.
 
 - [ ] **Schritt 5: Die Unit schreiben**
 
@@ -2960,7 +2982,7 @@ Erwartet: PASS, 6 Tests.
 
 Ausführen: `node --test tests/*.mjs && python3 -m unittest discover -s tests -v`
 Erwartet: 34 JavaScript-Tests (11 geo, 6 config, 3 airports, 4 radar, 4 board, 6 stats)
-und 42 Python-Tests, alle grün.
+und 43 Python-Tests, alle grün.
 
 - [ ] **Schritt 6: Commit**
 
