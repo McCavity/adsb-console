@@ -57,3 +57,43 @@ html, body {
 .stats-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid #14361f;
               display: flex; gap: 40px; font-size: 20px; color: #4e9c6a; }
 .stats-foot b { color: #b8f5cc; }
+
+.radar-wrap { position: relative; width: 620px; height: 620px; flex: 0 0 620px; }
+.radar-wrap canvas { position: absolute; inset: 0; }
+.radar-side { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+
+/* Die Keule: ein einziges Element, vom Compositor gedreht. Der
+   conic-gradient ist der Nachlauf -- hell an der Vorderkante, dann
+   auslaufend. Kein JavaScript beteiligt. */
+.sweep { position: absolute; inset: 0; border-radius: 50%;
+         background: conic-gradient(from 0deg,
+           rgba(125,251,161,.55) 0deg, rgba(125,251,161,.18) 12deg,
+           rgba(125,251,161,.06) 40deg, rgba(125,251,161,0) 90deg,
+           rgba(125,251,161,0) 360deg);
+         animation: sweep-rot 5s linear infinite;
+         will-change: transform; pointer-events: none; }
+@keyframes sweep-rot { to { transform: rotate(360deg); } }
+
+.blips { position: absolute; inset: 0; pointer-events: none; }
+/* Jeder Blip leuchtet auf, wenn die Keule ihn passiert, und verglimmt --
+   phasengleich ueber animation-delay, ohne Synchronisation im Code. */
+.blip { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
+        border-radius: 50%; background: #b8ffcf;
+        animation: blip-phosphor 5s linear infinite; will-change: opacity; }
+.blip.heavy { width: 10px; height: 10px; margin: -5px 0 0 -5px; }
+.blip.emg   { background: #ff5a5a; }
+@keyframes blip-phosphor {
+  0%   { opacity: 1; }
+  24%  { opacity: .45; }   /* entspricht decay_s = 6 bei sweep_s = 5 */
+  60%  { opacity: .18; }
+  100% { opacity: .18; }
+}
+/* Beschriftung und Track-Vektor bleiben konstant hell -- sie sind
+   Zusatzinformation, kein Radarecho. */
+.blip .lab { position: absolute; left: 10px; top: -4px; white-space: pre;
+             font-size: 13px; line-height: 1.15; color: #8fe6ab;
+             font-family: ui-monospace, monospace; opacity: 1; }
+.blip.emg .lab { color: #ff5a5a; }
+.blip .vec { position: absolute; left: 50%; bottom: 50%; width: 1.5px;
+             background: #8fe6ab; transform-origin: 50% 100%; opacity: 1; }
+.blip.emg .vec { background: #ff5a5a; }
