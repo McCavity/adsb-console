@@ -1012,6 +1012,21 @@ class StundenfensterVorbelegung(unittest.TestCase):
             d.seed_hour_window(w, run, 12.0, 34.0)
             self.assertEqual([ts for ts, _, _ in w._items], [1000.0, 2000.0])
 
+    def test_ausnahme_im_durchlauf_toetet_den_dienst_nicht(self):
+        # Volle Platte, SQLite-Fehler, unerwartete Datenform: Der Dienst
+        # laeuft weiter und meldet den Fehler, statt abzustuerzen und alle
+        # paar Sekunden aus 120 History-Dateien neu vorzubelegen.
+        def explodiert(*args, **kwargs):
+            raise RuntimeError("kein Platz mehr auf dem Geraet")
+        orig = d._tick
+        d._tick = explodiert
+        try:
+            self.assertEqual(
+                d._safe_tick(None, None, None, None, 0.0, 0.0, 5.0, 7.0),
+                (5.0, 7.0))          # Zeitmarken bleiben unveraendert
+        finally:
+            d._tick = orig
+
     def test_kaputte_history_datei_wird_uebersprungen(self):
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp)
@@ -1035,6 +1050,7 @@ Erwartet: FAIL — `AttributeError: module 'atc_daemon' has no attribute 'build_
 # daemon/atc_daemon.py -- anhaengen
 import argparse
 import shutil
+import traceback
 import signal
 import subprocess
 import time
@@ -1239,30 +1255,58 @@ def main(argv=None) -> int:
     last_system = 0.0
     last_range = 0.0
     while _running:
-        now = time.time()
-        try:
-            doc = json.loads((run_dir / "aircraft.json").read_text())
-        except (OSError, ValueError):
-            doc = None
-        if doc:
-            stamp = datetime.now().astimezone().isoformat(timespec="seconds")
-            for t in usable_positions(doc, lat0, lon0):
-                window.add(now, t["sector"], t["nm"])
-                store.update(t["sector"], t["nm"], t["hex"],
-                             t["callsign"], t["alt_ft"], stamp)
-        if now - last_system >= SYSTEM_EVERY_S:
-            v = read_vcgencmd_cached(now)
-            atomic_write_json(out_dir / "system.json",
-                              build_system_json(v["throttled"], v["available"],
-                                                v["clock_hz"], v["volts"]))
-            last_system = now
-        if now - last_range >= RANGE_EVERY_S:
-            atomic_write_json(out_dir / "range.json",
-                              build_range_json(store, window, now))
-            last_range = now
+        last_system, last_range = _safe_tick(store, window, run_dir, out_dir,
+                                             lat0, lon0, last_system, last_range)
         time.sleep(POLL_S)
     print("beendet", flush=True)
     return 0
+
+
+def _safe_tick(store, window, run_dir, out_dir, lat0, lon0, last_system, last_range):
+    """_tick mit Fehlerbehandlung -- eigene Funktion, damit die Zusage
+    'ein Fehler toetet den Dienst nicht' pruefbar ist statt behauptet.
+
+    Ein Dienst, der monatelang laufen soll, darf an einer vollen Platte
+    oder einem SQLite-Fehler nicht sterben. Restart=always faengt das zwar
+    auf, aber als Absturz-Neustart-Zyklus mit Neuvorbelegung aus 120
+    Dateien alle paar Sekunden -- das ist kein Weiterlaufen. Der Traceback
+    geht ins Journal, damit der Fehler sichtbar bleibt statt still
+    verschluckt zu werden.
+    """
+    try:
+        return _tick(store, window, run_dir, out_dir,
+                     lat0, lon0, last_system, last_range)
+    except Exception:
+        traceback.print_exc()
+        return last_system, last_range
+
+
+def _tick(store, window, run_dir, out_dir, lat0, lon0, last_system, last_range):
+    """Ein Schleifendurchlauf. Ausgelagert, damit die Schleife selbst nur
+    noch aus Fehlerbehandlung besteht und jeder Schritt darin geschuetzt
+    ist -- nicht nur das Lesen von aircraft.json."""
+    now = time.time()
+    try:
+        doc = json.loads((run_dir / "aircraft.json").read_text())
+    except (OSError, ValueError):
+        doc = None
+    if doc:
+        stamp = datetime.now().astimezone().isoformat(timespec="seconds")
+        for t in usable_positions(doc, lat0, lon0):
+            window.add(now, t["sector"], t["nm"])
+            store.update(t["sector"], t["nm"], t["hex"],
+                         t["callsign"], t["alt_ft"], stamp)
+    if now - last_system >= SYSTEM_EVERY_S:
+        v = read_vcgencmd_cached(now)
+        atomic_write_json(out_dir / "system.json",
+                          build_system_json(v["throttled"], v["available"],
+                                            v["clock_hz"], v["volts"]))
+        last_system = now
+    if now - last_range >= RANGE_EVERY_S:
+        atomic_write_json(out_dir / "range.json",
+                          build_range_json(store, window, now))
+        last_range = now
+    return last_system, last_range
 
 
 if __name__ == "__main__":
@@ -1272,7 +1316,7 @@ if __name__ == "__main__":
 - [ ] **Schritt 4: Test laufen lassen, Bestehen bestätigen**
 
 Ausführen: `python3 -m unittest discover -s tests -v`
-Erwartet: PASS, 43 Tests.
+Erwartet: PASS, 44 Tests.
 
 - [ ] **Schritt 5: Die Unit schreiben**
 
@@ -2989,7 +3033,7 @@ Erwartet: PASS, 6 Tests.
 
 Ausführen: `node --test tests/*.mjs && python3 -m unittest discover -s tests -v`
 Erwartet: 34 JavaScript-Tests (11 geo, 6 config, 3 airports, 4 radar, 4 board, 6 stats)
-und 43 Python-Tests, alle grün.
+und 44 Python-Tests, alle grün.
 
 - [ ] **Schritt 6: Commit**
 
