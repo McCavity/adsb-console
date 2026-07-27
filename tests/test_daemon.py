@@ -1,5 +1,4 @@
 import json
-import os
 import sys
 import tempfile
 import unittest
@@ -33,30 +32,43 @@ class ThrottleParser(unittest.TestCase):
 
 
 class Position(unittest.TestCase):
-    def test_liest_lat_und_lon(self):
-        # Erfundene Koordinaten -- die echte Position gehoert nicht ins Repo.
-        with tempfile.NamedTemporaryFile("w", suffix=".conf", delete=False) as f:
-            f.write('# Kommentar\nRECEIVER_OPTIONS="--device 0"\n'
-                    'LAT=12.3456\nLON=-4.5678\n')
-            path = f.name
-        try:
-            self.assertEqual(d.read_receiver_position(path), (12.3456, -4.5678))
-        finally:
-            os.unlink(path)
+    # Alle Koordinaten hier sind erfunden -- die echte Position gehoert nicht
+    # ins Repo. Gelesen wird zur Laufzeit die WIRKSAME Position des laufenden
+    # dump1090-fa aus /proc/<pid>/cmdline, nicht eine Konfigdatei: auf dem
+    # Zielgeraet sind RECEIVER_LAT/RECEIVER_LON in /etc/default/dump1090-fa
+    # leer, und die Position kommt aus der piaware-Konfiguration.
+    def test_zieht_lat_und_lon_aus_der_argumentliste(self):
+        argv = ["/usr/bin/dump1090-fa", "--device-type", "rtlsdr",
+                "--lat", "12.34567", "--lon", "-4.56789", "--max-range", "360"]
+        self.assertEqual(d.parse_position_from_cmdline(argv), (12.34567, -4.56789))
 
-    def test_fehlende_datei_ist_ein_klarer_fehler(self):
-        with self.assertRaises(FileNotFoundError):
-            d.read_receiver_position("/nicht/vorhanden/dump1090-fa")
+    def test_nur_eine_haelfte_ist_keine_position(self):
+        self.assertIsNone(d.parse_position_from_cmdline(
+            ["/usr/bin/dump1090-fa", "--lat", "12.34567"]))
 
-    def test_datei_ohne_position_ist_ein_klarer_fehler(self):
-        with tempfile.NamedTemporaryFile("w", delete=False) as f:
-            f.write("RECEIVER_OPTIONS=\n")
-            path = f.name
-        try:
-            with self.assertRaises(ValueError):
-                d.read_receiver_position(path)
-        finally:
-            os.unlink(path)
+    def test_flag_am_ende_ohne_wert(self):
+        # Wuerde ohne Laengenpruefung einen IndexError werfen.
+        self.assertIsNone(d.parse_position_from_cmdline(
+            ["/usr/bin/dump1090-fa", "--lon", "-4.5", "--lat"]))
+
+    def test_unlesbarer_wert(self):
+        self.assertIsNone(d.parse_position_from_cmdline(
+            ["/usr/bin/dump1090-fa", "--lat", "sued", "--lon", "-4.5"]))
+
+    def test_liest_aus_cmdline_puffern(self):
+        cmdlines = [
+            b"/usr/bin/python3\x00-m\x00http.server\x00",
+            b"/usr/bin/dump1090-fa\x00--lat\x0012.34567\x00--lon\x00-4.56789\x00",
+        ]
+        self.assertEqual(d.read_receiver_position(cmdlines), (12.34567, -4.56789))
+
+    def test_kein_dump1090_prozess_ist_ein_klarer_fehler(self):
+        with self.assertRaises(RuntimeError):
+            d.read_receiver_position([b"/usr/bin/python3\x00-m\x00http.server\x00"])
+
+    def test_dump1090_ohne_position_ist_ein_klarer_fehler(self):
+        with self.assertRaises(RuntimeError):
+            d.read_receiver_position([b"/usr/bin/dump1090-fa\x00--max-range\x00360\x00"])
 
 
 class Geometrie(unittest.TestCase):
