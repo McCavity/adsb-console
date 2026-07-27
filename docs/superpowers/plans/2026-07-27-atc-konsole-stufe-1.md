@@ -2447,7 +2447,7 @@ Erwartet: FAIL — `Cannot find module .../console/js/pages/radar.js`.
 
 ```javascript
 // console/js/pages/radar.js
-import { haversineNm, bearingDeg, formatCallsign, flightLevel, isEmergency }
+import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel, isEmergency }
   from '../geo.js';
 import { registerPage } from '../console.js';
 
@@ -2593,11 +2593,13 @@ registerPage({
           brg: bearingDeg(state.receiver.lat, state.receiver.lon, a.lat, a.lon),
           callsign: formatCallsign(a.flight), fl: flightLevel(a.alt_baro),
           squawk: a.squawk || null, gs: a.gs, track: a.track,
+          rate: typeof a.baro_rate === 'number' ? a.baro_rate : null,
           heavy: a.category === 'A5', emergency: isEmergency(a),
         };
       })
       .filter(t => t.nm <= cfg.radar.range_nm) : [];
     renderBlips(c.blips, cfg, targets, c.sweepStart);
+    renderSide(el.querySelector('.radar-side'), cfg, state, targets);
   },
 });
 
@@ -2686,6 +2688,68 @@ function setPhase(el, cfg, brg, sweepStart) {
   el.dataset.brg = String(brg);
 }
 
+// Der Datenblock rechts neben dem Schirm. Er ergaenzt das Bild, statt es
+// zu wiederholen: Was der Kreis zeigt (wo etwas ist), zeigt er nicht noch
+// einmal; er zeigt, was man aus dem Kreis nicht ablesen kann.
+function renderSide(root, cfg, state, targets) {
+  if (!targets.length) {
+    // Nachts ist das der Normalfall, kein Defekt -- deshalb bleibt die
+    // Nachrichtenrate stehen: Sie laeuft weiter, auch wenn kein Ziel eine
+    // Position sendet, und unterscheidet "nichts fliegt" von "Empfaenger
+    // tot".
+    root.innerHTML = `
+      <div class="tile ctr" style="flex:1">
+        <div class="empty">KEINE ZIELE IN REICHWEITE
+          <div class="empty-sub">Nachrichtenrate ${msgRate(state)} /s</div>
+        </div>
+      </div>`;
+    return;
+  }
+  const naechstes = targets.reduce((a, b) => (b.nm < a.nm ? b : a));
+  const weitestes = targets.reduce((a, b) => (b.nm > a.nm ? b : a));
+  const mitPosition = targets.length;
+  const gesamt = (state.aircraft || []).length;
+  const steig = typeof naechstes.rate === 'number' && Math.abs(naechstes.rate) >= 100
+    ? (naechstes.rate > 0 ? '↑' : '↓') + ' ' + Math.abs(Math.round(naechstes.rate)) + ' ft/min'
+    : '→ level';
+
+  root.innerHTML = `
+    <div class="tile" style="flex:0 0 250px">
+      <div class="lbl">Nächstes Ziel</div>
+      <div class="huge em value" style="font-size:78px;margin:6px 0 10px">
+        ${naechstes.callsign || '——'}${naechstes.heavy ? '<span class="hv"> HEAVY</span>' : ''}</div>
+      <div class="row" style="gap:26px">
+        <span class="med sky">${naechstes.fl}</span>
+        <span class="med amber">${naechstes.nm.toFixed(1)}<span class="unit-s">NM</span></span>
+        <span class="med slate">${formatBearing(naechstes.brg)}</span>
+      </div>
+      <div class="sub-d" style="margin-top:10px">${steig}${naechstes.squawk ? ' · Squawk ' + naechstes.squawk : ''}</div>
+    </div>
+    <div class="grid2" style="flex:1">
+      ${sideTile('Ziele mit Position', mitPosition, '', `von ${gesamt} empfangen`)}
+      ${sideTile('Nachrichten', msgRate(state), '/s', 'letzte Minute')}
+      ${sideTile('Weitestes Ziel', weitestes.nm.toFixed(0), 'NM',
+                 `${weitestes.callsign || '——'} ${formatBearing(weitestes.brg)}`)}
+      ${sideTile('Maßstab', cfg.radar.range_nm, 'NM',
+                 `Ringe ${cfg.radar.rings_nm.join(' · ')}`)}
+    </div>`;
+}
+
+function sideTile(label, wert, einheit, sub) {
+  return `<div class="tile">
+    <div class="lbl">${label}</div>
+    <div class="value"><span class="big em">${wert}<span class="unit-s">${einheit}</span></span></div>
+    <div class="sub-d value">${sub}</div>
+  </div>`;
+}
+
+function msgRate(state) {
+  const s = state.stats && state.stats.last1min;
+  if (!s) return '—';
+  const spanne = s.end - s.start;
+  return spanne > 0 ? Math.round(s.messages / spanne) : '—';
+}
+
 // Kuerzester Winkelabstand, damit der Sprung ueber 360/0 keine
 // Dauer-Neusynchronisation ausloest.
 function angleDiff(a, b) {
@@ -2743,6 +2807,27 @@ Dazu in `console/css/console.css` ergänzen:
 .blip .vec { position: absolute; left: 50%; bottom: 50%; width: 1.5px;
              background: #8fe6ab; transform-origin: 50% 100%; opacity: 1; }
 .blip.emg .vec { background: #ff5a5a; }
+```
+
+```css
+/* Datenblock rechts neben dem Schirm */
+.radar-side .tile { background:#0b1f13; border:1px solid #14361f; border-radius:12px;
+                    padding:14px 18px; display:flex; flex-direction:column;
+                    justify-content:center; min-width:0; }
+.radar-side .tile.ctr { align-items:center; text-align:center; }
+.radar-side .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.radar-side .lbl { font-size:16px; text-transform:uppercase; letter-spacing:.11em;
+                   color:#4e9c6a; font-weight:600; }
+.radar-side .huge { line-height:.9; font-weight:300; letter-spacing:-.02em; }
+.radar-side .big { font-size:56px; line-height:1; font-weight:300;
+                   font-variant-numeric:tabular-nums; }
+.radar-side .med { font-size:38px; line-height:1; font-weight:300;
+                   font-variant-numeric:tabular-nums; }
+.radar-side .unit-s { font-size:18px; color:#4e9c6a; margin-left:5px; }
+.radar-side .sub-d { font-size:17px; color:#4e9c6a; font-variant-numeric:tabular-nums; }
+.radar-side .row { display:flex; align-items:baseline; }
+.radar-side .em { color:#3ddc84; } .radar-side .sky { color:#67d5f5; }
+.radar-side .amber { color:#f0b429; } .radar-side .slate { color:#8fb8a0; }
 ```
 
 **Warum die Beschriftung eine eigene Deckkraft braucht:** Sie sitzt im selben Element
