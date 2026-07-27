@@ -1,10 +1,6 @@
 // tests/test_board.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-// Muss vor board.js importiert werden: setzt `globalThis.location`, das
-// data.js (transitiv ueber console.js) im Modul-Toplevel liest. Siehe
-// tests/helpers/node_env_shim.mjs und task-10-report.md.
-import './helpers/node_env_shim.mjs';
 import { splitTargets } from '../console/js/pages/board.js';
 
 const RX = { lat: 12.0, lon: 34.0 };      // erfundene Empfaengerposition
