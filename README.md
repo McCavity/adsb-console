@@ -35,7 +35,19 @@ Jede Seite läßt sich in `config/console.json` einzeln abschalten.
 
 ## Installation
 
-Auf dem Gerät mit angeschlossenem Panel, aus dem Repository-Wurzelverzeichnis:
+Auf dem Gerät, aus dem Repository-Wurzelverzeichnis, **in dieser Reihenfolge** — der
+Kiosk-Installer verweigert sich ohne den Systembenutzer, den erst der Daemon-Installer
+anlegt:
+
+**1. Daemon** (legt den Systembenutzer `atc`, `/var/www/html/atc/` und
+`/var/lib/atc-console/` an, installiert und startet `atc-daemon.service`, weist am Ende
+per HTTP nach, daß `system.json` tatsächlich geschrieben wird):
+
+```bash
+sudo ./install-daemon.sh
+```
+
+**2. Konsole** (Panel angeschlossen), Kiosk-Installation:
 
 ```bash
 sudo ./install-console.sh --rotate 90 --output DSI-1
@@ -47,7 +59,8 @@ Auf anderer Hardware ist er neu zu bestimmen und nicht zu übernehmen: labwc dre
 Toucheingaben nicht mit der Ausgabe mit, und ein gedrehtes Bild über einer ungedrehten
 Touchfläche sieht mit den Augen völlig richtig aus.
 
-Der Schreiber-Daemon wird separat installiert; er läuft unabhängig vom Kiosk.
+Der Schreiber-Daemon läuft unabhängig vom Kiosk weiter, auch wenn dieser neu installiert
+oder neugestartet wird.
 
 ## Lizenz
 
