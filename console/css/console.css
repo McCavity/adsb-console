@@ -66,10 +66,15 @@ html, body {
    conic-gradient ist der Nachlauf -- hell an der Vorderkante, dann
    auslaufend. Kein JavaScript beteiligt. */
 .sweep { position: absolute; inset: 0; border-radius: 50%;
+         /* Der Schweif laeuft HINTERHER, nicht voraus. Das Element dreht
+            im Uhrzeigersinn, also liegen groessere Winkel in Fahrtrichtung
+            -- die helle Vorderkante gehoert deshalb ans Ende des Verlaufs
+            (360deg), das Auslaufen davor. Umgekehrt eilte der Schweif der
+            Keule voraus; am 27.07. am Panel gesehen. */
          background: conic-gradient(from 0deg,
-           rgba(125,251,161,.55) 0deg, rgba(125,251,161,.18) 12deg,
-           rgba(125,251,161,.06) 40deg, rgba(125,251,161,0) 90deg,
-           rgba(125,251,161,0) 360deg);
+           rgba(125,251,161,0) 0deg, rgba(125,251,161,0) 270deg,
+           rgba(125,251,161,.06) 320deg, rgba(125,251,161,.18) 348deg,
+           rgba(125,251,161,.55) 360deg);
          animation: sweep-rot 5s linear infinite;
          will-change: transform; pointer-events: none; }
 @keyframes sweep-rot { to { transform: rotate(360deg); } }

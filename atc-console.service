@@ -37,6 +37,7 @@ ExecStart=/usr/bin/labwc -s '/usr/bin/chromium \
   --disable-infobars \
   --noerrdialogs \
   --check-for-update-interval=31536000 \
+  --lang=de \
   --app=http://127.0.0.1/atc/'
 Restart=always
 RestartSec=5

@@ -140,33 +140,50 @@ registerPage({
   },
 });
 
-// Ein Blip je Ziel, als positioniertes Element. Das Aufleuchten beim
-// Ueberstreichen und das Verglimmen danach macht die CSS-Animation; ihr
-// animation-delay wird aus der Peilung berechnet, sodass sie mit der
-// Keule zusammenfaellt, ohne dass hier jemals synchronisiert wird.
+// Blips werden WIEDERVERWENDET, nicht neu gebaut. Das ist der Kern: Ein neu
+// erzeugtes Element startet seine CSS-Animation von vorn, und da render()
+// im Sekundentakt laeuft, blinkte vorher der ganze Schirm synchron im
+// Sekundentakt, statt dass jeder Blip auf seine eigene Keulenpassage
+// wartet. Am 27.07. am Panel gesehen.
+//
+// Auch das animation-delay wird nur bei Bedarf angefasst: Es aus der
+// Peilung neu zu setzen wuerde die Animation ebenfalls neu starten. Erst
+// ab MIN_RESYNC_DEG lohnt die Korrektur -- 5 Grad sind bei sweep_s = 5
+// rund 70 ms Phasenfehler, unsichtbar, waehrend ein Ziel dafuer meist
+// Minuten braucht.
+const MIN_RESYNC_DEG = 5;
+
 function renderBlips(root, cfg, targets) {
-  root.innerHTML = '';
-  const frag = document.createDocumentFragment();
+  const gesehen = new Set();
   for (const t of targets) {
-    const p = projectToCanvas(t.nm, t.brg, cfg.radar.range_nm, R);
-    const el = document.createElement('div');
+    if (!t.hex) continue;
+    gesehen.add(t.hex);
+    let el = root.querySelector(`[data-hex="${t.hex}"]`);
+    if (!el) {
+      el = document.createElement('div');
+      el.dataset.hex = t.hex;
+      el.innerHTML = '<i class="vec"></i><span class="lab"></span>';
+      el.style.animationDuration = cfg.radar.sweep_s + 's';
+      setPhase(el, cfg, t.brg);
+      root.appendChild(el);
+    } else if (Math.abs(angleDiff(Number(el.dataset.brg), t.brg)) >= MIN_RESYNC_DEG) {
+      setPhase(el, cfg, t.brg);
+    }
+
     el.className = 'blip' + (t.heavy ? ' heavy' : '') + (t.emergency ? ' emg' : '');
+    const p = projectToCanvas(t.nm, t.brg, cfg.radar.range_nm, R);
     el.style.left = (CENTER + p.x) + 'px';
     el.style.top = (CENTER + p.y) + 'px';
-    el.style.animationDuration = cfg.radar.sweep_s + 's';
-    // Die Keule beginnt bei 000 und laeuft im Uhrzeigersinn. Ein Ziel bei
-    // der Peilung brg wird nach brg/360 einer Umdrehung ueberstrichen --
-    // genau dann soll der Keyframe bei 0 Prozent stehen.
-    el.style.animationDelay = (t.brg / 360 * cfg.radar.sweep_s).toFixed(3) + 's';
 
+    const vec = el.querySelector('.vec');
     if (typeof t.gs === 'number' && typeof t.track === 'number') {
       // Track-Vektor: wo das Ziel in leader_s Sekunden waere.
       const len = t.gs * (cfg.radar.leader_s / 3600) / cfg.radar.range_nm * R;
-      const v = document.createElement('i');
-      v.className = 'vec';
-      v.style.height = Math.max(0, len) + 'px';
-      v.style.transform = `rotate(${t.track}deg)`;
-      el.appendChild(v);
+      vec.style.height = Math.max(0, len) + 'px';
+      vec.style.transform = `rotate(${t.track}deg)`;
+      vec.style.display = '';
+    } else {
+      vec.style.display = 'none';
     }
 
     const lines = [];
@@ -177,13 +194,25 @@ function renderBlips(root, cfg, targets) {
     if (cfg.radar.labels.includes('fl')) second.push(t.fl);
     if (cfg.radar.labels.includes('squawk') && t.squawk) second.push(t.squawk);
     if (second.length) lines.push(second.join(' '));
-    if (lines.length) {
-      const lab = document.createElement('span');
-      lab.className = 'lab';
-      lab.textContent = lines.join('\n');
-      el.appendChild(lab);
-    }
-    frag.appendChild(el);
+    el.querySelector('.lab').textContent = lines.join('\n');
   }
-  root.appendChild(frag);
+  // Ziele, die dump1090 hat fallenlassen, verschwinden.
+  for (const el of Array.from(root.children)) {
+    if (!gesehen.has(el.dataset.hex)) el.remove();
+  }
+}
+
+// Die Keule beginnt bei 000 und laeuft im Uhrzeigersinn. Ein Ziel bei der
+// Peilung brg wird nach brg/360 einer Umdrehung ueberstrichen -- genau
+// dann soll der Keyframe bei 0 Prozent stehen.
+function setPhase(el, cfg, brg) {
+  el.style.animationDelay = (brg / 360 * cfg.radar.sweep_s).toFixed(3) + 's';
+  el.dataset.brg = String(brg);
+}
+
+// Kuerzester Winkelabstand, damit der Sprung ueber 360/0 keine
+// Dauer-Neusynchronisation ausloest.
+function angleDiff(a, b) {
+  if (!Number.isFinite(a)) return 360;
+  return ((b - a + 540) % 360) - 180;
 }
