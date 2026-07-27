@@ -182,6 +182,7 @@ function renderBlips(root, cfg, targets, sweepStart, auswahl) {
     if (!t.hex) continue;
     gesehen.add(t.hex);
     let el = vorhanden.get(t.hex);
+    const istAusgewaehlt = !!(auswahl && t.hex === auswahl.hex);
     if (!el) {
       el = document.createElement('div');
       el.dataset.hex = t.hex;
@@ -194,12 +195,26 @@ function renderBlips(root, cfg, targets, sweepStart, auswahl) {
       root.appendChild(el);
       vorhanden.set(t.hex, el);
       setPhase(el, cfg, t.brg, sweepStart);
+    } else if (el.classList.contains('sel') && !istAusgewaehlt) {
+      // Verlaesst den ausgewaehlten Zustand: ".blip.sel .dot" setzt
+      // "animation: none", das entfernte Element unten (Klassenwechsel)
+      // erzeugt die Animation gleich neu -- und eine neu erzeugte
+      // CSS-Animation zaehlt ihre Zeit ab DIESEM Moment, nicht ab
+      // el.dataset.tc (das kann Minuten zurueckliegen). setPhase rechnet
+      // sein delay aber gegen dataset.tc; ohne Nachziehen bekaeme die
+      // neue Animationsinstanz das Delay eines laengst vergangenen
+      // Zeitpunkts und der Blip leuchtete am falschen Azimut auf, bis
+      // sich seine Peilung zufaellig um MIN_RESYNC_DEG bewegt -- derselbe
+      // Fehler, der schon einmal am Panel gefunden wurde. Also
+      // dataset.tc auf jetzt vorziehen, genau wie bei der Entstehung.
+      el.dataset.tc = String(performance.now());
+      setPhase(el, cfg, t.brg, sweepStart);
     } else if (Math.abs(angleDiff(Number(el.dataset.brg), t.brg)) >= MIN_RESYNC_DEG) {
       setPhase(el, cfg, t.brg, sweepStart);
     }
 
     el.className = 'blip' + (t.heavy ? ' heavy' : '') + (t.emergency ? ' emg' : '')
-                 + (auswahl && t.hex === auswahl.hex ? ' sel' : '');
+                 + (istAusgewaehlt ? ' sel' : '');
     const p = projectToCanvas(t.nm, t.brg, cfg.radar.range_nm, R);
     el.style.left = (CENTER + p.x) + 'px';
     el.style.top = (CENTER + p.y) + 'px';
