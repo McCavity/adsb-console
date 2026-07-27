@@ -80,13 +80,16 @@ html, body {
 @keyframes sweep-rot { to { transform: rotate(360deg); } }
 
 .blips { position: absolute; inset: 0; pointer-events: none; }
-/* Jeder Blip leuchtet auf, wenn die Keule ihn passiert, und verglimmt --
-   phasengleich ueber animation-delay, ohne Synchronisation im Code. */
-.blip { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
-        border-radius: 50%; background: #b8ffcf;
-        animation: blip-phosphor 5s linear infinite; will-change: opacity; }
-.blip.heavy { width: 10px; height: 10px; margin: -5px 0 0 -5px; }
-.blip.emg   { background: #ff5a5a; }
+/* Der Behaelter wird NICHT animiert. Deckkraft multipliziert sich auf alle
+   Kinder -- laege die Animation hier, pulsierten Beschriftung und
+   Track-Vektor mit, und ein blinkendes Callsign ist auf einem Wanddisplay
+   unlesbar. Animiert wird allein der Punkt. */
+.blip { position: absolute; }
+.blip .dot { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
+             border-radius: 50%; background: #b8ffcf;
+             animation: blip-phosphor 5s linear infinite; will-change: opacity; }
+.blip.heavy .dot { width: 10px; height: 10px; margin: -5px 0 0 -5px; }
+.blip.emg .dot   { background: #ff5a5a; }
 @keyframes blip-phosphor {
   0%   { opacity: 1; }
   24%  { opacity: .45; }   /* entspricht decay_s = 6 bei sweep_s = 5 */
@@ -97,7 +100,7 @@ html, body {
    Zusatzinformation, kein Radarecho. */
 .blip .lab { position: absolute; left: 10px; top: -4px; white-space: pre;
              font-size: 13px; line-height: 1.15; color: #8fe6ab;
-             font-family: ui-monospace, monospace; opacity: 1; }
+             font-family: ui-monospace, monospace; }
 .blip.emg .lab { color: #ff5a5a; }
 .blip .vec { position: absolute; left: 50%; bottom: 50%; width: 1.5px;
              background: #8fe6ab; transform-origin: 50% 100%; opacity: 1; }

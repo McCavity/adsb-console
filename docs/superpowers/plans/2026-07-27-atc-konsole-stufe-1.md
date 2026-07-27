@@ -2554,6 +2554,9 @@ registerPage({
       bg: el.querySelector('.bg').getContext('2d'),
       blips: el.querySelector('.blips'),
       drawnBg: false,
+      // Startzeit der Keule. Jeder Blip rechnet sein animation-delay
+      // gegen diesen Zeitpunkt, nicht gegen seine eigene Entstehung.
+      sweepStart: performance.now(),
     };
     loadAirports().then(() => { el._ctx.drawnBg = false; });
   },
@@ -2576,24 +2579,23 @@ registerPage({
         };
       })
       .filter(t => t.nm <= cfg.radar.range_nm) : [];
-    renderBlips(c.blips, cfg, targets);
+    renderBlips(c.blips, cfg, targets, c.sweepStart);
   },
 });
 
-// Blips werden WIEDERVERWENDET, nicht neu gebaut. Das ist der Kern: Ein neu
-// erzeugtes Element startet seine CSS-Animation von vorn, und da render()
-// im Sekundentakt laeuft, blinkte vorher der ganze Schirm synchron im
-// Sekundentakt, statt dass jeder Blip auf seine eigene Keulenpassage
-// wartet. Am 27.07. am Panel gesehen.
+// Blips werden WIEDERVERWENDET, nicht neu gebaut. Ein neu erzeugtes
+// Element startet seine CSS-Animation von vorn, und da render() im
+// Sekundentakt laeuft, blinkte sonst der ganze Schirm synchron.
 //
-// Auch das animation-delay wird nur bei Bedarf angefasst: Es aus der
-// Peilung neu zu setzen wuerde die Animation ebenfalls neu starten. Erst
-// ab MIN_RESYNC_DEG lohnt die Korrektur -- 5 Grad sind bei sweep_s = 5
-// rund 70 ms Phasenfehler, unsichtbar, waehrend ein Ziel dafuer meist
-// Minuten braucht.
+// Die Animation sitzt auf einem eigenen Punkt-Element, NICHT auf dem
+// Behaelter: Deckkraft multipliziert sich auf alle Kinder, ein Kind kann
+// seinen Vater nicht ueberstrahlen. Laege die Animation auf dem
+// Behaelter, pulsierten Beschriftung und Track-Vektor mit -- und ein
+// Callsign, das im Takt der Keule blinkt, ist auf einem Wanddisplay
+// unlesbar. Am 27.07. am Panel gesehen.
 const MIN_RESYNC_DEG = 5;
 
-function renderBlips(root, cfg, targets) {
+function renderBlips(root, cfg, targets, sweepStart) {
   const gesehen = new Set();
   for (const t of targets) {
     if (!t.hex) continue;
@@ -2602,12 +2604,16 @@ function renderBlips(root, cfg, targets) {
     if (!el) {
       el = document.createElement('div');
       el.dataset.hex = t.hex;
-      el.innerHTML = '<i class="vec"></i><span class="lab"></span>';
-      el.style.animationDuration = cfg.radar.sweep_s + 's';
-      setPhase(el, cfg, t.brg);
+      // Entstehungszeit merken: Die CSS-Animation rechnet ihre Phase ab
+      // diesem Moment, das animation-delay muss den Versatz zur Keule
+      // ausgleichen (siehe setPhase).
+      el.dataset.tc = String(performance.now());
+      el.innerHTML = '<i class="dot"></i><i class="vec"></i><span class="lab"></span>';
+      el.querySelector('.dot').style.animationDuration = cfg.radar.sweep_s + 's';
       root.appendChild(el);
+      setPhase(el, cfg, t.brg, sweepStart);
     } else if (Math.abs(angleDiff(Number(el.dataset.brg), t.brg)) >= MIN_RESYNC_DEG) {
-      setPhase(el, cfg, t.brg);
+      setPhase(el, cfg, t.brg, sweepStart);
     }
 
     el.className = 'blip' + (t.heavy ? ' heavy' : '') + (t.emergency ? ' emg' : '');
@@ -2642,11 +2648,23 @@ function renderBlips(root, cfg, targets) {
   }
 }
 
-// Die Keule beginnt bei 000 und laeuft im Uhrzeigersinn. Ein Ziel bei der
-// Peilung brg wird nach brg/360 einer Umdrehung ueberstrichen -- genau
-// dann soll der Keyframe bei 0 Prozent stehen.
-function setPhase(el, cfg, brg) {
-  el.style.animationDelay = (brg / 360 * cfg.radar.sweep_s).toFixed(3) + 's';
+// Die Keule laeuft ab `sweepStart` im Uhrzeigersinn, ein Umlauf dauert
+// sweep_s. Ein Ziel bei der Peilung brg wird nach brg/360 einer Umdrehung
+// ueberstrichen.
+//
+// Der Haken: Eine CSS-Animation zaehlt ihre Zeit ab dem Moment, in dem ihr
+// Element entstand -- und ein Blip entsteht, wenn sein Ziel auftaucht,
+// nicht wenn die Seite laedt. Ohne Ausgleich passen nur die Ziele, die
+// beim Laden schon da waren; alle spaeteren laufen um die verstrichene
+// Zeit versetzt und leuchten nie unter der Keule auf. Genau das war am
+// 27.07. am Panel zu sehen. Das Delay zieht diesen Versatz ab und darf
+// dabei negativ werden -- ein negatives animation-delay bedeutet, die
+// Animation laeuft, als sei sie bereits eine Weile gelaufen.
+function setPhase(el, cfg, brg, sweepStart) {
+  const T = cfg.radar.sweep_s;
+  const seitStart = ((Number(el.dataset.tc) - sweepStart) / 1000) % T;
+  const delay = (brg / 360) * T - seitStart;
+  el.querySelector('.dot').style.animationDelay = delay.toFixed(3) + 's';
   el.dataset.brg = String(brg);
 }
 
@@ -2682,13 +2700,16 @@ Dazu in `console/css/console.css` ergänzen:
 @keyframes sweep-rot { to { transform: rotate(360deg); } }
 
 .blips { position: absolute; inset: 0; pointer-events: none; }
-/* Jeder Blip leuchtet auf, wenn die Keule ihn passiert, und verglimmt --
-   phasengleich ueber animation-delay, ohne Synchronisation im Code. */
-.blip { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
-        border-radius: 50%; background: #b8ffcf;
-        animation: blip-phosphor 5s linear infinite; will-change: opacity; }
-.blip.heavy { width: 10px; height: 10px; margin: -5px 0 0 -5px; }
-.blip.emg   { background: #ff5a5a; }
+/* Der Behaelter wird NICHT animiert. Deckkraft multipliziert sich auf alle
+   Kinder -- laege die Animation hier, pulsierten Beschriftung und
+   Track-Vektor mit, und ein blinkendes Callsign ist auf einem Wanddisplay
+   unlesbar. Animiert wird allein der Punkt. */
+.blip { position: absolute; }
+.blip .dot { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
+             border-radius: 50%; background: #b8ffcf;
+             animation: blip-phosphor 5s linear infinite; will-change: opacity; }
+.blip.heavy .dot { width: 10px; height: 10px; margin: -5px 0 0 -5px; }
+.blip.emg .dot   { background: #ff5a5a; }
 @keyframes blip-phosphor {
   0%   { opacity: 1; }
   24%  { opacity: .45; }   /* entspricht decay_s = 6 bei sweep_s = 5 */
@@ -2699,7 +2720,7 @@ Dazu in `console/css/console.css` ergänzen:
    Zusatzinformation, kein Radarecho. */
 .blip .lab { position: absolute; left: 10px; top: -4px; white-space: pre;
              font-size: 13px; line-height: 1.15; color: #8fe6ab;
-             font-family: ui-monospace, monospace; opacity: 1; }
+             font-family: ui-monospace, monospace; }
 .blip.emg .lab { color: #ff5a5a; }
 .blip .vec { position: absolute; left: 50%; bottom: 50%; width: 1.5px;
              background: #8fe6ab; transform-origin: 50% 100%; opacity: 1; }
