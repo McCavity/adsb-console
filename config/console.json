@@ -1,0 +1,10 @@
+{
+  "pages":   { "radar": true, "board": true, "target": true, "stats": true,
+               "polar": true, "profile": true, "system": true },
+  "dwell_s": { "radar": 45, "default": 15 },
+  "radar":   { "range_nm": 50, "rings_nm": [10, 25, 50], "sweep_s": 5,
+               "decay_s": 6, "leader_s": 60,
+               "labels": ["callsign", "fl", "squawk"] },
+  "emergency": { "highlight": true, "interrupt_carousel": false },
+  "_hinweis": "interrupt_carousel wirkt ab Stufe 2, wenn es die Einzelziel-Seite gibt"
+}
