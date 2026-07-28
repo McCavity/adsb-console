@@ -81,6 +81,17 @@ export async function startConsole() {
     els.get(page.id).classList.add(st);
   }
 
+  // Raeumt die Wisch-Klasse UND den zugehoerigen Timer. Beides gehoert
+  // zusammen: Ein ungetrackter Timer feuert spaeter auf einem Element,
+  // das inzwischen wieder die sichtbare Seite sein kann -- und bis dahin
+  // stuende sie 90 px verschoben da. Zwei schnelle Gegenwische reichen,
+  // um das herzustellen.
+  function raeumeWisch(el) {
+    clearTimeout(el._wischTimer);
+    el._wischTimer = null;
+    el.classList.remove('wisch-links', 'wisch-rechts');
+  }
+
   // rotate: Soll nach dem Wechsel wieder automatisch weitergeblaettert
   // werden? Der automatische Umlauf will das, eine Beruehrung nicht --
   // dort uebernimmt takeOver() und plant die Fortsetzung in 60 s.
@@ -94,15 +105,17 @@ export async function startConsole() {
     if (next === current) return;
     const alt = els.get(order[current]);
     alt.classList.remove('active');
-    alt.classList.remove('wisch-links', 'wisch-rechts');
+    raeumeWisch(alt);
     if (wischRichtung) {
       alt.classList.add(wischRichtung < 0 ? 'wisch-links' : 'wisch-rechts');
-      setTimeout(() => alt.classList.remove('wisch-links', 'wisch-rechts'), 220);
+      alt._wischTimer = setTimeout(() => raeumeWisch(alt), 220);
     }
     current = next;
     betrete(current);
     renderCurrent();
-    els.get(order[current]).classList.add('active');
+    const neu = els.get(order[current]);
+    raeumeWisch(neu);
+    neu.classList.add('active');
     dotsEl.querySelectorAll('.dot')
       .forEach((d, i) => d.classList.toggle('on', i === current));
     if (rotate) startRotation();
