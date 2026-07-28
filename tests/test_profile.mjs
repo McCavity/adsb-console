@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { hoehenprofil, BAENDER, FL_MAX } from '../console/js/pages/profile.js';
+import { hoehenprofil, BAENDER, FL_MAX, BILD, punktX, punktY } from '../console/js/pages/profile.js';
 
 const RCV = { lat: 50.0, lon: 9.0 };
 // 50.05 / 9.05 liegt rund 4 NM vom erfundenen Empfaenger entfernt,
@@ -117,4 +117,44 @@ test('ein null-Eintrag in der Liste wirft nicht', () => {
 
 test('die Bandgrenzen lassen sich nicht nachtraeglich verbiegen', () => {
   assert.throws(() => { 'use strict'; BAENDER[0].bis = 999; }, TypeError);
+});
+
+test('ein Ziel auf FL000 liegt vollstaendig im Bild', () => {
+  assert.ok(punktY(0) + BILD.punkt <= BILD.hoehe,
+            `FL000 bei y=${punktY(0)} ragt unten heraus`);
+});
+
+test('ein Ziel an der oberen Kante liegt vollstaendig im Bild', () => {
+  assert.ok(punktY(FL_MAX) - BILD.punkt >= 0,
+            `FL450 bei y=${punktY(FL_MAX)} ragt oben heraus`);
+});
+
+test('ein Ziel bei 0,0 NM liegt vollstaendig im Bild', () => {
+  assert.ok(punktX(0, 50) - BILD.punkt >= 0,
+            `0 NM bei x=${punktX(0, 50)} ragt links heraus`);
+});
+
+test('ein Ziel am Maszstabsrand liegt vollstaendig im Bild', () => {
+  assert.ok(punktX(50, 50) + BILD.punkt <= BILD.breite,
+            `50 NM bei x=${punktX(50, 50)} ragt rechts heraus`);
+});
+
+test('die Abbildung ist monoton: weiter draussen heisst weiter rechts', () => {
+  assert.ok(punktX(10, 50) < punktX(25, 50));
+  assert.ok(punktX(25, 50) < punktX(50, 50));
+});
+
+test('die Abbildung ist monoton: hoeher heisst weiter oben', () => {
+  assert.ok(punktY(40000) < punktY(10000));
+  assert.ok(punktY(10000) < punktY(0));
+});
+
+test('ein Gitterring und ein Ziel derselben Entfernung sitzen auf derselben Achse', () => {
+  assert.equal(punktX(25, 50), punktX(25, 50));
+  assert.ok(Math.abs(punktX(10, 50) - punktX(10, 50)) < 1e-9);
+});
+
+test('ein anderer Maszstab verschiebt beide Enden mit', () => {
+  assert.ok(punktX(0, 25) - BILD.punkt >= 0);
+  assert.ok(punktX(25, 25) + BILD.punkt <= BILD.breite);
 });

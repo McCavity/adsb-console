@@ -58,11 +58,24 @@ export function hoehenprofil(aircraft, receiver, rangeNm, highlight) {
   return { punkte, baender, ohnePosition, ausserhalb };
 }
 
-// Das Bild ist so gross wie der Radarschirm: 620 x 620 minus Rand. Die
-// x-Achse benutzt denselben cfg.radar.range_nm wie das Radar und dieselben
-// Ringe als Gitterlinien -- wer auf dem Schirm einen Ring sieht, findet ihn
-// hier als senkrechte Linie wieder.
-const BILD_B = 700, BILD_H = 560;
+// Masse des Seitenrisses. `rand` haelt die Zeichenflaeche um einen
+// Punktradius von der Kante weg: Ohne ihn liegt ein Ziel auf FL000 bei
+// cy = hoehe, und sein Kreis ragt zur Haelfte aus dem Bild. In einer
+// Messstunde am Geraet waren 244 von 1724 Positionen auf FL000 -- darunter
+// der Haufen bei 5 bis 10 NM, also genau der Flughafenkegel, dessentwegen
+// diese Seite ein Seitenriss ist.
+export const BILD = Object.freeze({ breite: 700, hoehe: 560, rand: 8, punkt: 5 });
+
+// Entfernung und Hoehe auf Bildkoordinaten. Rein und exportiert, damit die
+// Abbildung ohne Browser pruefbar ist -- als sie in der Render-Closure
+// steckte, fiel niemandem auf, dass FL000 halb aus dem Bild ragt.
+export function punktX(nm, rangeNm) {
+  return BILD.rand + nmToPx(nm, rangeNm, BILD.breite - 2 * BILD.rand);
+}
+
+export function punktY(altFt) {
+  return BILD.rand + (1 - altFt / FL_MAX) * (BILD.hoehe - 2 * BILD.rand);
+}
 
 registerPage({
   id: 'profile',
@@ -71,7 +84,7 @@ registerPage({
   mount(el) {
     el.innerHTML = `
       <div class="profil-bild">
-        <svg class="profil-svg" viewBox="0 0 ${BILD_B} ${BILD_H}"
+        <svg class="profil-svg" viewBox="0 0 ${BILD.breite} ${BILD.hoehe}"
              preserveAspectRatio="none" aria-hidden="true"></svg>
       </div>
       <div class="profil-spalte value"></div>`;
@@ -83,24 +96,23 @@ registerPage({
     const spalte = el.querySelector('.profil-spalte');
 
     // Gitter: waagerecht alle FL100, senkrecht auf den Radarringen.
-    const yVon = ft => BILD_H - (ft / FL_MAX) * BILD_H;
     const teile = [];
     for (let ft = 10000; ft < FL_MAX; ft += 10000) {
-      const y = yVon(ft);
-      teile.push(`<line class="g-h" x1="0" y1="${y}" x2="${BILD_B}" y2="${y}"/>`);
+      const y = punktY(ft);
+      teile.push(`<line class="g-h" x1="0" y1="${y}" x2="${BILD.breite}" y2="${y}"/>`);
       teile.push(`<text class="g-t" x="4" y="${y - 5}">FL${ft / 100}</text>`);
     }
     for (const ring of cfg.radar.rings_nm) {
       if (ring > cfg.radar.range_nm) continue;
-      const x = nmToPx(ring, cfg.radar.range_nm, BILD_B);
-      teile.push(`<line class="g-v" x1="${x}" y1="0" x2="${x}" y2="${BILD_H}"/>`);
-      teile.push(`<text class="g-t" x="${x + 5}" y="${BILD_H - 6}">${ring} NM</text>`);
+      const x = punktX(ring, cfg.radar.range_nm);
+      teile.push(`<line class="g-v" x1="${x}" y1="0" x2="${x}" y2="${BILD.hoehe}"/>`);
+      teile.push(`<text class="g-t" x="${x + 5}" y="${BILD.hoehe - 6}">${ring} NM</text>`);
     }
     for (const p of r.punkte) {
-      const x = nmToPx(p.nm, cfg.radar.range_nm, BILD_B);
-      const y = yVon(p.altFt);
+      const x = punktX(p.nm, cfg.radar.range_nm);
+      const y = punktY(p.altFt);
       const klassen = 'p' + (p.emergency ? ' emg' : '') + (p.geklemmt ? ' klemm' : '');
-      teile.push(`<circle class="${klassen}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5"/>`);
+      teile.push(`<circle class="${klassen}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${BILD.punkt}"/>`);
       // Ein geklemmtes Ziel bekommt einen Aufwaertspfeil: Der Punkt sagt
       // sonst "genau FL450", und das waere eine Behauptung statt einer Marke.
       if (p.geklemmt) {
