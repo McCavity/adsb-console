@@ -70,7 +70,8 @@ Diese gelten für **jede** Aufgabe, auch wo sie nicht wiederholt werden.
 | `console/js/data.js` | Abrufschleifen; **neu:** `pruefeReceiver()`, `refreshSystem` | 1, 8 |
 | `console/js/geo.js` | reine Rechenfunktionen; **neu:** `waehleDatenblattZiel()` | 4 |
 | `console/js/console.js` | Karussell und Seitenvertrag; **neu:** `onEnter`-Haken | 5 |
-| `console/js/pages/board.js` | Zielliste; `splitTargets` bekommt `highlight` | 2 |
+| `console/js/pages/gemeinsam.js` | **neu** — `msgRate()`, später `leerUntertitel()`; von vier Seiten benutzt | 5, 10 |
+| `console/js/pages/board.js` | Zielliste; `splitTargets` bekommt `highlight` | 2, 5, 10 |
 | `console/js/pages/target.js` | **neu** — Einzelziel, mit `datenblattFelder()` | 5 |
 | `console/js/pages/profile.js` | **neu** — Höhenprofil, mit `hoehenprofil()` | 6, 7 |
 | `console/js/pages/system.js` | **neu** — Systemseite, mit `systemFelder()` | 8 |
@@ -660,7 +661,43 @@ test('highlight=false schaltet auch das Datenblatt stumm', () => {
 Ausführen: `node --test tests/test_target.mjs`
 Erwartet: FAIL mit `Cannot find module .../console/js/pages/target.js`
 
-- [ ] **Schritt 3: Die Seite schreiben**
+- [ ] **Schritt 3a: Das gemeinsame Modul anlegen und die Duplizierung auflösen**
+
+`msgRate()` steht heute wortgleich in `board.js:76` und `radar.js:398` — identisch bis auf
+einen Variablennamen. Ohne diesen Schritt käme sie mit `target.js` und `profile.js` auf
+vier Kopien. Der Leerzustand ist die Stelle, an der die Konsole „nichts fliegt" von
+„Empfänger tot" unterscheidet; diese Aussage braucht genau einen Ort.
+
+Neue Datei `console/js/pages/gemeinsam.js`:
+
+```javascript
+// Von allen Seiten geteilt, die einen Leerzustand haben. Die
+// Nachrichtenrate laeuft weiter, auch wenn kein einziges Ziel eine
+// Position sendet -- sie ist das einzige, was "nichts fliegt" von
+// "Empfaenger tot" unterscheidet. Deshalb steht sie in jedem Leerzustand,
+// und deshalb gehoert sie an genau eine Stelle.
+export function msgRate(state) {
+  const s = state && state.stats && state.stats.last1min;
+  if (!s) return '—';
+  const spanne = s.end - s.start;
+  return spanne > 0 ? Math.round(s.messages / spanne) : '—';
+}
+```
+
+In `console/js/pages/board.js` die lokale Funktion `msgRate` (Zeilen 76–81) **löschen**
+und stattdessen am Dateikopf ergänzen:
+
+```javascript
+import { msgRate } from './gemeinsam.js';
+```
+
+In `console/js/pages/radar.js` ebenso: die lokale Funktion `msgRate` löschen und den
+Import am Dateikopf ergänzen.
+
+**Das faßt zwei am Panel abgenommene Seiten an.** Ersetzt wird eine reine Funktion durch
+einen Import identischen Verhaltens; Schritt 12 prüft beide Leerzustände gegen.
+
+- [ ] **Schritt 3b: Die Seite schreiben**
 
 Neue Datei `console/js/pages/target.js`:
 
@@ -668,6 +705,7 @@ Neue Datei `console/js/pages/target.js`:
 import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel,
          isEmergency, waehleDatenblattZiel } from '../geo.js';
 import { registerPage } from '../console.js';
+import { msgRate } from './gemeinsam.js';
 
 // Die Seite braucht den ROHEN aircraft.json-Eintrag, nicht nur das
 // angereicherte Ziel: ias, tas, mach, roll, nav_altitude_mcp und die
@@ -747,13 +785,6 @@ export function datenblattFelder(t) {
       ]},
     ],
   };
-}
-
-function msgRate(state) {
-  const s = state.stats && state.stats.last1min;
-  if (!s) return '—';
-  const spanne = s.end - s.start;
-  return spanne > 0 ? Math.round(s.messages / spanne) : '—';
 }
 
 registerPage({
@@ -973,7 +1004,8 @@ Dann am Panel:
 - [ ] **Schritt 13: Commit**
 
 ```bash
-git add console/js/pages/target.js console/js/console.js console/js/data.js \
+git add console/js/pages/target.js console/js/pages/gemeinsam.js console/js/console.js \
+        console/js/data.js console/js/pages/board.js console/js/pages/radar.js \
         console/css/console.css console/index.html tests/test_target.mjs
 git commit -m "Einzelziel-Seite: volles Datenblatt, Ziel friert beim Betreten ein"
 ```
@@ -1208,6 +1240,7 @@ Den Import am Kopf von `console/js/pages/profile.js` erweitern:
 ```javascript
 import { haversineNm, isEmergency, nmToPx } from '../geo.js';
 import { registerPage } from '../console.js';
+import { msgRate } from './gemeinsam.js';
 ```
 
 An das Dateiende anhängen:
@@ -1218,13 +1251,6 @@ An das Dateiende anhängen:
 // Ringe als Gitterlinien -- wer auf dem Schirm einen Ring sieht, findet ihn
 // hier als senkrechte Linie wieder.
 const BILD_B = 700, BILD_H = 560;
-
-function msgRate(state) {
-  const s = state.stats && state.stats.last1min;
-  if (!s) return '—';
-  const spanne = s.end - s.start;
-  return spanne > 0 ? Math.round(s.messages / spanne) : '—';
-}
 
 registerPage({
   id: 'profile',
@@ -1939,25 +1965,45 @@ Erwartet: FAIL in `die Uhrzeit des letzten Ziels wird als HH:MM ausgegeben` — 
 statt `09:05`.
 **Danach zurücknehmen** und Schritt 4 wiederholen.
 
-- [ ] **Schritt 6: Die Uhrzeit in die drei Leerzustände einbauen**
+- [ ] **Schritt 6: Den Leerzustands-Untertitel an genau einen Ort legen**
 
-In `console/js/pages/board.js` den Import erweitern:
+Vier Seiten haben einen Leerzustand (Radar, Board, Einzelziel, Höhenprofil), und alle vier
+sollen dieselbe Aussage machen. Der Untertitel gehört deshalb neben `msgRate` in das
+gemeinsame Modul und nicht viermal in die Seiten.
+
+In `console/js/pages/gemeinsam.js` anhängen:
 
 ```javascript
 import { letzteZielzeit } from '../data.js';
+
+// Der Untertitel jedes Leerzustands. Zwei Aussagen, beide noetig:
+// seit wann kein Ziel mehr da war, und ob der Empfaenger ueberhaupt noch
+// Nachrichten sieht. Frankfurt hat ein Nachtflugverbot -- null Ziele um
+// 03:00 ist richtig, nicht kaputt; genau deshalb muss die Anzeige
+// "nichts fliegt" von "Empfaenger tot" unterscheidbar halten.
+export function leerUntertitel(state) {
+  const seit = letzteZielzeit(state);
+  return (seit ? `letztes Ziel ${seit} · ` : '') + `Nachrichtenrate ${msgRate(state)} /s`;
+}
 ```
 
-und den Leerzustand ersetzen durch:
+Dann in **allen vier** Seiten den Untertitel des Leerzustands durch
+`${leerUntertitel(state)}` ersetzen und den Import auf
+`import { msgRate, leerUntertitel } from './gemeinsam.js';` erweitern (in `radar.js` und
+`board.js` wird `msgRate` danach womöglich gar nicht mehr gebraucht — dann nur
+`leerUntertitel` importieren):
+
+- `console/js/pages/radar.js` — in `renderSide`, Leerzustand `KEINE ZIELE IN REICHWEITE`
+- `console/js/pages/board.js` — Leerzustand `KEINE ZIELE IN REICHWEITE`
+- `console/js/pages/target.js` — Leerzustand `KEIN ZIEL MIT POSITION`
+- `console/js/pages/profile.js` — Leerzustand `KEINE ZIELE MIT HÖHE`
+
+Beispiel für `board.js`:
 
 ```javascript
-      const seit = letzteZielzeit(state);
       root.innerHTML = `<div class="empty">KEINE ZIELE IN REICHWEITE
-        <div class="empty-sub">${seit ? `letztes Ziel ${seit} · ` : ''}Nachrichtenrate ${msgRate(state)} /s</div></div>`;
+        <div class="empty-sub">${leerUntertitel(state)}</div></div>`;
 ```
-
-Dieselbe Ergänzung in `console/js/pages/target.js` (Leerzustand `KEIN ZIEL MIT POSITION`)
-und `console/js/pages/profile.js` (Leerzustand `KEINE ZIELE MIT HÖHE`) — jeweils
-`letzteZielzeit` importieren und `${seit ? ... : ''}` vor die Nachrichtenrate setzen.
 
 - [ ] **Schritt 7: „keine Daten seit HH:MM" in der Kopfzeile**
 
@@ -2059,7 +2105,8 @@ Erwartet: `ℹ fail 0`, `ℹ tests` um 2 höher als nach Aufgabe 9.
 - [ ] **Schritt 11: Commit**
 
 ```bash
-git add console/js/data.js console/js/console.js console/js/pages/board.js \
+git add console/js/data.js console/js/console.js console/js/pages/gemeinsam.js \
+        console/js/pages/radar.js console/js/pages/board.js \
         console/js/pages/target.js console/js/pages/profile.js \
         console/css/console.css tests/test_data.mjs
 git commit -m "Spec-Drift geschlossen: Wisch-Richtung, Uhrzeit im Leerzustand und im Kopf"
