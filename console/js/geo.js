@@ -59,3 +59,30 @@ export function isEmergency(ac) {
 export function nmToPx(nm, rangeNm, radiusPx) {
   return nm / rangeNm * radiusPx;
 }
+
+// Welches Ziel steht auf der Einzelziel-Seite? Anders als der Datenblock
+// neben dem Radarschirm haelt diese Seite ihr Ziel fest, solange sie steht:
+// Zwei Ziele bei 12,3 und 12,4 NM wuerden sonst im Sekundentakt tauschen,
+// und ein Datenblatt, dessen Gegenstand springt, ist unlesbar.
+//
+// Zurueckgegeben wird IMMER ein Element aus kandidaten, niemals bisher
+// selbst -- sonst zeigte die Seite eingefrorene WERTE statt eines
+// eingefrorenen ZIELS.
+//
+// Der Rueckweg ist absichtlich asymmetrisch: Verschwindet der
+// Notfall-Squawk wieder, springt die Seite nicht zurueck. Das Ziel steht
+// dann noch in kandidaten, also greift Regel 2.
+export function waehleDatenblattZiel(kandidaten, bisher) {
+  const liste = Array.isArray(kandidaten)
+    ? kandidaten.filter(t => t && typeof t.nm === 'number' && Number.isFinite(t.nm))
+    : [];
+  if (!liste.length) return null;
+  const naechster = menge => menge.reduce((a, b) => (b.nm < a.nm ? b : a));
+  const notfaelle = liste.filter(t => t.emergency);
+  if (notfaelle.length) return naechster(notfaelle);
+  if (bisher && bisher.hex) {
+    const weiterhin = liste.find(t => t.hex === bisher.hex);
+    if (weiterhin) return weiterhin;
+  }
+  return naechster(liste);
+}

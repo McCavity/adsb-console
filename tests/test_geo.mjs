@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   haversineNm, bearingDeg, formatBearing, flightLevel,
-  formatCallsign, sectorOf, isEmergency, nmToPx,
+  formatCallsign, sectorOf, isEmergency, nmToPx, waehleDatenblattZiel,
 } from '../console/js/geo.js';
 
 test('ein Breitengrad ist 60 NM', () => {
@@ -97,6 +97,50 @@ const EDDF = { lat: 50.0379, lon: 8.5622 };
 test('Entfernung erfundener Empfaenger nach EDDF', () => {
   const nm = haversineNm(EMPF.lat, EMPF.lon, EDDF.lat, EDDF.lon);
   assert.ok(Math.abs(nm - 17.042) < 0.01, `erwartet ~17,042 NM, war ${nm}`);
+});
+
+const ziel = (hex, nm, emergency = false) => ({ hex, nm, emergency });
+
+test('leere Liste ergibt null', () => {
+  assert.equal(waehleDatenblattZiel([], null), null);
+  assert.equal(waehleDatenblattZiel(null, null), null);
+});
+
+test('ohne Vorgaenger gewinnt das naechstgelegene Ziel', () => {
+  const liste = [ziel('a', 30), ziel('b', 12.3), ziel('c', 18)];
+  assert.equal(waehleDatenblattZiel(liste, null).hex, 'b');
+});
+
+test('das eingefrorene Ziel bleibt, auch wenn ein naeheres auftaucht', () => {
+  const liste = [ziel('a', 4.0), ziel('b', 12.4)];
+  assert.equal(waehleDatenblattZiel(liste, ziel('b', 12.3)).hex, 'b');
+});
+
+test('das eingefrorene Ziel liefert die FRISCHEN Werte, nicht die alten', () => {
+  const frisch = ziel('b', 12.4);
+  const ergebnis = waehleDatenblattZiel([ziel('a', 4.0), frisch], ziel('b', 12.3));
+  assert.equal(ergebnis.nm, 12.4);
+  assert.equal(ergebnis, frisch);
+});
+
+test('verschwundenes Ziel wird durch das naechstgelegene ersetzt', () => {
+  const liste = [ziel('a', 30), ziel('c', 18)];
+  assert.equal(waehleDatenblattZiel(liste, ziel('b', 12.3)).hex, 'c');
+});
+
+test('Notfall uebersteuert das eingefrorene Ziel', () => {
+  const liste = [ziel('a', 4.0), ziel('b', 12.3), ziel('n', 40, true)];
+  assert.equal(waehleDatenblattZiel(liste, ziel('b', 12.3)).hex, 'n');
+});
+
+test('bei mehreren Notfaellen gewinnt der naechstgelegene', () => {
+  const liste = [ziel('n1', 40, true), ziel('n2', 9, true), ziel('a', 2)];
+  assert.equal(waehleDatenblattZiel(liste, null).hex, 'n2');
+});
+
+test('Kandidaten ohne brauchbare Entfernung werden uebergangen', () => {
+  const liste = [{ hex: 'x', nm: null, emergency: false }, ziel('b', 12.3)];
+  assert.equal(waehleDatenblattZiel(liste, null).hex, 'b');
 });
 
 test('EDDF liegt von dort aus knapp noerdlich von West', () => {
