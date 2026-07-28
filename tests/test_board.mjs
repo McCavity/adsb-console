@@ -56,3 +56,19 @@ test('ohne dritten Parameter bleibt die Markierung an', () => {
   const ac = [{ hex: 'ccc333', squawk: '7500', alt_baro: 9000 }];
   assert.equal(splitTargets(ac, null).unpositioned[0].emergency, true);
 });
+
+test('ein Ziel ohne Callsign traegt seine hex-Kennung, keinen Gedankenstrich', () => {
+  // Gemessen am 28.07.: 38 von 174 Kennungen hatten nie ein Callsign, und
+  // 134 verloren es zeitweise. Ein Gedankenstrich verschweigt ein Ziel,
+  // das sehr wohl empfangen wurde.
+  const ac = [{ hex: 'c0ffee', lat: 50.1, lon: 9.1, alt_baro: 30000 }];
+  const t = splitTargets(ac, { lat: 50.0, lon: 9.0 }).positioned[0];
+  assert.equal(t.callsign, null);
+  assert.equal(t.hex, 'c0ffee');
+});
+
+test('ein vorhandenes Callsign bleibt das Callsign', () => {
+  const ac = [{ hex: 'c0ffee', flight: 'DLH123  ', lat: 50.1, lon: 9.1, alt_baro: 30000 }];
+  const t = splitTargets(ac, { lat: 50.0, lon: 9.0 }).positioned[0];
+  assert.equal(t.callsign, 'DLH123');
+});
