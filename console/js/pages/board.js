@@ -1,6 +1,7 @@
 import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel, isEmergency }
   from '../geo.js';
 import { registerPage } from '../console.js';
+import { msgRate } from './gemeinsam.js';
 
 // highlight kommt aus cfg.emergency.highlight. Der Schalter muss ALLE
 // Anzeigen stummschalten, nicht nur das Radar -- sonst schaltet er die
@@ -77,10 +78,3 @@ registerPage({
       </div>`;
   },
 });
-
-function msgRate(state) {
-  const s = state.stats && state.stats.last1min;
-  if (!s) return '—';
-  const span = s.end - s.start;
-  return span > 0 ? Math.round(s.messages / span) : '—';
-}

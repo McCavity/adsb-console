@@ -2,7 +2,7 @@ import { loadConfig } from './config.js';
 import { createDataStore, ageState } from './data.js';
 import { naechsterWechsel } from './carousel.js';
 
-const pages = new Map();          // id -> {id, title, ageSource, mount, render}
+const pages = new Map();          // id -> {id, title, ageSource, mount, render, onEnter?}
 
 export function registerPage(page) { pages.set(page.id, page); }
 
@@ -37,10 +37,20 @@ export async function startConsole() {
     return (config.dwell_s[id] ?? config.dwell_s.default) * 1000;
   }
 
+  // Wird beim Seitenwechsel genau einmal gerufen -- nicht bei jedem
+  // Datenpaket. Die Einzelziel-Seite friert hier ihr Ziel ein, die
+  // Systemseite holt hier ihre Daten sofort statt bis zu 10 s zu warten.
+  function betrete(index) {
+    const id = order[index];
+    store.state.systemVisible = id === 'system';
+    if (id === 'system') store.refreshSystem();
+    const page = pages.get(id);
+    if (page && page.onEnter) page.onEnter(els.get(id), config, store.state);
+  }
+
   function renderCurrent() {
     const page = pages.get(order[current]);
     if (!page) return;
-    store.state.systemVisible = page.id === 'system';
     page.render(els.get(page.id), config, store.state);
     document.getElementById('page-title').textContent = page.title.toUpperCase();
     updateAge(page);
@@ -73,6 +83,7 @@ export async function startConsole() {
     if (next === current) return;
     els.get(order[current]).classList.remove('active');
     current = next;
+    betrete(current);
     renderCurrent();
     els.get(order[current]).classList.add('active');
     dotsEl.querySelectorAll('.dot')
@@ -132,6 +143,7 @@ export async function startConsole() {
   els.get(order[0]).classList.add('active');
   dotsEl.querySelector('.dot').classList.add('on');
   await store.start();
+  betrete(0);
   renderCurrent();
   tickClock();
   setInterval(tickClock, 1000);
