@@ -42,6 +42,7 @@ export function pruefeReceiver(doc) {
 export function createDataStore(onUpdate) {
   const state = {
     aircraft: [], aircraftAt: null, aircraftNow: null,
+    letztesZielMs: null,
     stats: null, statsAt: null,
     range: null, rangeAt: null,
     system: null, systemAt: null,
@@ -56,6 +57,10 @@ export function createDataStore(onUpdate) {
       // now stammt vom selben Host wie der Browser -- kein Uhrenversatz.
       state.aircraftNow = d.now;
       state.aircraftAt = Date.now();
+      // Wann stand hier zuletzt ein Ziel? Der Leerzustand soll "seit wann"
+      // sagen koennen, nicht nur "nichts". Frankfurt hat ein
+      // Nachtflugverbot -- null Ziele um 03:00 ist richtig, nicht kaputt.
+      if (state.aircraft.length) state.letztesZielMs = state.aircraftAt;
       onUpdate();
     }
   }
@@ -99,4 +104,13 @@ export function ageState(ageMs) {
   if (ageMs < 10000) return 'fresh';
   if (ageMs < 60000) return 'aging';
   return 'stale';
+}
+
+// Liest keine Uhr -- der Zeitstempel kommt aus dem Zustand. Sonst waere
+// die Funktion nicht testbar.
+export function letzteZielzeit(state) {
+  const ms = state && state.letztesZielMs;
+  if (typeof ms !== 'number' || !Number.isFinite(ms)) return null;
+  return new Date(ms).toLocaleTimeString('de-DE',
+    { hour: '2-digit', minute: '2-digit', hour12: false });
 }

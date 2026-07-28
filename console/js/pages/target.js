@@ -1,7 +1,7 @@
 import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel,
          isEmergency, waehleDatenblattZiel } from '../geo.js';
 import { registerPage } from '../console.js';
-import { msgRate } from './gemeinsam.js';
+import { leerUntertitel } from './gemeinsam.js';
 
 // Die Seite braucht den ROHEN aircraft.json-Eintrag, nicht nur das
 // angereicherte Ziel: ias, tas, mach, roll, nav_altitude_mcp und die
@@ -105,7 +105,7 @@ registerPage({
       // Nachts ist das der Normalfall, kein Defekt. Die Nachrichtenrate
       // bleibt stehen: Sie unterscheidet "nichts fliegt" von "Empfaenger tot".
       root.innerHTML = `<div class="empty">KEIN ZIEL MIT POSITION
-        <div class="empty-sub">Nachrichtenrate ${msgRate(state)} /s</div></div>`;
+        <div class="empty-sub">${leerUntertitel(state)}</div></div>`;
       return;
     }
     const { kopf, gruppen } = datenblattFelder(gewaehlt);

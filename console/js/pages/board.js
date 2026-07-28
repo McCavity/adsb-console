@@ -1,7 +1,7 @@
 import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel, isEmergency }
   from '../geo.js';
 import { registerPage } from '../console.js';
-import { msgRate } from './gemeinsam.js';
+import { leerUntertitel } from './gemeinsam.js';
 
 // highlight kommt aus cfg.emergency.highlight. Der Schalter muss ALLE
 // Anzeigen stummschalten, nicht nur das Radar -- sonst schaltet er die
@@ -52,7 +52,7 @@ registerPage({
     if (!positioned.length && !unpositioned.length) {
       // Nachts ist null Ziele der Normalfall, kein Defekt.
       root.innerHTML = `<div class="empty">KEINE ZIELE IN REICHWEITE
-        <div class="empty-sub">Nachrichtenrate: ${msgRate(state)} /s</div></div>`;
+        <div class="empty-sub">${leerUntertitel(state)}</div></div>`;
       return;
     }
     const rows = positioned.slice(0, 12).map(t => `

@@ -24,6 +24,13 @@ html, body {
 .page { position: absolute; inset: 0; padding: 16px 0 6px; display: flex; gap: 20px;
         opacity: 0; pointer-events: none; transition: opacity 180ms linear; }
 .page.active { opacity: 1; pointer-events: auto; }
+/* Spec 7.1: Ein Wisch schiebt die Seite in Wischrichtung heraus (200 ms),
+   damit sich die Geste wie eine Geste anfuehlt. Der automatische Wechsel
+   blendet weiterhin nur ueber (180 ms). */
+.page.wisch-links  { transition: opacity 200ms linear, transform 200ms ease-out;
+                     transform: translateX(-90px); }
+.page.wisch-rechts { transition: opacity 200ms linear, transform 200ms ease-out;
+                     transform: translateX(90px); }
 .aging .value { opacity: .55; }
 .stale .value { opacity: .35; filter: grayscale(1); }
 

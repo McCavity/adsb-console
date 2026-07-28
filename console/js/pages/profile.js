@@ -1,6 +1,6 @@
 import { haversineNm, isEmergency, nmToPx } from '../geo.js';
 import { registerPage } from '../console.js';
-import { msgRate } from './gemeinsam.js';
+import { leerUntertitel } from './gemeinsam.js';
 
 // Die sechs Baender aus Spec 6.6, in Fuss. Die obere Kante ist Infinity --
 // "ueber FL400" hat keine Obergrenze, und ein Ziel oberhalb einer
@@ -125,7 +125,7 @@ registerPage({
     if (!r.punkte.length && !r.ohnePosition && !r.ausserhalb) {
       spalte.innerHTML = `<div class="tile ctr" style="flex:1">
         <div class="empty">KEINE ZIELE MIT HÖHE
-          <div class="empty-sub">Nachrichtenrate ${msgRate(state)} /s</div></div></div>`;
+          <div class="empty-sub">${leerUntertitel(state)}</div></div></div>`;
       return;
     }
     const groesstes = Math.max(1, ...r.baender.map(b => b.anzahl));
