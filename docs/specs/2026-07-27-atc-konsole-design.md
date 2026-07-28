@@ -440,9 +440,21 @@ sagt, ob die Konsole selbst zum Problem geworden ist.
 
 ### 7.1 Karussell
 
-Radar als Heimatseite mit 45 s, die übrigen sechs je 15 s — bei allen sieben aktiven
-Seiten ein Umlauf von 2:15, das Radar ein Drittel der Zeit. Standzeiten und
-Seitenauswahl stehen in `console.json`.
+Radar als Heimatseite mit 45 s, die übrigen je 15 s. Standzeiten und Seitenauswahl
+stehen in `console.json`.
+
+**Der Umlauf hängt an der Zahl der Seiten, die wirklich einen Renderer haben** —
+`console.js` filtert `activePages` gegen die registrierten Seiten, ein `true` in
+`console.json` allein genügt nicht:
+
+| Stand | aktive Seiten | Umlauf | Radaranteil |
+|---|---|---|---|
+| nach Stufe 1 | 3 (Radar, Board, Statistik) | 1:15 | **60 %** |
+| **heute, nach Stufe 2** | **6** (Polar fehlt noch) | **2:00** | **37,5 %** |
+| nach Stufe 3 | 7 | 2:15 | 33 % |
+
+Die Zeile für Stufe 1 steht hier, weil ihre Verwechslung mit der Stufe-3-Zeile schon
+einmal ein Meßprotokoll falsch gemacht hat (`docs/messungen/2026-07-27-variante-b-stunde.md`).
 
 **Die geltende Reihenfolge** (`PAGE_ORDER` in `console/js/config.js`, am 28.07.2026
 am Panel festgelegt) ist: Radar, Einzelziel, Höhenprofil, Polar, Board, Statistik,
