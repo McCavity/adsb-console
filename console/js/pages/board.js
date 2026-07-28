@@ -2,7 +2,11 @@ import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel, is
   from '../geo.js';
 import { registerPage } from '../console.js';
 
-export function splitTargets(aircraft, receiver) {
+// highlight kommt aus cfg.emergency.highlight. Der Schalter muss ALLE
+// Anzeigen stummschalten, nicht nur das Radar -- sonst schaltet er die
+// halbe Konsole. Vorgabewert true, damit ein Aufrufer ohne Konfiguration
+// (etwa ein Test) die Markierung sieht.
+export function splitTargets(aircraft, receiver, highlight = true) {
   const positioned = [], unpositioned = [];
   for (const a of aircraft || []) {
     const hasPos = receiver &&
@@ -15,7 +19,7 @@ export function splitTargets(aircraft, receiver) {
       track: typeof a.track === 'number' ? a.track : null,
       rate: typeof a.baro_rate === 'number' ? a.baro_rate : null,
       heavy: a.category === 'A5',
-      emergency: isEmergency(a),
+      emergency: highlight && isEmergency(a),
       squawk: a.squawk || null,
     };
     if (hasPos) {
@@ -41,7 +45,8 @@ registerPage({
   ageSource: 'aircraft',
   mount(el) { el.innerHTML = '<div class="board value"></div>'; },
   render(el, cfg, state) {
-    const { positioned, unpositioned } = splitTargets(state.aircraft, state.receiver);
+    const { positioned, unpositioned } =
+      splitTargets(state.aircraft, state.receiver, cfg.emergency.highlight);
     const root = el.querySelector('.board');
     if (!positioned.length && !unpositioned.length) {
       // Nachts ist null Ziele der Normalfall, kein Defekt.
