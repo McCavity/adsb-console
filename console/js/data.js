@@ -27,9 +27,22 @@ function aircraftUrl() {
   return override || DATA + 'aircraft.json';
 }
 
+// Jedes truthy receiver.json wurde bisher ungeprueft uebernommen. Ein
+// Textwert statt einer Zahl macht damit JEDE Entfernungsangabe der Konsole
+// zu NaN -- lautlos, und sichtbar erst am Panel. Array wird ausdruecklich
+// abgewiesen: typeof [] ist "object", und [50,9].lat ist undefined.
+export function pruefeReceiver(doc) {
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) return null;
+  const { lat, lon } = doc;
+  if (typeof lat !== 'number' || !Number.isFinite(lat) || Math.abs(lat) > 90) return null;
+  if (typeof lon !== 'number' || !Number.isFinite(lon) || Math.abs(lon) > 180) return null;
+  return { lat, lon };
+}
+
 export function createDataStore(onUpdate) {
   const state = {
     aircraft: [], aircraftAt: null, aircraftNow: null,
+    letztesZielMs: null,
     stats: null, statsAt: null,
     range: null, rangeAt: null,
     system: null, systemAt: null,
@@ -44,6 +57,10 @@ export function createDataStore(onUpdate) {
       // now stammt vom selben Host wie der Browser -- kein Uhrenversatz.
       state.aircraftNow = d.now;
       state.aircraftAt = Date.now();
+      // Wann stand hier zuletzt ein Ziel? Der Leerzustand soll "seit wann"
+      // sagen koennen, nicht nur "nichts". Frankfurt hat ein
+      // Nachtflugverbot -- null Ziele um 03:00 ist richtig, nicht kaputt.
+      if (state.aircraft.length) state.letztesZielMs = state.aircraftAt;
       onUpdate();
     }
   }
@@ -67,8 +84,7 @@ export function createDataStore(onUpdate) {
     // Die gerundete Position aus receiver.json genuegt: bei 0,161 NM/px sind
     // 600 m Rundungsfehler rund zwei Pixel. Die exakte Position bleibt auf
     // dem Geraet und wird nur vom Daemon fuer die Rekorde benutzt.
-    const r = await getJSON(DATA + 'receiver.json');
-    if (r) state.receiver = { lat: r.lat, lon: r.lon };
+    state.receiver = pruefeReceiver(await getJSON(DATA + 'receiver.json'));
     await Promise.all([pollAircraft(), pollStats(), pollRange()]);
     setInterval(pollAircraft, 1000);
     setInterval(pollStats, 5000);
@@ -76,7 +92,10 @@ export function createDataStore(onUpdate) {
     setInterval(pollSystem, 10000);
   }
 
-  return { state, start };
+  // refreshSystem wird beim Betreten der Systemseite gerufen. Ohne diesen
+  // Sofortabruf kaemen die ersten Daten bis zu 10 s spaet -- bei 15 s
+  // Standzeit zwei Drittel der Zeit mit Gedankenstrichen.
+  return { state, start, refreshSystem: pollSystem };
 }
 
 // Alterszustand einer Quelle. Grenzen aus der Spec, Abschnitt 8.
@@ -85,4 +104,13 @@ export function ageState(ageMs) {
   if (ageMs < 10000) return 'fresh';
   if (ageMs < 60000) return 'aging';
   return 'stale';
+}
+
+// Liest keine Uhr -- der Zeitstempel kommt aus dem Zustand. Sonst waere
+// die Funktion nicht testbar.
+export function letzteZielzeit(state) {
+  const ms = state && state.letztesZielMs;
+  if (typeof ms !== 'number' || !Number.isFinite(ms)) return null;
+  return new Date(ms).toLocaleTimeString('de-DE',
+    { hour: '2-digit', minute: '2-digit', hour12: false });
 }

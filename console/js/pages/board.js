@@ -1,8 +1,13 @@
 import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel, isEmergency }
   from '../geo.js';
 import { registerPage } from '../console.js';
+import { leerUntertitel } from './gemeinsam.js';
 
-export function splitTargets(aircraft, receiver) {
+// highlight kommt aus cfg.emergency.highlight. Der Schalter muss ALLE
+// Anzeigen stummschalten, nicht nur das Radar -- sonst schaltet er die
+// halbe Konsole. Vorgabewert true, damit ein Aufrufer ohne Konfiguration
+// (etwa ein Test) die Markierung sieht.
+export function splitTargets(aircraft, receiver, highlight = true) {
   const positioned = [], unpositioned = [];
   for (const a of aircraft || []) {
     const hasPos = receiver &&
@@ -15,7 +20,7 @@ export function splitTargets(aircraft, receiver) {
       track: typeof a.track === 'number' ? a.track : null,
       rate: typeof a.baro_rate === 'number' ? a.baro_rate : null,
       heavy: a.category === 'A5',
-      emergency: isEmergency(a),
+      emergency: highlight && isEmergency(a),
       squawk: a.squawk || null,
     };
     if (hasPos) {
@@ -41,17 +46,18 @@ registerPage({
   ageSource: 'aircraft',
   mount(el) { el.innerHTML = '<div class="board value"></div>'; },
   render(el, cfg, state) {
-    const { positioned, unpositioned } = splitTargets(state.aircraft, state.receiver);
+    const { positioned, unpositioned } =
+      splitTargets(state.aircraft, state.receiver, cfg.emergency.highlight);
     const root = el.querySelector('.board');
     if (!positioned.length && !unpositioned.length) {
       // Nachts ist null Ziele der Normalfall, kein Defekt.
       root.innerHTML = `<div class="empty">KEINE ZIELE IN REICHWEITE
-        <div class="empty-sub">Nachrichtenrate: ${msgRate(state)} /s</div></div>`;
+        <div class="empty-sub">${leerUntertitel(state)}</div></div>`;
       return;
     }
     const rows = positioned.slice(0, 12).map(t => `
       <tr class="${t.emergency ? 'emg' : ''}">
-        <td>${t.callsign || '——'}${t.heavy ? ' <span class="hv">H</span>' : ''}</td>
+        <td>${t.callsign ? t.callsign : `<span class="hexkennung">${t.hex}</span>`}${t.heavy ? ' <span class="hv">H</span>' : ''}</td>
         <td>${t.fl}</td>
         <td>${t.gs ?? '—'}</td>
         <td>${formatBearing(t.track)}</td>
@@ -68,14 +74,7 @@ registerPage({
       </table>
       <div class="nopos">ohne Position: ${unpositioned.length}
         <span class="nopos-list">${unpositioned.slice(0, 10)
-          .map(t => `${t.callsign || t.hex} ${t.fl}`).join(' · ')}</span>
+          .map(t => `${t.callsign ? t.callsign : `<span class="hexkennung">${t.hex}</span>`} ${t.fl}`).join(' · ')}</span>
       </div>`;
   },
 });
-
-function msgRate(state) {
-  const s = state.stats && state.stats.last1min;
-  if (!s) return '—';
-  const span = s.end - s.start;
-  return span > 0 ? Math.round(s.messages / span) : '—';
-}
