@@ -149,9 +149,20 @@ test('die Abbildung ist monoton: hoeher heisst weiter oben', () => {
   assert.ok(punktY(10000) < punktY(0));
 });
 
-test('ein Gitterring und ein Ziel derselben Entfernung sitzen auf derselben Achse', () => {
-  assert.equal(punktX(25, 50), punktX(25, 50));
-  assert.ok(Math.abs(punktX(10, 50) - punktX(10, 50)) < 1e-9);
+// Sollwerte von Hand: Die Zeichenflaeche ist breite - 2*rand = 700 - 16 =
+// 684 breit, ihre Mitte liegt bei rand + 342 = 350. Entsprechend ist die
+// Hoehe 560 - 16 = 544, ihre Mitte bei 8 + 272 = 280. Beide Zahlen stehen
+// unabhaengig von der Formel fest -- deshalb faengt dieser Test einen
+// verrutschten Rand oder einen vergessenen Faktor, was die reinen
+// Kantentests nicht koennen.
+test('punktX bildet die Mitte des Massstabs auf die Bildmitte ab', () => {
+  assert.equal(punktX(25, 50), 350);
+  assert.equal(punktX(25, 50), BILD.rand + (BILD.breite - 2 * BILD.rand) / 2);
+});
+
+test('punktY bildet die halbe Hoehe auf die Bildmitte ab', () => {
+  assert.equal(punktY(FL_MAX / 2), 280);
+  assert.equal(punktY(FL_MAX / 2), BILD.rand + (BILD.hoehe - 2 * BILD.rand) / 2);
 });
 
 test('ein anderer Maszstab verschiebt beide Enden mit', () => {
