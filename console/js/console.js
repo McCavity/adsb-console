@@ -124,26 +124,31 @@ export async function startConsole() {
   // dieselbe blieb, und die Planung liest current selbst (planeWechsel).
   function goTo(index, ausloeser = 'automatisch', wischRichtung = null) {
     const next = ((index % order.length) + order.length) % order.length;
-    if (next !== current) {
-      const alt = els.get(order[current]);
-      alt.classList.remove('active');
-      raeumeWisch(alt);
-      if (wischRichtung) {
-        alt.classList.add(wischRichtung < 0 ? 'wisch-links' : 'wisch-rechts');
-        alt._wischTimer = setTimeout(() => raeumeWisch(alt), 220);
+    try {
+      if (next !== current) {
+        const alt = els.get(order[current]);
+        alt.classList.remove('active');
+        raeumeWisch(alt);
+        if (wischRichtung) {
+          alt.classList.add(wischRichtung < 0 ? 'wisch-links' : 'wisch-rechts');
+          alt._wischTimer = setTimeout(() => raeumeWisch(alt), 220);
+        }
+        current = next;
+        betrete(current);
+        renderCurrent();
+        const neu = els.get(order[current]);
+        raeumeWisch(neu);
+        neu.classList.add('active');
+        dotsEl.querySelectorAll('.dot')
+          .forEach((d, i) => d.classList.toggle('on', i === current));
       }
-      current = next;
-      betrete(current);
-      renderCurrent();
-      const neu = els.get(order[current]);
-      raeumeWisch(neu);
-      neu.classList.add('active');
-      dotsEl.querySelectorAll('.dot')
-        .forEach((d, i) => d.classList.toggle('on', i === current));
+    } finally {
+      // IMMER planen -- auch wenn die Seite dieselbe blieb und auch, wenn
+      // eine Seite beim Betreten oder Rendern wirft. Ein Ausstieg ohne
+      // Planung laesst das Karussell stehen, und zwar fuer immer; genau so
+      // ist es am 28.07. nach jedem Linkswisch passiert.
+      planeWechsel(ausloeser);
     }
-    // IMMER planen -- auch wenn die Seite dieselbe blieb. Ein Ausstieg ohne
-    // Planung laesst das Karussell stehen, und zwar fuer immer.
-    planeWechsel(ausloeser);
   }
 
   let downX = 0, downY = 0, downT = 0;

@@ -490,7 +490,10 @@ sichtbarer Zeiger.
 
 7500, 7600 und 7700 sowie ein aussagekräftiges `emergency`-Feld werden **markiert**: rotes
 Blip auf dem Radar, rote Zeile im Board, Squawk im Klartext. Das Karussell läuft normal
-weiter; `emergency.interrupt_carousel` kann das umschalten, steht aber auf `false`.
+weiter. Das Feld `emergency.interrupt_carousel` existiert und wird normalisiert
+(`console/js/config.js`), **hat aber keine Wirkung** — es wertet es niemand aus, das
+Karussell läuft bei einem Notfall immer weiter, unabhängig vom Wert. Das ist ein offener
+Punkt für Stufe 3, kein umgesetztes Verhalten.
 
 **„Aussagekräftig" ist hier wörtlich zu nehmen und war beinahe ein Fehler:** In der
 Messung trug das Feld die Werte `null` (23 Ziele) und `"none"` (6 Ziele) — es ist also
