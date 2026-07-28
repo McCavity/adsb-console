@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { samplesDropped, tempZustand, daemonAlterS, strich }
+import { samplesDropped, tempZustand, daemonAlterS, strich, flagZustand, dienstZustand }
   from '../console/js/pages/system.js';
 
 // Aufbau aus der Messung an adsapp01 am 28.07.2026.
@@ -67,4 +67,31 @@ test('strich macht aus null einen Gedankenstrich, aus 0 aber eine 0', () => {
   assert.equal(strich(undefined), '—');
   assert.equal(strich(0), '0');
   assert.equal(strich(0.35, 2), '0.35');
+});
+
+test('ein fehlendes Flag ist keine Entwarnung', () => {
+  assert.deepEqual(flagZustand(null),      { klasse: 'unbekannt', text: '—' });
+  assert.deepEqual(flagZustand(undefined), { klasse: 'unbekannt', text: '—' });
+});
+
+test('ein gemessenes false bleibt ein sichtbares "nein"', () => {
+  assert.deepEqual(flagZustand(false), { klasse: 'aus', text: 'nein' });
+});
+
+test('ein gesetztes Flag meldet JA', () => {
+  assert.deepEqual(flagZustand(true), { klasse: 'an', text: 'JA' });
+});
+
+test('ein laufender Dienst schlaegt keinen Alarm', () => {
+  assert.deepEqual(dienstZustand('active'), { klasse: 'aus', text: 'active' });
+});
+
+test('ein toter Dienst schlaegt Alarm', () => {
+  assert.deepEqual(dienstZustand('failed'), { klasse: 'an', text: 'failed' });
+});
+
+test('unbekannt ist weder gut noch Alarm', () => {
+  assert.deepEqual(dienstZustand('unknown'), { klasse: 'unbekannt', text: 'unknown' });
+  assert.deepEqual(dienstZustand(null),      { klasse: 'unbekannt', text: '—' });
+  assert.deepEqual(dienstZustand(''),        { klasse: 'unbekannt', text: '—' });
 });

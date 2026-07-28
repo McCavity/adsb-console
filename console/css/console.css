@@ -200,3 +200,4 @@ html, body {
 .flag { font-size: 19px; font-variant-numeric: tabular-nums; }
 .flag.aus { color: #4e9c6a; }
 .flag.an  { color: #ff5a5a; font-weight: 700; }
+.flag.unbekannt { color: #4e6b58; }
