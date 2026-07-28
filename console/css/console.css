@@ -159,3 +159,23 @@ html, body {
             gap: 12px; margin-top: 6px; }
 .db-label { font-size: 17px; color: #4e9c6a; }
 .db-wert { font-size: 27px; font-variant-numeric: tabular-nums; color: #b8f5cc; }
+
+/* Höhenprofil: Seitenriß links, Bandspalte rechts */
+.profil-bild { flex: 0 0 700px; height: 560px; align-self: center;
+               border-left: 1px solid #14361f; border-bottom: 1px solid #14361f; }
+.profil-svg { width: 700px; height: 560px; display: block; }
+.profil-svg .g-h, .profil-svg .g-v { stroke: #14361f; stroke-width: 1; }
+.profil-svg .g-t { fill: #2f6b45; font-size: 13px;
+                   font-family: ui-monospace, monospace; }
+.profil-svg .p { fill: #b8ffcf; }
+.profil-svg .p.emg { fill: #ff5a5a; }
+.profil-svg .p.klemm { fill: #f0b429; }
+.profil-svg .klemm-pfeil { fill: none; stroke: #f0b429; stroke-width: 2; }
+.profil-spalte { flex: 1; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+.band { display: flex; align-items: center; gap: 10px; margin-top: 9px; }
+.band-lbl { font-size: 16px; color: #4e9c6a; flex: 0 0 108px; }
+.band-bar { flex: 1; height: 14px; background: #0b1f13; border: 1px solid #14361f;
+            border-radius: 3px; overflow: hidden; }
+.band-bar i { display: block; height: 100%; background: #3ddc84; }
+.band-n { font-size: 22px; font-variant-numeric: tabular-nums; flex: 0 0 34px;
+          text-align: right; }
