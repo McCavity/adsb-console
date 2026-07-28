@@ -1,4 +1,6 @@
-import { haversineNm, isEmergency } from '../geo.js';
+import { haversineNm, isEmergency, nmToPx } from '../geo.js';
+import { registerPage } from '../console.js';
+import { msgRate } from './gemeinsam.js';
 
 // Die sechs Baender aus Spec 6.6, in Fuss. Die obere Kante ist Infinity --
 // "ueber FL400" hat keine Obergrenze, und ein Ziel oberhalb einer
@@ -55,3 +57,82 @@ export function hoehenprofil(aircraft, receiver, rangeNm, highlight) {
   }
   return { punkte, baender, ohnePosition, ausserhalb };
 }
+
+// Das Bild ist so gross wie der Radarschirm: 620 x 620 minus Rand. Die
+// x-Achse benutzt denselben cfg.radar.range_nm wie das Radar und dieselben
+// Ringe als Gitterlinien -- wer auf dem Schirm einen Ring sieht, findet ihn
+// hier als senkrechte Linie wieder.
+const BILD_B = 700, BILD_H = 560;
+
+registerPage({
+  id: 'profile',
+  title: 'Höhenprofil',
+  ageSource: 'aircraft',
+  mount(el) {
+    el.innerHTML = `
+      <div class="profil-bild">
+        <svg class="profil-svg" viewBox="0 0 ${BILD_B} ${BILD_H}"
+             preserveAspectRatio="none" aria-hidden="true"></svg>
+      </div>
+      <div class="profil-spalte value"></div>`;
+  },
+  render(el, cfg, state) {
+    const r = hoehenprofil(state.aircraft, state.receiver,
+                           cfg.radar.range_nm, cfg.emergency.highlight);
+    const svg = el.querySelector('.profil-svg');
+    const spalte = el.querySelector('.profil-spalte');
+
+    // Gitter: waagerecht alle FL100, senkrecht auf den Radarringen.
+    const yVon = ft => BILD_H - (ft / FL_MAX) * BILD_H;
+    const teile = [];
+    for (let ft = 10000; ft < FL_MAX; ft += 10000) {
+      const y = yVon(ft);
+      teile.push(`<line class="g-h" x1="0" y1="${y}" x2="${BILD_B}" y2="${y}"/>`);
+      teile.push(`<text class="g-t" x="4" y="${y - 5}">FL${ft / 100}</text>`);
+    }
+    for (const ring of cfg.radar.rings_nm) {
+      if (ring > cfg.radar.range_nm) continue;
+      const x = nmToPx(ring, cfg.radar.range_nm, BILD_B);
+      teile.push(`<line class="g-v" x1="${x}" y1="0" x2="${x}" y2="${BILD_H}"/>`);
+      teile.push(`<text class="g-t" x="${x + 5}" y="${BILD_H - 6}">${ring} NM</text>`);
+    }
+    for (const p of r.punkte) {
+      const x = nmToPx(p.nm, cfg.radar.range_nm, BILD_B);
+      const y = yVon(p.altFt);
+      const klassen = 'p' + (p.emergency ? ' emg' : '') + (p.geklemmt ? ' klemm' : '');
+      teile.push(`<circle class="${klassen}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5"/>`);
+      // Ein geklemmtes Ziel bekommt einen Aufwaertspfeil: Der Punkt sagt
+      // sonst "genau FL450", und das waere eine Behauptung statt einer Marke.
+      if (p.geklemmt) {
+        teile.push(`<path class="klemm-pfeil" d="M${(x - 5).toFixed(1)} ${(y + 8).toFixed(1)}
+                    L${x.toFixed(1)} ${(y + 1).toFixed(1)} L${(x + 5).toFixed(1)} ${(y + 8).toFixed(1)}"/>`);
+      }
+    }
+    svg.innerHTML = teile.join('');
+
+    if (!r.punkte.length && !r.ohnePosition && !r.ausserhalb) {
+      spalte.innerHTML = `<div class="tile ctr" style="flex:1">
+        <div class="empty">KEINE ZIELE MIT HÖHE
+          <div class="empty-sub">Nachrichtenrate ${msgRate(state)} /s</div></div></div>`;
+      return;
+    }
+    const groesstes = Math.max(1, ...r.baender.map(b => b.anzahl));
+    spalte.innerHTML = `
+      <div class="tile" style="flex:1">
+        <div class="lbl">Ziele je Flugflächenband</div>
+        ${r.baender.slice().reverse().map(b => `
+          <div class="band">
+            <span class="band-lbl">${b.label}</span>
+            <span class="band-bar"><i style="width:${(b.anzahl / groesstes * 100).toFixed(0)}%"></i></span>
+            <span class="band-n">${b.anzahl}</span>
+          </div>`).join('')}
+      </div>
+      <div class="tile">
+        <div class="lbl">Nicht im Bild</div>
+        <div class="db-zeile"><span class="db-label">mit Höhe, ohne Position</span>
+          <span class="db-wert">${r.ohnePosition}</span></div>
+        <div class="db-zeile"><span class="db-label">außerhalb ${cfg.radar.range_nm} NM</span>
+          <span class="db-wert">${r.ausserhalb}</span></div>
+      </div>`;
+  },
+});
