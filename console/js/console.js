@@ -56,6 +56,9 @@ export async function startConsole() {
     updateAge(page);
   }
 
+  const uhrzeit = ms => new Date(ms).toLocaleTimeString('de-DE',
+    { hour: '2-digit', minute: '2-digit', hour12: false });
+
   function updateAge(page) {
     const at = page.ageSource ? store.state[page.ageSource + 'At'] : null;
     const dot = document.getElementById('age-dot');
@@ -65,7 +68,15 @@ export async function startConsole() {
     const ms = at == null ? null : Date.now() - at;
     const st = ageState(ms);
     dot.className = st;
-    txt.textContent = ms == null ? 'keine Daten' : `${Math.round(ms / 1000)} s`;
+    // Spec 8 sagt "keine Daten seit HH:MM" zu. Eine Uhrzeit sagt, seit
+    // wann; "keine Daten" sagt es nicht.
+    if (ms == null) {
+      txt.textContent = at == null ? 'keine Daten' : `keine Daten seit ${uhrzeit(at)}`;
+    } else if (ms >= 60000) {
+      txt.textContent = `keine Daten seit ${uhrzeit(at)}`;
+    } else {
+      txt.textContent = `${Math.round(ms / 1000)} s`;
+    }
     els.get(page.id).classList.remove('fresh', 'aging', 'stale');
     els.get(page.id).classList.add(st);
   }
@@ -78,10 +89,16 @@ export async function startConsole() {
   // und goTo startete die Rotation sofort wieder -- die Pause war
   // gesetzt und im selben Atemzug ueberschrieben. Am 27.07. am Panel
   // gemessen: Das Board blieb 15 statt 60 Sekunden stehen.
-  function goTo(index, rotate = true) {
+  function goTo(index, rotate = true, wischRichtung = null) {
     const next = ((index % order.length) + order.length) % order.length;
     if (next === current) return;
-    els.get(order[current]).classList.remove('active');
+    const alt = els.get(order[current]);
+    alt.classList.remove('active');
+    alt.classList.remove('wisch-links', 'wisch-rechts');
+    if (wischRichtung) {
+      alt.classList.add(wischRichtung < 0 ? 'wisch-links' : 'wisch-rechts');
+      setTimeout(() => alt.classList.remove('wisch-links', 'wisch-rechts'), 220);
+    }
     current = next;
     betrete(current);
     renderCurrent();
@@ -126,7 +143,7 @@ export async function startConsole() {
     const dx = e.clientX - downX, dy = e.clientY - downY;
     takeOver();
     if (Math.abs(dx) >= 60 && Math.abs(dx) > Math.abs(dy) && Date.now() - downT < 1200) {
-      goTo(current + (dx < 0 ? 1 : -1), false);
+      goTo(current + (dx < 0 ? 1 : -1), false, dx < 0 ? -1 : 1);
     }
   });
   document.addEventListener('contextmenu', e => e.preventDefault());

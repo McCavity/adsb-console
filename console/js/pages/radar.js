@@ -1,7 +1,7 @@
 import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel, isEmergency }
   from '../geo.js';
 import { registerPage } from '../console.js';
-import { msgRate } from './gemeinsam.js';
+import { msgRate, leerUntertitel } from './gemeinsam.js';
 
 const SIZE = 620;               // Buehnenhoehe: 720 minus Kopf (56) und Punkte (44)
 const R = SIZE / 2;             // Radius in Pixeln
@@ -326,7 +326,7 @@ function renderSide(root, cfg, state, targets, auswahl) {
     root.innerHTML = `
       <div class="tile ctr" style="flex:1">
         <div class="empty">KEINE ZIELE IN REICHWEITE
-          <div class="empty-sub">Nachrichtenrate ${msgRate(state)} /s</div>
+          <div class="empty-sub">${leerUntertitel(state)}</div>
         </div>
       </div>`;
     return;
