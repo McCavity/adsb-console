@@ -43,6 +43,27 @@ export function strich(v, stellen = 0) {
   return typeof v === 'number' && Number.isFinite(v) ? v.toFixed(stellen) : '—';
 }
 
+// Ein fehlendes Flag ist KEINE Entwarnung. Ein null, das als "nein"
+// erscheint, behauptet einen gemessenen Zustand, wo nichts gemessen wurde
+// -- derselbe Fehler wie "0 MB von 0 MB" auf einem Geraet, dessen /proc
+// gar nicht lesbar war. Deshalb drei Zustaende statt zwei.
+export function flagZustand(v) {
+  if (v == null) return { klasse: 'unbekannt', text: '—' };
+  return v ? { klasse: 'an', text: 'JA' } : { klasse: 'aus', text: 'nein' };
+}
+
+// Dasselbe fuer den Dienststatus: "unbekannt" ist nicht "kaputt".
+// systemctl liefert im Fehlerfall die Zeichenkette "unknown"; fehlt der
+// Wert ganz, steht ein Gedankenstrich da und nicht das Wort "null".
+export function dienstZustand(zustand) {
+  if (typeof zustand !== 'string' || !zustand) {
+    return { klasse: 'unbekannt', text: '—' };
+  }
+  if (zustand === 'active') return { klasse: 'aus', text: zustand };
+  if (zustand === 'unknown') return { klasse: 'unbekannt', text: zustand };
+  return { klasse: 'an', text: zustand };
+}
+
 const FLAGGEN = [
   ['undervoltage',   'Unterspannung'],
   ['arm_freq_capped', 'Takt gedeckelt'],
@@ -54,11 +75,14 @@ function throttleBlock(titel, teil) {
   if (!teil) return `<div class="tile"><div class="lbl">${titel}</div>
     <div class="db-zeile"><span class="db-wert">—</span></div></div>`;
   return `<div class="tile"><div class="lbl">${titel}</div>
-    ${FLAGGEN.map(([k, label]) => `
+    ${FLAGGEN.map(([k, label]) => {
+      const f = flagZustand(teil[k]);
+      return `
       <div class="db-zeile">
         <span class="db-label">${label}</span>
-        <span class="flag ${teil[k] ? 'an' : 'aus'}">${teil[k] ? 'JA' : 'nein'}</span>
-      </div>`).join('')}</div>`;
+        <span class="flag ${f.klasse}">${f.text}</span>
+      </div>`;
+    }).join('')}</div>`;
 }
 
 registerPage({
@@ -129,9 +153,12 @@ registerPage({
         ${throttleBlock('Drosselung seit Boot', s.throttle && s.throttle.ever)}
         <div class="tile">
           <div class="lbl">Dienste</div>
-          ${Object.entries(s.services || {}).map(([name, zustand]) => `
+          ${Object.entries(s.services || {}).map(([name, zustand]) => {
+            const d = dienstZustand(zustand);
+            return `
             <div class="db-zeile"><span class="db-label">${name}</span>
-              <span class="flag ${zustand === 'active' ? 'aus' : 'an'}">${zustand}</span></div>`).join('')}
+              <span class="flag ${d.klasse}">${d.text}</span></div>`;
+          }).join('')}
         </div>
         <div class="tile">
           <div class="lbl">Daemon</div>
