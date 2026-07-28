@@ -44,7 +44,7 @@ function drawBackground(ctx, cfg, receiver) {
     const r = nm / cfg.radar.range_nm * R;
     ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
     ctx.fillStyle = COL.ringText;
-    ctx.font = '13px ui-monospace, monospace';
+    ctx.font = '13px B612Mono, ui-monospace, monospace';
     ctx.fillText(`${nm}`, 4, -r - 5);
   }
   for (let d = 0; d < 360; d += 30) {          // Peilstrahlen
@@ -52,7 +52,7 @@ function drawBackground(ctx, cfg, receiver) {
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(p.x, p.y); ctx.stroke();
     const t = projectToCanvas(cfg.radar.range_nm * 0.94, d, cfg.radar.range_nm, R);
     ctx.fillStyle = COL.ringText;
-    ctx.font = '13px ui-monospace, monospace';
+    ctx.font = '13px B612Mono, ui-monospace, monospace';
     ctx.textAlign = 'center';
     ctx.fillText(String(d === 0 ? 360 : d).padStart(3, '0'), t.x, t.y);
   }
@@ -96,7 +96,7 @@ function drawAirports(ctx, cfg, receiver) {
     // Beschriftung laeuft aus dem Bild (am 27.07. an EDFJ gesehen, dessen
     // Kennung bis auf das J abgeschnitten war).
     ctx.fillStyle = COL.airport;
-    ctx.font = '12px ui-monospace, monospace';
+    ctx.font = '12px B612Mono, ui-monospace, monospace';
     const breite = ctx.measureText(ap.icao).width;
     const passtRechts = p.x + 6 + breite <= CENTER - 2;
     ctx.textAlign = passtRechts ? 'left' : 'right';
@@ -129,7 +129,14 @@ registerPage({
       sweepStart: performance.now(),
     };
     installDecayKeyframes(cfg);
-    loadAirports().then(() => { el._ctx.drawnBg = false; });
+    // Der Hintergrund wird nur EINMAL gezeichnet (drawnBg). Eine Canvas-
+    // Schrift, die zum Zeichenzeitpunkt noch nicht geladen ist, faellt
+    // lautlos auf die Ersatzschrift zurueck -- und wird nie neu gezeichnet.
+    // Deshalb erst die Schrift, dann die Flugplaetze, dann freigeben.
+    Promise.all([
+      loadAirports(),
+      document.fonts ? document.fonts.load('13px B612Mono').catch(() => null) : null,
+    ]).then(() => { el._ctx.drawnBg = false; });
   },
   render(el, cfg, state) {
     const c = el._ctx;

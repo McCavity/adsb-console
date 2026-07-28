@@ -201,3 +201,16 @@ html, body {
 .flag.aus { color: #4e9c6a; }
 .flag.an  { color: #ff5a5a; font-weight: 700; }
 .flag.unbekannt { color: #4e6b58; }
+
+/* B612 Mono, lokal gebundelt (console/fonts/HERKUNFT.md). NUR im
+   Radarkreis: Dort sind die Texte kurz und unumbrechbar (Callsign, FL,
+   Squawk, ICAO-Kennung). Kacheln und Tabellen bleiben bei ui-monospace --
+   eine andere Laufweite dort hiesse, jedes Layout neu zu beurteilen. */
+@font-face {
+  font-family: 'B612Mono';
+  src: url('../fonts/B612Mono-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+.radar-wrap .blip .lab { font-family: 'B612Mono', ui-monospace, monospace; }
