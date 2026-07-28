@@ -6,5 +6,5 @@
                "decay_s": 6, "leader_s": 60,
                "labels": ["callsign", "fl", "squawk"] },
   "emergency": { "highlight": true, "interrupt_carousel": false },
-  "_hinweis": "interrupt_carousel wirkt ab Stufe 2, wenn es die Einzelziel-Seite gibt"
+  "_hinweis": "interrupt_carousel wird geladen und normalisiert (console/js/config.js), aber von keiner Stelle im Code ausgewertet -- noch nicht umgesetzt, fruehestens Stufe 3"
 }

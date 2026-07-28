@@ -70,10 +70,14 @@ test('Ziel ganz ohne alt_baro faellt vollstaendig heraus', () => {
   assert.deepEqual(r.baender.map(b => b.anzahl), [0, 0, 0, 0, 0, 0]);
 });
 
+// Enge Spanne bewusst: Der echte Wert liegt bei 3,57 NM. Ein fehlender
+// cos(lat)-Faktor -- der naheliegendste Fehler bei Laengengraden -- ergaebe
+// 4,24 NM. Die Spanne 3 < x < 5 haette das nicht gefangen; 3,4 < x < 3,8
+// schliesst 4,24 aus und macht den Test kalibrierbar rot.
 test('Entfernung wird gerechnet, nicht uebernommen', () => {
   const r = lauf([ac({ alt_baro: 30000 })]);
-  assert.ok(r.punkte[0].nm > 3 && r.punkte[0].nm < 5,
-            `erwartet rund 4 NM, war ${r.punkte[0].nm}`);
+  assert.ok(r.punkte[0].nm > 3.4 && r.punkte[0].nm < 3.8,
+            `erwartet rund 3,57 NM, war ${r.punkte[0].nm}`);
 });
 
 test('ohne Empfaengerposition gibt es keine Punkte, aber die Baender zaehlen', () => {
