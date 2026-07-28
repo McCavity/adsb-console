@@ -29,7 +29,7 @@ export async function startConsole() {
     dot.className = 'dot';
     box.appendChild(dot);
     const index = order.indexOf(id);
-    box.addEventListener('pointerup', () => { goTo(index, false); takeOver(); });
+    box.addEventListener('pointerup', () => goTo(index, 'beruehrung'));
     dotsEl.appendChild(box);
   }
 
@@ -92,60 +92,58 @@ export async function startConsole() {
     el.classList.remove('wisch-links', 'wisch-rechts');
   }
 
-  // rotate: Soll nach dem Wechsel wieder automatisch weitergeblaettert
-  // werden? Der automatische Umlauf will das, eine Beruehrung nicht --
-  // dort uebernimmt takeOver() und plant die Fortsetzung in 60 s.
-  // Ausdruecklich als Parameter und nicht ueber die Aufrufreihenfolge:
-  // Vorher rief die Touch-Behandlung erst takeOver() und dann goTo(),
-  // und goTo startete die Rotation sofort wieder -- die Pause war
-  // gesetzt und im selben Atemzug ueberschrieben. Am 27.07. am Panel
-  // gemessen: Das Board blieb 15 statt 60 Sekunden stehen.
-  function goTo(index, rotate = true, wischRichtung = null) {
-    const next = ((index % order.length) + order.length) % order.length;
-    if (next === current) return;
-    const alt = els.get(order[current]);
-    alt.classList.remove('active');
-    raeumeWisch(alt);
-    if (wischRichtung) {
-      alt.classList.add(wischRichtung < 0 ? 'wisch-links' : 'wisch-rechts');
-      alt._wischTimer = setTimeout(() => raeumeWisch(alt), 220);
-    }
-    current = next;
-    betrete(current);
-    renderCurrent();
-    const neu = els.get(order[current]);
-    raeumeWisch(neu);
-    neu.classList.add('active');
-    dotsEl.querySelectorAll('.dot')
-      .forEach((d, i) => d.classList.toggle('on', i === current));
-    if (rotate) startRotation();
-  }
-
-  // Die eigentliche Entscheidung (welche Seite als naechstes, nach wie
-  // langer Wartezeit) sitzt rein in naechsterWechsel() (carousel.js) und ist
-  // dort getestet (tests/test_carousel.mjs) -- hier bleiben nur DOM-seitige
-  // Nebenwirkungen: Timer setzen und goTo() aufrufen.
-  function startRotation() {
-    clearTimeout(rotateTimer);
-    const { seiteIndex, inMs } = naechsterWechsel({
-      seiteIndex: current, seitenzahl: order.length,
-      dwellMs: dwellFor(order[current]), resumeMs: RESUME_MS,
-      ausloeser: 'automatisch',
-    });
-    rotateTimer = setTimeout(() => goTo(seiteIndex, true), inMs);
-  }
-
-  // Jede Beruehrung pausiert die Rotation; sie nimmt danach von der
-  // SICHTBAREN Seite aus wieder auf, nicht von der unterbrochenen.
-  function takeOver() {
+  // Plant den naechsten Wechsel, IMMER von der gerade sichtbaren Seite aus.
+  // Liest `current` selbst, statt einen Index entgegenzunehmen: Ein
+  // Aufrufer, der ihn vor einem Seitenwechsel berechnet, uebergibt sonst
+  // einen veralteten Wert -- und wenn das geplante Ziel dann die sichtbare
+  // Seite ist, steigt goTo() frueh aus und niemand plant je wieder etwas.
+  // Genau so blieb das Karussell am 28.07. nach jedem Linkswisch stehen.
+  function planeWechsel(ausloeser) {
     clearTimeout(rotateTimer);
     clearTimeout(resumeTimer);
     const { seiteIndex, inMs } = naechsterWechsel({
       seiteIndex: current, seitenzahl: order.length,
-      dwellMs: dwellFor(order[current]), resumeMs: RESUME_MS,
-      ausloeser: 'beruehrung',
+      dwellMs: dwellFor(order[current]), resumeMs: RESUME_MS, ausloeser,
     });
-    resumeTimer = setTimeout(() => goTo(seiteIndex, true), inMs);
+    const timer = setTimeout(() => goTo(seiteIndex, 'automatisch'), inMs);
+    if (ausloeser === 'beruehrung') resumeTimer = timer; else rotateTimer = timer;
+  }
+
+  // ausloeser: Was den Wechsel anstoesst -- 'automatisch' (der Umlauf) oder
+  // 'beruehrung' (Wisch/Tipp/Punkt). Ausdruecklich als Parameter und nicht
+  // ueber die Aufrufreihenfolge: Vorher rief die Touch-Behandlung erst
+  // takeOver() und dann goTo(), und goTo startete die Rotation sofort
+  // wieder -- die Pause war gesetzt und im selben Atemzug ueberschrieben.
+  // Am 27.07. am Panel gemessen: Das Board blieb 15 statt 60 Sekunden
+  // stehen. Am 28.07. kam eine zweite, schwerere Variante derselben
+  // Fehlerklasse dazu: takeOver() plante von einem VERALTETEN current aus
+  // (vor dem Wechsel berechnet), sodass ein Linkswisch genau dorthin lief
+  // -- goTo() stieg dann ueber "next === current" frueh aus, BEVOR
+  // ueberhaupt wieder geplant wurde, und das Karussell blieb fuer immer
+  // stehen. Deshalb plant goTo() jetzt am Ende IMMER, auch wenn die Seite
+  // dieselbe blieb, und die Planung liest current selbst (planeWechsel).
+  function goTo(index, ausloeser = 'automatisch', wischRichtung = null) {
+    const next = ((index % order.length) + order.length) % order.length;
+    if (next !== current) {
+      const alt = els.get(order[current]);
+      alt.classList.remove('active');
+      raeumeWisch(alt);
+      if (wischRichtung) {
+        alt.classList.add(wischRichtung < 0 ? 'wisch-links' : 'wisch-rechts');
+        alt._wischTimer = setTimeout(() => raeumeWisch(alt), 220);
+      }
+      current = next;
+      betrete(current);
+      renderCurrent();
+      const neu = els.get(order[current]);
+      raeumeWisch(neu);
+      neu.classList.add('active');
+      dotsEl.querySelectorAll('.dot')
+        .forEach((d, i) => d.classList.toggle('on', i === current));
+    }
+    // IMMER planen -- auch wenn die Seite dieselbe blieb. Ein Ausstieg ohne
+    // Planung laesst das Karussell stehen, und zwar fuer immer.
+    planeWechsel(ausloeser);
   }
 
   let downX = 0, downY = 0, downT = 0;
@@ -154,10 +152,10 @@ export async function startConsole() {
   });
   stage.addEventListener('pointerup', e => {
     const dx = e.clientX - downX, dy = e.clientY - downY;
-    takeOver();
-    if (Math.abs(dx) >= 60 && Math.abs(dx) > Math.abs(dy) && Date.now() - downT < 1200) {
-      goTo(current + (dx < 0 ? 1 : -1), false, dx < 0 ? -1 : 1);
-    }
+    const istWisch = Math.abs(dx) >= 60 && Math.abs(dx) > Math.abs(dy)
+                     && Date.now() - downT < 1200;
+    if (istWisch) goTo(current + (dx < 0 ? 1 : -1), 'beruehrung', dx < 0 ? -1 : 1);
+    else planeWechsel('beruehrung');
   });
   document.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -177,7 +175,7 @@ export async function startConsole() {
   renderCurrent();
   tickClock();
   setInterval(tickClock, 1000);
-  startRotation();
+  planeWechsel('automatisch');
 
   // Naechtlicher Reload -- nur wenn die Quelle vorher antwortet. Ohne diese
   // Sperre ist der Reload genau der Mechanismus, der morgens eine
