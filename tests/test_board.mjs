@@ -37,3 +37,22 @@ test('leere Eingabe ergibt zwei leere Listen', () => {
   assert.deepEqual(r.positioned, []);
   assert.deepEqual(r.unpositioned, []);
 });
+
+test('highlight=false schaltet auch das Board stumm', () => {
+  const ac = [{ hex: 'aaa111', flight: 'DLH123  ', squawk: '7700',
+                lat: 50.1, lon: 9.1, alt_baro: 30000 }];
+  const rcv = { lat: 50.0, lon: 9.0 };
+  assert.equal(splitTargets(ac, rcv, true).positioned[0].emergency, true);
+  assert.equal(splitTargets(ac, rcv, false).positioned[0].emergency, false);
+});
+
+test('highlight=false wirkt auch auf Ziele ohne Position', () => {
+  const ac = [{ hex: 'bbb222', flight: 'AFR9   ', squawk: '7600', alt_baro: 12000 }];
+  assert.equal(splitTargets(ac, null, true).unpositioned[0].emergency, true);
+  assert.equal(splitTargets(ac, null, false).unpositioned[0].emergency, false);
+});
+
+test('ohne dritten Parameter bleibt die Markierung an', () => {
+  const ac = [{ hex: 'ccc333', squawk: '7500', alt_baro: 9000 }];
+  assert.equal(splitTargets(ac, null).unpositioned[0].emergency, true);
+});
