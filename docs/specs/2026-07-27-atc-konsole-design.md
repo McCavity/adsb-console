@@ -160,7 +160,7 @@ adsb-console/
     js/geo.js          — reine Funktionen: Entfernung, Peilung, FL, Formatierung
     js/console.js      — Karussell, Touch, Seitenauswahl
     js/pages/*.js      — je Seite ein Renderer
-    fonts/             — gebundelter Font
+    fonts/             — gebundelter Font, **nur im Radarkreis** benutzt
     data/airports.json — statische Flugplatz- und Bahngeometrie
   daemon/
     atc_daemon.py
@@ -277,9 +277,14 @@ einem Neustart aussagefähig, ohne daß irgendjemand 120 Dateien pro Seitenladen
   },
   "services": { "dump1090-fa": "active", "piaware": "active",
                 "fr24feed": "active", "telegraf": "active", "lighttpd": "active" },
-  "samples_dropped": 0
+  "written_at": 1785224553.5
 }
 ```
+
+`written_at` ist der Unix-Zeitstempel des Schreibvorgangs (Sekunden, mit
+Nachkommastellen). Die Systemseite vergleicht ihn gegen die eigene Uhr und
+erkennt daran, wie lange der Daemon schon nicht mehr geschrieben hat — unabhängig
+vom Fetch-Intervall des Frontends, das nur zeigt, wann *es* zuletzt gefragt hat.
 
 **`now` und `ever` bleiben getrennte Felder und getrennte Anzeige.** `get_throttled`
 packt den aktuellen Zustand in die Bits 0–3 und „ist seit dem Boot einmal vorgekommen"
@@ -291,7 +296,11 @@ Anzeige ein Gedankenstrich. Die Datei wird nie als Ganzes ungültig, weil ein Te
 
 ## 6. Die Seiten
 
-Sieben Seiten, Reihenfolge wie hier. Layout **1280×720 quer** (Panel 720×1280 nativ,
+Sieben Seiten. **Reihenfolge in diesem Dokument** ist die thematische: Radar, Board,
+Einzelziel, Statistik, Polar, Höhenprofil, System — Übersicht, Liste, Detail, Zahlen.
+Das ist **nicht** die Reihenfolge des Karussells am Gerät; die steht verbindlich in
+§7.1 und wurde am 28.07.2026 am Panel geändert, nachdem Einzelziel und Höhenprofil
+dazukamen. Layout **1280×720 quer** (Panel 720×1280 nativ,
 im Compositor gedreht): 56 px Kopfzeile, Rumpf, 44 px Indikatorreihe. **Nichts
 scrollt.** Was nicht paßt, ist ein Layoutfehler und wird als solcher behoben.
 
@@ -322,7 +331,10 @@ Median 21 NM, 58 % innerhalb von 25 NM, Stundenmaximum 69 NM. Bei einem Scope vo
 Anflugradarantenne), mit nachlaufendem Keil abnehmender Helligkeit. Das Nachglühen
 entsteht klassisch: Die Phosphor-Ebene wird pro Frame mit halbtransparentem Schwarz
 überzogen, statt jedes Blip einzeln zu verrechnen. Ein Blip wird hell gesetzt, wenn die
-Keule seinen Azimut überstreicht, und verblaßt über `decay_s = 6 s`.
+Keule seinen Azimut überstreicht, und verblaßt über `decay_s`, **begrenzt auf
+einen Sweep-Umlauf**: In Variante B hängt das Verglimmen an der
+sweep-gekoppelten CSS-Animation, ein `decay_s` über `sweep_s` ist dort nicht
+darstellbar und wird auf 0,98 × `sweep_s` gedeckelt.
 
 **Die Fiktion, ausdrücklich benannt.** Ein echter PPI zeigt ein Ziel nur beim
 Überstreichen; unsere Daten kommen jede Sekunde für alle Ziele gleichzeitig. Die Keule
@@ -343,8 +355,10 @@ in wahrer Ausrichtung zeichenbar, einschließlich der 18/36. Kleinere Plätze im
 (Egelsbach, Mainz-Finthen, Reichelsheim, Aschaffenburg) bekommen Symbol plus
 ICAO-Kennung; ihre Bahnen wären bei 3–6 px Strichgekritzel.
 
-**Schrift.** Ein gebundelter Font, kein CDN. Erster Kandidat ist **B612** (von Airbus
-für Cockpitanzeigen entworfen, offene Lizenz) — Lizenztext und Datei werden beim Bauen
+**Schrift.** Ein gebundelter Font, kein CDN, **nur im Radarkreis** (Kontakt-Overlays,
+Flugplatzkennungen, Ringbeschriftung) — Kacheln, Tabellen und alle übrigen Seiten
+bleiben bei `ui-monospace`. Erster Kandidat ist **B612** (von Airbus für
+Cockpitanzeigen entworfen, offene Lizenz) — Lizenztext und Datei werden beim Bauen
 geprüft, nicht angenommen. Fällt er durch, ist die Rückfallposition eine echte
 Strichschrift (Hershey, gemeinfrei), als Pfade gezeichnet.
 
@@ -361,9 +375,20 @@ sie stillschweigend wegzulassen hieße, die Hälfte des Empfangs zu verschweigen
 
 ### 6.3 Einzelziel
 
-Das nächstgelegene Ziel mit Position, groß: Callsign und Squawk, FL mit Steig- oder
-Sinkrate, IAS/TAS/Mach, Entfernung und Peilung, RSSI und Nachrichtenzahl. Alle diese
-Felder waren in der Stichprobe real belegt; fehlende zeigen einen Gedankenstrich.
+**Neu gefaßt am 28.07.2026**, maßgeblich ist
+[`2026-07-28-stufe-2-entwurf.md`](2026-07-28-stufe-2-entwurf.md) §4.1.
+
+Die ursprüngliche Fassung („das nächstgelegene Ziel mit Position, groß") war beim
+Bau der Stufe 2 fast vollständig Wiederholung: Der Datenblock rechts auf der
+Radarseite zeigt Callsign, Heavy, FL, Entfernung, Peilung, Track-Symbol, GS,
+Steig-/Sinkrate und Squawk bereits, und das ein Drittel der Karussellzeit. Übrig
+blieben genau drei zusätzliche Felder — eine ganze Seite dafür ist eine Dublette.
+
+Die Seite zeigt stattdessen ein **volles Datenblatt**: Geschwindigkeitstrias,
+Höhentrias samt der im Autopiloten eingestellten Zielflugfläche
+(`nav_altitude_mcp`, in der Messung vom 28.07. bei 18 von 18 positionierten
+Zielen belegt), Lage, Ort, Empfangs- und Positionsgüte. Ihr Ziel friert beim
+Betreten der Seite ein.
 
 ### 6.4 Statistik
 
@@ -381,24 +406,62 @@ Abschattung nach Südwest (15 NM) gegen Nord und Ost (69 NM).
 
 ### 6.6 Höhenprofil
 
-Ziele nach Flugflächenbändern als Balken: 0–5, 5–10, 10–20, 20–30, 30–40, > 40. Aus
-`alt_baro` (in der Stichprobe 18 von 26 Zielen).
+**Neu gefaßt am 28.07.2026**, maßgeblich ist
+[`2026-07-28-stufe-2-entwurf.md`](2026-07-28-stufe-2-entwurf.md) §4.2.
+
+Die ursprüngliche Fassung (sechs Balken nach Flugflächenbändern) scheiterte an
+einer Messung über eine Stunde, 1808 Positionen: Ein Band hält 57 %, ein anderes
+im Mittel 0,3 Ziele. Sechs Balken, von denen einer immer lang und einer immer
+leer ist, ändern sich nicht sichtbar.
+
+Vor allem aber summiert die Bänderzählung die **Entfernung** weg — und damit die
+Struktur, die wirklich da ist: ein Reiseflugband FL320–FL400 über die vollen
+50 NM und ein Flughafenkegel innerhalb von 10 NM unterhalb FL050, mit einer
+Lücke dazwischen. Die Seite zeigt deshalb einen **Seitenriß** (Höhe über
+Entfernung, x-Achse im Maßstab des Radars) und behält die sechs Bänder als
+Zählspalte daneben.
 
 ### 6.7 System
 
-CPU-Temperatur mit beiden belegten Marken (60 °C Soft-Limit als dokumentierter
-Firmware-Vorgabewert, 80 °C hart), Load, RAM, Disk, Uptime, `get_throttled` in **zwei
+CPU-Temperatur mit drei Marken, aber nur zwei Farbschwellen: 60 °C ist der
+dokumentierte Firmware-Vorgabewert und steht als Strich im Bild, ist aber **keine**
+Farbschwelle — das Gerät läuft im Regelbetrieb bei 66,7–71,5 °C, also dauerhaft
+darüber, und eine Anzeige, die dabei ständig Alarmfarbe zeigt, lehrt das Falsche.
+Die Farbe wechselt erst bei **72 °C** (Abnahmegrenze dieses Projekts) und bei
+**80 °C** (hart). Dazu Load, RAM, Disk, Uptime, `get_throttled` in **zwei
 getrennten Blöcken** „jetzt" und „seit Boot", Status der fünf Dienste und
-`samples_dropped`. Auf 1843 MB neben vier Diensten ist das die Seite, die sagt, ob die
-Konsole selbst zum Problem geworden ist.
+`samples_dropped` — **aus `stats.json`, in zwei Werten** (`last1min` und `total`,
+dieselbe Trennung wie bei `get_throttled` und aus demselben Grund: Ein Kriterium,
+das nur kumulativ gilt, verschweigt den Moment; eines, das nur den Moment zeigt,
+verschweigt die Historie). Auf 1843 MB neben vier Diensten ist das die Seite, die
+sagt, ob die Konsole selbst zum Problem geworden ist.
 
 ## 7. Verhalten
 
 ### 7.1 Karussell
 
-Radar als Heimatseite mit 45 s, die übrigen sechs je 15 s — bei allen sieben aktiven
-Seiten ein Umlauf von 2:15, das Radar ein Drittel der Zeit. Standzeiten und
-Seitenauswahl stehen in `console.json`.
+Radar als Heimatseite mit 45 s, die übrigen je 15 s. Standzeiten und Seitenauswahl
+stehen in `console.json`.
+
+**Der Umlauf hängt an der Zahl der Seiten, die wirklich einen Renderer haben** —
+`console.js` filtert `activePages` gegen die registrierten Seiten, ein `true` in
+`console.json` allein genügt nicht:
+
+| Stand | aktive Seiten | Umlauf | Radaranteil |
+|---|---|---|---|
+| nach Stufe 1 | 3 (Radar, Board, Statistik) | 1:15 | **60 %** |
+| **heute, nach Stufe 2** | **6** (Polar fehlt noch) | **2:00** | **37,5 %** |
+| nach Stufe 3 | 7 | 2:15 | 33 % |
+
+Die Zeile für Stufe 1 steht hier, weil ihre Verwechslung mit der Stufe-3-Zeile schon
+einmal ein Meßprotokoll falsch gemacht hat (`docs/messungen/2026-07-27-variante-b-stunde.md`).
+
+**Die geltende Reihenfolge** (`PAGE_ORDER` in `console/js/config.js`, am 28.07.2026
+am Panel festgelegt) ist: Radar, Einzelziel, Höhenprofil, Polar, Board, Statistik,
+System. Sie folgt dem inhaltlichen Faden statt der Bauabfolge — das Radar zeigt, WO
+etwas ist; Einzelziel greift den nächstgelegenen Kontakt davon direkt auf;
+Höhenprofil zeigt dieselben Ziele im Aufriß; Polar die Reichweite darum herum. Erst
+danach die Listen- und Zustandsseiten.
 
 **Die Radar-Animation läuft nur, solange die Seite sichtbar ist.** Eine unsichtbare
 Canvas zu rendern ist reine Verschwendung — und auf diesem Gerät eine thermische dazu.
@@ -427,7 +490,10 @@ sichtbarer Zeiger.
 
 7500, 7600 und 7700 sowie ein aussagekräftiges `emergency`-Feld werden **markiert**: rotes
 Blip auf dem Radar, rote Zeile im Board, Squawk im Klartext. Das Karussell läuft normal
-weiter; `emergency.interrupt_carousel` kann das umschalten, steht aber auf `false`.
+weiter. Das Feld `emergency.interrupt_carousel` existiert und wird normalisiert
+(`console/js/config.js`), **hat aber keine Wirkung** — es wertet es niemand aus, das
+Karussell läuft bei einem Notfall immer weiter, unabhängig vom Wert. Das ist ein offener
+Punkt für Stufe 3, kein umgesetztes Verhalten.
 
 **„Aussagekräftig" ist hier wörtlich zu nehmen und war beinahe ein Fehler:** In der
 Messung trug das Feld die Werte `null` (23 Ziele) und `"none"` (6 Ziele) — es ist also
@@ -562,12 +628,17 @@ als erledigt gemeldet.
 |---|---|
 | 0 | Meß-Spike (§10.1). Entscheidet die Radar-Umsetzung. |
 | 1 | Daemon **inklusive Rekord-Sammlung** + Gerüst + Radar + Board + Statistik; Kiosk läuft am Panel |
-| 2 | Einzelziel, System, Höhenprofil |
+| 2 | Einzelziel, System, Höhenprofil — **umgesetzt am 28.07.2026** |
 | 3 | Polar mit Rekordhaltern |
 
 Der Daemon geht bewußt zuerst live: Dann sammelt SQLite bereits Rekorde, während der
 Rest gebaut wird, und die Polar-Seite hat bei ihrer Fertigstellung echte Daten statt
 einer leeren Tabelle.
+
+**Nach Stufe 2 laufen sechs Seiten**, nicht sieben: Polar hat noch keinen Renderer
+(`console/js/pages/polar.js` existiert erst mit Stufe 3) und wird von `console.js`
+gegen die registrierten Module gefiltert (§4.2, §6.5) — nicht ausgeblendet, sondern
+schlicht nicht registriert. Erst mit Stufe 3 wird daraus wieder ein Siebentel.
 
 ## 12. Zurückgestellt
 

@@ -75,5 +75,9 @@ vereinbart.**
 - Die Kosten von Variante B. Die wird nach demselben Verfahren gemessen, bevor sie
   freigegeben wird — sonst wäre der Rückfall genau die unbelegte Annahme, gegen die
   dieser Spike gebaut wurde.
-- Den Einfluß des Karussells: Im Betrieb ist die Radarseite nur ein Drittel der Zeit
-  sichtbar, und die Animation läuft nur, solange sie sichtbar ist.
+- Den Einfluß des Karussells: Die Animation läuft nur, solange die Radarseite sichtbar
+  ist. **Korrektur vom 28.07.:** Der ursprüngliche Satz nannte hier „ein Drittel der
+  Zeit" — das war eine Annahme, keine Messung, und traf schon für den Meßcommit dieses
+  Spikes nicht zu (drei registrierte Seiten, 60 % Radaranteil; siehe
+  `docs/messungen/2026-07-27-variante-b-stunde.md`). Mit den sechs Seiten der Stufe 2
+  sind es 37,5 %.
