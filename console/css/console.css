@@ -179,3 +179,24 @@ html, body {
 .band-bar i { display: block; height: 100%; background: #3ddc84; }
 .band-n { font-size: 22px; font-variant-numeric: tabular-nums; flex: 0 0 34px;
           text-align: right; }
+
+/* Systemseite */
+.sys { flex: 1; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+.sys-oben, .sys-unten { flex: 1; display: grid; gap: 14px; min-height: 0; }
+.sys-oben  { grid-template-columns: 1.25fr 1fr 1fr 1fr; }
+.sys-unten { grid-template-columns: 1fr 1fr 1.1fr .8fr; }
+.sys-temp .huge { font-size: 62px; margin: 4px 0 10px; }
+.sys-temp.normal .huge  { color: #3ddc84; }
+.sys-temp.grenze .huge  { color: #f0b429; }
+.sys-temp.hart .huge    { color: #ff5a5a; }
+.sys-temp.unbekannt .huge { color: #4e6b58; }
+.temp-bar { position: relative; height: 14px; background: #0b1f13;
+            border: 1px solid #14361f; border-radius: 3px; overflow: hidden; }
+.temp-bar i { display: block; height: 100%; background: #2f6b45; }
+.temp-bar u { position: absolute; top: 0; width: 2px; height: 100%; }
+.temp-bar u.m-soft { background: #4e6b58; }
+.temp-bar u.m-abn  { background: #f0b429; }
+.temp-bar u.m-hart { background: #ff5a5a; }
+.flag { font-size: 19px; font-variant-numeric: tabular-nums; }
+.flag.aus { color: #4e9c6a; }
+.flag.an  { color: #ff5a5a; font-weight: 700; }
