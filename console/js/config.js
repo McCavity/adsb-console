@@ -10,7 +10,12 @@ export const DEFAULTS = Object.freeze({
   emergency: { highlight: true, interrupt_carousel: false },
 });
 
-const PAGE_ORDER = ['radar', 'board', 'target', 'stats', 'polar', 'profile', 'system'];
+// Reihenfolge nach dem inhaltlichen Faden, nicht nach der Bauabfolge:
+// Das Radar zeigt, WO etwas ist; das Einzelziel greift den naechsten
+// Kontakt von dort direkt auf; das Hoehenprofil zeigt dieselben Ziele im
+// Aufriss; Polar die Reichweite darum herum. Erst danach die Listen- und
+// Zustandsseiten. Am 28.07. am Panel so entschieden.
+const PAGE_ORDER = ['radar', 'target', 'profile', 'polar', 'board', 'stats', 'system'];
 
 function positiveNumber(value, fallback) {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;

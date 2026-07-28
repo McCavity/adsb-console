@@ -70,3 +70,27 @@ test('Beruehrung veraendert die Seite nicht, nur die Wartezeit', () => {
   assert.equal(r.seiteIndex, 2);
   assert.equal(r.inMs, 60000);
 });
+
+test('der geplante Wechsel zeigt nie auf die gerade sichtbare Seite', () => {
+  // Genau diese Zusicherung wurde am 28.07. verletzt -- nicht von dieser
+  // Funktion, sondern vom Aufrufer, der ihr einen veralteten seiteIndex
+  // gab. Steht der Vertrag hier, ist er beim naechsten Lesen sichtbar.
+  for (let n = 2; n <= 7; n++) {
+    for (let i = 0; i < n; i++) {
+      for (const ausloeser of ['automatisch', 'beruehrung']) {
+        const r = naechsterWechsel({ seiteIndex: i, seitenzahl: n,
+                                     dwellMs: 45000, resumeMs: 60000, ausloeser });
+        assert.notEqual(r.seiteIndex, i, `n=${n} i=${i} ${ausloeser}`);
+      }
+    }
+  }
+});
+
+test('bei nur einer Seite bleibt es zwangslaeufig dieselbe', () => {
+  // Der einzige Fall, in dem Ziel und sichtbare Seite zusammenfallen
+  // duerfen -- und deshalb der Grund, warum goTo() auch dann planen muss,
+  // wenn es die Seite gar nicht wechselt.
+  const r = naechsterWechsel({ seiteIndex: 0, seitenzahl: 1,
+                               dwellMs: 45000, resumeMs: 60000, ausloeser: 'automatisch' });
+  assert.equal(r.seiteIndex, 0);
+});
