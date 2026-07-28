@@ -87,7 +87,10 @@ export function createDataStore(onUpdate) {
     setInterval(pollSystem, 10000);
   }
 
-  return { state, start };
+  // refreshSystem wird beim Betreten der Systemseite gerufen. Ohne diesen
+  // Sofortabruf kaemen die ersten Daten bis zu 10 s spaet -- bei 15 s
+  // Standzeit zwei Drittel der Zeit mit Gedankenstrichen.
+  return { state, start, refreshSystem: pollSystem };
 }
 
 // Alterszustand einer Quelle. Grenzen aus der Spec, Abschnitt 8.

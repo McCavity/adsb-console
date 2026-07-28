@@ -1,6 +1,7 @@
 import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel, isEmergency }
   from '../geo.js';
 import { registerPage } from '../console.js';
+import { msgRate } from './gemeinsam.js';
 
 const SIZE = 620;               // Buehnenhoehe: 720 minus Kopf (56) und Punkte (44)
 const R = SIZE / 2;             // Radius in Pixeln
@@ -393,13 +394,6 @@ function sideTile(label, wert, einheit, sub) {
     <div class="value"><span class="big em">${wert}<span class="unit-s">${einheit}</span></span></div>
     <div class="sub-d value">${sub}</div>
   </div>`;
-}
-
-function msgRate(state) {
-  const s = state.stats && state.stats.last1min;
-  if (!s) return '—';
-  const spanne = s.end - s.start;
-  return spanne > 0 ? Math.round(s.messages / spanne) : '—';
 }
 
 // Kuerzester Winkelabstand, damit der Sprung ueber 360/0 keine
