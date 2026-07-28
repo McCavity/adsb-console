@@ -81,3 +81,31 @@ test('Umrechnung NM auf Pixel', () => {
   assert.equal(nmToPx(50, 50, 310), 310);
   assert.equal(nmToPx(25, 50, 310), 155);
 });
+
+// Die Empfaengerposition hier ist ERFUNDEN (50.0 N / 9.0 E, ein runder
+// Punkt oestlich des Rhein-Main-Gebiets) und hat mit der tatsaechlichen
+// nichts zu tun -- die gehoert nicht ins Repo, auch nicht gerundet.
+// EDDF ist oeffentliche Infrastruktur und darf hier stehen.
+//
+// Der Sollwert ist von Hand nachrechenbar und damit unabhaengig vom Code:
+// Bei 50 Grad Nord ist ein Laengengrad 60 * cos(50 Grad) = 38,57 NM breit.
+// 0,4378 Grad Laengendifferenz sind also 16,88 NM, dazu 0,0379 Grad
+// Breitendifferenz = 2,27 NM. Pythagoras: sqrt(16,88^2 + 2,27^2) = 17,03 NM.
+const EMPF = { lat: 50.0, lon: 9.0 };
+const EDDF = { lat: 50.0379, lon: 8.5622 };
+
+test('Entfernung erfundener Empfaenger nach EDDF', () => {
+  const nm = haversineNm(EMPF.lat, EMPF.lon, EDDF.lat, EDDF.lon);
+  assert.ok(Math.abs(nm - 17.042) < 0.01, `erwartet ~17,042 NM, war ${nm}`);
+});
+
+test('EDDF liegt von dort aus knapp noerdlich von West', () => {
+  const brg = bearingDeg(EMPF.lat, EMPF.lon, EDDF.lat, EDDF.lon);
+  assert.equal(formatBearing(brg), '278°');
+});
+
+test('Gegenprobe: der Rueckweg ist gleich lang', () => {
+  const hin = haversineNm(EMPF.lat, EMPF.lon, EDDF.lat, EDDF.lon);
+  const zurueck = haversineNm(EDDF.lat, EDDF.lon, EMPF.lat, EMPF.lon);
+  assert.ok(Math.abs(hin - zurueck) < 1e-9);
+});
