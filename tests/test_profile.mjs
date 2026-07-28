@@ -14,7 +14,7 @@ const lauf = (liste, rangeNm = 50, highlight = true) =>
 
 test('sechs Baender in der Reihenfolge der Spec', () => {
   assert.equal(BAENDER.length, 6);
-  assert.deepEqual(BAENDER.map(b => b.von), [0, 5000, 10000, 20000, 30000, 40000]);
+  assert.deepEqual(BAENDER.map(b => b.von), [-Infinity, 5000, 10000, 20000, 30000, 40000]);
 });
 
 test('Bandgrenze 5000 ft gehoert nach oben, nicht nach unten', () => {
@@ -94,4 +94,27 @@ test('leere Eingabe ergibt leere Auswertung statt Absturz', () => {
   assert.deepEqual(r.punkte, []);
   assert.equal(r.ohnePosition, 0);
   assert.deepEqual(r.baender.map(b => b.anzahl), [0, 0, 0, 0, 0, 0]);
+});
+
+test('negative Hoehe bekommt einen Punkt UND ein Band', () => {
+  const r = lauf([ac({ alt_baro: -100 })]);
+  assert.equal(r.punkte.length, 1);
+  assert.equal(r.punkte[0].altFt, -100);
+  assert.equal(r.baender[0].anzahl, 1);
+});
+
+test('was einen Punkt bekommt, wird auch in einem Band gezaehlt', () => {
+  const r = lauf([ac({ alt_baro: -100 }), ac({ alt_baro: 0 }),
+                  ac({ alt_baro: 37000 }), ac({ alt_baro: 47000 })]);
+  const inBaendern = r.baender.reduce((a, b) => a + b.anzahl, 0);
+  assert.equal(inBaendern, r.punkte.length + r.ohnePosition + r.ausserhalb);
+});
+
+test('ein null-Eintrag in der Liste wirft nicht', () => {
+  const r = lauf([null, ac({ alt_baro: 30000 })]);
+  assert.equal(r.punkte.length, 1);
+});
+
+test('die Bandgrenzen lassen sich nicht nachtraeglich verbiegen', () => {
+  assert.throws(() => { 'use strict'; BAENDER[0].bis = 999; }, TypeError);
 });

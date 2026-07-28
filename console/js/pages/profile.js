@@ -3,15 +3,20 @@ import { haversineNm, isEmergency } from '../geo.js';
 // Die sechs Baender aus Spec 6.6, in Fuss. Die obere Kante ist Infinity --
 // "ueber FL400" hat keine Obergrenze, und ein Ziel oberhalb einer
 // gedachten Grenze verschwinden zu lassen waere derselbe Fehler wie ein
-// Punkt, der aus dem Bild faellt.
+// Punkt, der aus dem Bild faellt. Die untere Kante ist -Infinity: alt_baro
+// kann bei niedrigem Luftdruck knapp negativ werden, und ein Ziel mit
+// -100 ft ist buchstaeblich "unter FL050". Ohne diese Kante bekaeme es einen
+// Punkt im Seitenriss, faende aber kein Band -- Bild und Zahlenspalte
+// widersprechen sich dann.
 export const BAENDER = Object.freeze([
-  { von: 0,     bis: 5000,     label: 'unter FL050' },
-  { von: 5000,  bis: 10000,    label: 'FL050–FL100' },
-  { von: 10000, bis: 20000,    label: 'FL100–FL200' },
-  { von: 20000, bis: 30000,    label: 'FL200–FL300' },
-  { von: 30000, bis: 40000,    label: 'FL300–FL400' },
-  { von: 40000, bis: Infinity, label: 'über FL400' },
+  { von: -Infinity, bis: 5000,     label: 'unter FL050' },
+  { von: 5000,      bis: 10000,    label: 'FL050–FL100' },
+  { von: 10000,     bis: 20000,    label: 'FL100–FL200' },
+  { von: 20000,     bis: 30000,    label: 'FL200–FL300' },
+  { von: 30000,     bis: 40000,    label: 'FL300–FL400' },
+  { von: 40000,     bis: Infinity, label: 'über FL400' },
 ]);
+BAENDER.forEach(Object.freeze);
 
 // Obere Kante des Seitenrisses in Fuss. Das gemessene Stundenmaximum lag
 // bei FL409; FL450 gibt Luft, ohne das Bild leer aussehen zu lassen.
@@ -22,7 +27,7 @@ export const FL_MAX = 45000;
 // diese Seite haelt sich daran, damit nicht zwei Teile derselben Konsole
 // dieselbe Eingabe verschieden deuten.
 function hoeheFt(a) {
-  const v = a.alt_baro;
+  const v = a && a.alt_baro;
   return typeof v === 'number' && Number.isFinite(v) ? v : null;
 }
 
