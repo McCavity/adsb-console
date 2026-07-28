@@ -82,9 +82,11 @@ if [[ ! "$OUTPUT" =~ ^[A-Za-z0-9-]+$ ]]; then
     exit 1
 fi
 
-echo "Installing labwc, wlr-randr, chromium, seatd, curl and a colour emoji font …"
+echo "Installing labwc, wlr-randr, chromium, seatd and curl …"
 apt-get update -qq
-apt-get install -y --no-install-recommends labwc wlr-randr chromium seatd curl fonts-noto-color-emoji
+# Kein Emoji-Font: Die Konsole benutzt keine Emoji, und die Radarschrift
+# liegt gebundelt im Repo (console/fonts/HERKUNFT.md).
+apt-get install -y --no-install-recommends labwc wlr-randr chromium seatd curl
 
 echo "Enabling seatd …"
 systemctl enable --now seatd.service

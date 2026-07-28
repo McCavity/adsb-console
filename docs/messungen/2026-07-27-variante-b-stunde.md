@@ -57,5 +57,15 @@ der Kühlung ist ohnehin eine Verlaufsfrage.
   gilt dieselbe Regel wie beim Spike: messen, nicht schönreden.
 - Gemessen wurde eine Stunde, nicht ein Tag. Über Nacht (kein Verkehr, leerer Schirm)
   dürfte das Gerät kühler laufen; belegt ist das nicht.
-- Die Radarseite war rund ein Drittel der Zeit sichtbar, wie im Regelbetrieb. Eine
-  Konfiguration, die das Radar dauerhaft stehen läßt, ist damit **nicht** gemessen.
+- **Korrektur vom 28.07.: Die Radarseite war 60 % der Zeit sichtbar, nicht ein Drittel.**
+  Der ursprüngliche Satz war nach den eigenen Zahlen dieses Dokuments falsch. `console.js`
+  filtert `activePages` gegen die **registrierten** Renderer; am Meßcommit `f2df217`
+  registrierte `index.html` genau drei Seiten (Radar, Board, Statistik). Bei Standzeiten
+  von 45 + 15 + 15 s ergibt das einen Umlauf von 75 s und einen Radaranteil von 45/75 =
+  60 %.
+
+  Das macht diese Stunde zu einem **härteren** Prüfling als den Regelbetrieb: Mit den
+  sechs Seiten der Stufe 2 fällt der Radaranteil auf 45/120 = 37,5 %. **Daraus folgt
+  nicht, daß die Konsole seither kühler läuft** — das wäre die Behauptung anstelle der
+  Messung. Es folgt nur, daß die 0,5 K Marge unter ungünstigeren Bedingungen erarbeitet
+  wurde als notiert.

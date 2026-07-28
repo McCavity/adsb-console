@@ -24,6 +24,11 @@ sind nicht dekorativ: Maßstab, Standzeiten und Abbruchkriterien leiten sich aus
 - **Keine Fremdquelle zur Laufzeit.** Keine CDN-Schrift, keine Kartenkacheln, keine
   externe Bibliothek. Alles wird lokal ausgeliefert. Diese Eigenschaft wird bei der
   Abnahme durch Ziehen des Netzsteckers geprüft, nicht behauptet.
+  Die einzige gebundelte Fremddatei ist `console/fonts/B612Mono-Regular.ttf` (SIL OFL 1.1,
+  Herkunft und Prüfsumme in `console/fonts/HERKUNFT.md`) — sie wird **nur im Radarkreis**
+  benutzt und wie `console/data/airports.json` einmal beim Bauen eingefroren. Die Herkunft
+  ist belegt, nicht behauptet: SHA256 geprüft gegen einen frischen Download der
+  Originalquelle und gegen die am Gerät ausgelieferte Fassung, alle drei identisch.
 - **Kein Umbau am ADS-B-Stack.** Weder `dump1090-fa` noch die Feeder noch die
   lighttpd-Konfiguration werden angefaßt. Die Konsole liest nur.
 - **`get_throttled` hat zwei Hälften.** Bits 0–3 sind „jetzt", Bits 16–19 „seit dem
@@ -46,8 +51,12 @@ sind nicht dekorativ: Maßstab, Standzeiten und Abbruchkriterien leiten sich aus
 
 ```
 console/   Statik-Frontend (HTML/CSS/JS, gebundelter Font, statische Flugplatzdaten)
-  js/geo.js      reine Rechenfunktionen, ohne DOM und ohne Zustand — hier liegen die Tests
+  js/geo.js          reine Rechenfunktionen, ohne DOM und ohne Zustand — hier liegen die Tests
+  js/pages/target.js   Einzelziel — volles Datenblatt zum eingefrorenen Ziel
+  js/pages/profile.js  Höhenprofil — Seitenriß über der Entfernung
+  js/pages/system.js   System — Temperatur, Last, Dienste, samples_dropped
+  fonts/             B612 Mono, gebundelt, nur im Radarkreis (fonts/HERKUNFT.md)
 daemon/    Schreiber-Daemon, nur Python-Standardbibliothek
 config/    console.json — Seitenschalter und Standzeiten
-tests/     node --test für geo.js, unittest für den Daemon
+tests/     node --test für geo.js und die Seiten-Module, unittest für den Daemon
 ```
