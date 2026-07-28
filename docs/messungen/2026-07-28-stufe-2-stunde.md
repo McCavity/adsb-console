@@ -1,5 +1,11 @@
 # Stufe 2 im Betrieb — eine Stunde am Gerät
 
+> **KORRIGIERT am 28.07. abends.** Zwei Aussagen dieses Protokolls waren falsch und sind
+> unten durchgestrichen: der behauptete Kaltstart und die daraus abgeleitete steigende
+> Kurve. Ein zweiter Lauf hat beides widerlegt — siehe
+> [`2026-07-28-stufe-2-stunde-2.md`](2026-07-28-stufe-2-stunde-2.md). Die Meßwerte und die
+> drei Kriterien sind davon **nicht** berührt.
+>
 > 2026-07-28, `adsapp01`. 120 Meßpunkte im 30-Sekunden-Abstand, 16:07:50 bis 17:07:35,
 > echte Konsole im Karussellbetrieb mit **sechs** Seiten (Radar 45 s, die übrigen fünf
 > je 15 s, Umlauf 2:00).
@@ -44,7 +50,15 @@ bei ~55 °C, am 27.07. bei 62,3 °C.
 **Heute war es also gut ein Kelvin wärmer als gestern.** Das macht das niedrigere Ergebnis
 nicht kleiner, sondern größer.
 
-## Der Verlauf — und was er diesmal *nicht* zeigt
+## Der Verlauf — ~~und was er diesmal *nicht* zeigt~~ (dieser Abschnitt war falsch)
+
+> **Alles ab hier bis zum nächsten Abschnitt ist widerlegt.** Der erste Meßpunkt war
+> **68,1 °C**, nicht 64,2 — die 64,2 waren das Minimum an Position 11, mitten im Lauf.
+> Es gab keinen Kaltstart, und die „steigende Kurve" ist Rauschen: Der mittlere Sprung
+> zwischen zwei Meßpunkten beträgt 1,15 K und ist damit größer als die behauptete Drift.
+> Über beide Läufe hinweg (zweieinhalb Stunden) liegen die Zehn-Minuten-Blockmittel
+> zwischen 67,46 und 68,55 °C — das Gerät **ist** im Gleichgewicht. Der Text bleibt
+> stehen, damit die Korrektur nachvollziehbar ist.
 
 | Zehn-Minuten-Block | Mittel |
 |---|---|
