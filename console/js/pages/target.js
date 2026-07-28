@@ -114,7 +114,7 @@ registerPage({
         <div class="lbl">${kopf.emergency
           ? 'NOTFALL' + (kopf.squawk ? ' · Squawk ' + kopf.squawk : '')
           : 'Datenblatt'}</div>
-        <div class="huge ${kopf.emergency ? 'red' : 'em'}${kopf.istHex ? ' db-hex' : ''}">
+        <div class="huge ${kopf.emergency ? 'red' : 'em'}${kopf.istHex ? ' hexkennung' : ''}">
           ${kopf.name}${kopf.heavy ? '<span class="hv"> HEAVY</span>' : ''}</div>
         ${kopf.squawk && !kopf.emergency
           ? `<div class="sub-d">Squawk ${kopf.squawk}</div>` : ''}

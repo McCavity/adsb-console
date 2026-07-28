@@ -57,7 +57,7 @@ registerPage({
     }
     const rows = positioned.slice(0, 12).map(t => `
       <tr class="${t.emergency ? 'emg' : ''}">
-        <td>${t.callsign || '——'}${t.heavy ? ' <span class="hv">H</span>' : ''}</td>
+        <td>${t.callsign ? t.callsign : `<span class="hexkennung">${t.hex}</span>`}${t.heavy ? ' <span class="hv">H</span>' : ''}</td>
         <td>${t.fl}</td>
         <td>${t.gs ?? '—'}</td>
         <td>${formatBearing(t.track)}</td>
@@ -74,7 +74,7 @@ registerPage({
       </table>
       <div class="nopos">ohne Position: ${unpositioned.length}
         <span class="nopos-list">${unpositioned.slice(0, 10)
-          .map(t => `${t.callsign || t.hex} ${t.fl}`).join(' · ')}</span>
+          .map(t => `${t.callsign ? t.callsign : `<span class="hexkennung">${t.hex}</span>`} ${t.fl}`).join(' · ')}</span>
       </div>`;
   },
 });
