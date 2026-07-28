@@ -27,6 +27,18 @@ function aircraftUrl() {
   return override || DATA + 'aircraft.json';
 }
 
+// Jedes truthy receiver.json wurde bisher ungeprueft uebernommen. Ein
+// Textwert statt einer Zahl macht damit JEDE Entfernungsangabe der Konsole
+// zu NaN -- lautlos, und sichtbar erst am Panel. Array wird ausdruecklich
+// abgewiesen: typeof [] ist "object", und [50,9].lat ist undefined.
+export function pruefeReceiver(doc) {
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) return null;
+  const { lat, lon } = doc;
+  if (typeof lat !== 'number' || !Number.isFinite(lat) || Math.abs(lat) > 90) return null;
+  if (typeof lon !== 'number' || !Number.isFinite(lon) || Math.abs(lon) > 180) return null;
+  return { lat, lon };
+}
+
 export function createDataStore(onUpdate) {
   const state = {
     aircraft: [], aircraftAt: null, aircraftNow: null,
@@ -67,8 +79,7 @@ export function createDataStore(onUpdate) {
     // Die gerundete Position aus receiver.json genuegt: bei 0,161 NM/px sind
     // 600 m Rundungsfehler rund zwei Pixel. Die exakte Position bleibt auf
     // dem Geraet und wird nur vom Daemon fuer die Rekorde benutzt.
-    const r = await getJSON(DATA + 'receiver.json');
-    if (r) state.receiver = { lat: r.lat, lon: r.lon };
+    state.receiver = pruefeReceiver(await getJSON(DATA + 'receiver.json'));
     await Promise.all([pollAircraft(), pollStats(), pollRange()]);
     setInterval(pollAircraft, 1000);
     setInterval(pollStats, 5000);
