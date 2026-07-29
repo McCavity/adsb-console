@@ -4,7 +4,7 @@ import { formatBearing } from '../console/js/geo.js';
 import { SEKTOREN, SKALA_STUFE, skalaNm, sektorBereich, halterName, polarModell,
   RICHTUNGEN, SEKTOREN_JE_RICHTUNG, richtungen, zuletztGefallen,
   BILD, R_PX, MITTE, werteArray, keilPfad, treppenPfade,
-  markenPlatz, markenKasten, PEIL_SCHRIFT, datumKurz, zahlNm }
+  markenPlatz, markenKasten, PEIL_SCHRIFT, datumKurz, zahlNm, radialen }
   from '../console/js/pages/polar.js';
 
 test('36 Sektoren zu je zehn Grad', () => {
@@ -360,4 +360,35 @@ test('zahlNm macht aus jedem unbrauchbaren Wert einen Gedankenstrich, nie eine Z
   assert.equal(zahlNm(NaN), '—');          // der Fall, den die erste Fassung durchliess
   assert.equal(zahlNm(Infinity), '—');
   assert.equal(zahlNm('22.6'), '—');       // eine Zeichenkette ist keine Messung
+});
+
+test('das Radialgitter hat 36 Grenzen, davon zwoelf grosse', () => {
+  const r = radialen(80, [10, 25, 50]);
+  assert.equal(r.length, 36);
+  assert.equal(r.filter(x => x.gross).length, 12);
+  assert.deepEqual(r.filter(x => x.gross).map(x => x.grad),
+    [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330]);
+});
+
+test('die grossen beginnen am innersten Ring, die kleinen erst am zweiten', () => {
+  // Der Kern der Entscheidung am Panel: innerhalb von 10 NM bleibt es frei,
+  // und die 24 kleinen setzen noch spaeter ein, damit die Mitte ruhig bleibt.
+  const r = radialen(80, [10, 25, 50]);
+  for (const x of r) {
+    assert.equal(x.vonNm, x.gross ? 10 : 25, `${x.grad}° beginnt falsch`);
+    assert.equal(x.bisNm, 80);
+  }
+});
+
+test('Ringe jenseits der Skala zaehlen nicht als Startradius', () => {
+  // Sonst begaenne ein Radial ausserhalb des Bildes und waere unsichtbar.
+  const r = radialen(20, [10, 25, 50]);
+  assert.equal(r.length, 36);
+  for (const x of r) assert.equal(x.vonNm, 10);   // 25 und 50 fallen raus
+});
+
+test('ohne brauchbaren Ring gibt es kein Gitter statt eines Sterns', () => {
+  assert.deepEqual(radialen(80, []), []);
+  assert.deepEqual(radialen(80, null), []);
+  assert.deepEqual(radialen(80, [200]), []);
 });

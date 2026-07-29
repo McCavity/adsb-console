@@ -208,10 +208,28 @@ html, body {
                          paint-order: stroke; stroke: #04140a; stroke-width: 3px; }
 .polar-svg .pol-peil { fill: #3a8f57; font-size: 15px; letter-spacing: .06em;
                        font-family: ui-monospace, monospace; }
-.polar-svg .pol-flaeche { fill: #14512b; stroke: none; }
+/* stroke in der eigenen Fuellfarbe: KEINE Kosmetik, sondern das Schliessen
+   einer Naht. 36 Keile stossen aneinander; an einer schraegen Kante rechnet
+   das Antialiasing die Teildeckung beider Seiten nacheinander gegen den
+   Hintergrund, und es bleibt eine dunkle Haarlinie -- am Geraet erst fuer
+   ein Radialgitter gehalten, das es nicht gab (0 <line>-Elemente im SVG).
+   Verraeterisch war die Ungleichmaessigkeit: Bei 000/090/180/270 fehlte die
+   Linie, weil dort die gemeinsame Kante achsparallel auf MITTE (310, einer
+   ganzen Zahl) liegt und die Deckung 0 oder 1 ist, nie dazwischen. Ein
+   halber Pixel Ueberlappung in der Fuellfarbe schliesst die Naht, ohne die
+   Flaeche sichtbar zu veraendern. */
+.polar-svg .pol-flaeche { fill: #14512b; stroke: #14512b; stroke-width: 1; }
 .polar-svg .pol-kante { fill: none; stroke: #2f8f52; stroke-width: 1.5; }
 .polar-svg .pol-stunde { fill: none; stroke: #3ddc84; stroke-width: 2.5;
                          stroke-linejoin: round; stroke-linecap: round; }
+/* Beide Farben liegen zwischen dem Hintergrund (#04140a) und der Fuellflaeche
+   (#14512b) -- heller als der Hintergrund, dunkler als die Flaeche. Ein
+   Radial laeuft von innen (oft ueber der Flaeche) bis zum Aussenring (immer
+   ausserhalb, auf dem Hintergrund): eine Farbe, die nur auf einer der beiden
+   Seiten funktioniert, verschwindet auf der anderen -- und das bei JEDEM der
+   36 Radiale, weil jedes ueber die Flaechenkante hinaus nach aussen laeuft. */
+.polar-svg .pol-radial { stroke: #0f2a19; stroke-width: 1; }
+.polar-svg .pol-radial.gross { stroke: #14361f; stroke-width: 1; }
 .polar-spalte { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
 .pol-troph { font-size: 46px; font-weight: 600; font-variant-numeric: tabular-nums;
              line-height: 1.05; }

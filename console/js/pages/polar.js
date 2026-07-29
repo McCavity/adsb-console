@@ -324,6 +324,32 @@ export function zahlNm(v) {
   return typeof v === 'number' && Number.isFinite(v) ? v.toFixed(1) : '—';
 }
 
+// Das Radialgitter: 36 Sektorgrenzen, in zwei Staerken.
+//
+// Die zwoelf 30-Grad-Grenzen sind zugleich die Gruppengrenzen der zwoelf
+// Richtungen in der Datenspalte -- Bild und Tabelle sagen damit dasselbe.
+// Die uebrigen 24 machen die Treppenstufen als Sektoren lesbar.
+//
+// Innerhalb des innersten Rings bleibt es frei: 36 Linien, die im
+// Mittelpunkt zusammenlaufen, ergeben dort einen Stern statt eines
+// Zentrums. Am Panel so entschieden (29.07.2026).
+export function radialen(skala, ringeNm) {
+  const ringe = (Array.isArray(ringeNm) ? ringeNm : [])
+    .filter(r => typeof r === 'number' && Number.isFinite(r) && r > 0 && r < skala)
+    .slice().sort((a, b) => a - b);
+  // Ohne brauchbare Ringe gibt es kein Gitter -- lieber keines als eines,
+  // das im Mittelpunkt zusammenlaeuft.
+  if (!ringe.length) return [];
+  const innen = ringe[0];
+  const zweiter = ringe.length > 1 ? ringe[1] : innen;
+  const out = [];
+  for (let grad = 0; grad < 360; grad += 360 / SEKTOREN) {
+    const gross = grad % 30 === 0;
+    out.push({ grad, gross, vonNm: gross ? innen : zweiter, bisNm: skala });
+  }
+  return out;
+}
+
 registerPage({
   id: 'polar',
   title: 'Reichweite',
@@ -367,6 +393,18 @@ registerPage({
     // zeigte auf nichts.
     const ringe = cfg.radar.rings_nm.filter(r => r < m.skalaNm).concat([m.skalaNm]);
     const ringGitter = [];
+    // Die Radialen ZUERST in ringGitter, die Ringkreise danach: Beide
+    // landen ueber der Flaeche (ringGitter wird ganz zum Schluss
+    // angehaengt), aber innerhalb dieser Sammlung sollen die Ringe obenauf
+    // liegen, nicht die Radialen -- dieselbe Reihenfolge-Regel wie zwischen
+    // Flaeche und Gitter oben, nur eine Ebene tiefer.
+    for (const rad of radialen(m.skalaNm, cfg.radar.rings_nm)) {
+      const a = punkt(rad.vonNm, rad.grad, m.skalaNm, R_PX);
+      const b = punkt(rad.bisNm, rad.grad, m.skalaNm, R_PX);
+      const klasse = rad.gross ? 'pol-radial gross' : 'pol-radial';
+      ringGitter.push(`<line class="${klasse}" x1="${fix(a.x)}" y1="${fix(a.y)}" `
+        + `x2="${fix(b.x)}" y2="${fix(b.y)}"/>`);
+    }
     for (const ring of ringe) {
       const rp = ring / m.skalaNm * R_PX;
       ringGitter.push(`<circle class="pol-ring" cx="${MITTE}" cy="${MITTE}" r="${rp.toFixed(1)}"/>`);
