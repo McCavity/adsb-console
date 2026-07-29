@@ -924,17 +924,24 @@ test('ein vollstaendiger Kranz ergibt genau EINEN geschlossenen Pfad', () => {
   assert.ok(p[0].endsWith(' Z'), `Pfad muss geschlossen sein: ${p[0].slice(-20)}`);
 });
 
-test('eine Luecke reisst den Zug auf -- zwei offene Pfade, kein Wert 0', () => {
+test('eine Luecke reisst den Zug auf -- offene Pfade, kein Wert 0', () => {
   // Die tragende Regel dieser Seite. Ein Polygon, das im Zentrum
   // durchhaengt, behauptet "0 NM gemessen".
+  //
+  // EINE Luecke ergibt EINEN Lauf, keine zwei: Der Zug laeuft ueber Nord
+  // hinweg weiter und endet erst wieder am Loch. Er ist dann aber offen.
   const w = voll.slice();
   w[10] = null;
   const p = treppenPfade(w, 80);
-  assert.equal(p.length, 1);          // ein Lauf, weil die Luecke am Rand liegt
-  assert.ok(!p[0].endsWith(' Z'));
+  assert.equal(p.length, 1);
+  assert.ok(!p[0].endsWith(' Z'), 'ein aufgerissener Zug darf nicht geschlossen sein');
+
+  // Erst ZWEI Luecken ergeben zwei Laeufe.
   const w2 = voll.slice();
   w2[10] = null; w2[20] = null;
-  assert.equal(treppenPfade(w2, 80).length, 2);
+  const p2 = treppenPfade(w2, 80);
+  assert.equal(p2.length, 2);
+  assert.ok(p2.every(d => !d.endsWith(' Z')));
 });
 
 test('ohne jeden Wert entsteht kein Pfad, kein Punkt im Zentrum', () => {
