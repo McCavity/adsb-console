@@ -51,9 +51,11 @@ sind nicht dekorativ: Maßstab, Standzeiten und Abbruchkriterien leiten sich aus
 
 ```
 console/   Statik-Frontend (HTML/CSS/JS, gebundelter Font, statische Flugplatzdaten)
-  js/geo.js          reine Rechenfunktionen, ohne DOM und ohne Zustand — hier liegen die Tests
+  js/geo.js          reine Rechenfunktionen, ohne DOM und ohne Zustand — hier liegen die Tests;
+                     seit Stufe 3 auch `projectToCanvas` (aus radar.js verschoben)
   js/pages/target.js   Einzelziel — volles Datenblatt zum eingefrorenen Ziel
   js/pages/profile.js  Höhenprofil — Seitenriß über der Entfernung
+  js/pages/polar.js    Polar — Reichweite je Sektor als Windrose, mit Trophäe und zwölf Richtungen
   js/pages/system.js   System — Temperatur, Last, Dienste, samples_dropped
   fonts/             B612 Mono, gebundelt, nur im Radarkreis (fonts/HERKUNFT.md)
 daemon/    Schreiber-Daemon, nur Python-Standardbibliothek
