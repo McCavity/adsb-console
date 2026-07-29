@@ -288,6 +288,18 @@ export function markenKasten(grad) {
            oben: p.y - PEIL_SCHRIFT.oben, unten: p.y + PEIL_SCHRIFT.unten };
 }
 
+// Der Zeitstempel des Daemons traegt einen Offset; die Anzeige zeigt
+// Ortszeit des Geraets -- Browser und Daemon laufen auf demselben Host,
+// also gibt es keinen Uhrenversatz zu ueberbruecken.
+export function datumKurz(iso) {
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return '—';
+  const d = new Date(ms);
+  const zwei = n => String(n).padStart(2, '0');
+  return `${zwei(d.getDate())}.${zwei(d.getMonth() + 1)}. `
+       + `${zwei(d.getHours())}:${zwei(d.getMinutes())}`;
+}
+
 registerPage({
   id: 'polar',
   title: 'Reichweite',
@@ -359,6 +371,38 @@ registerPage({
     teile.push(...ringBeschriftungen);
     svg.innerHTML = teile.join('');
 
-    spalte.innerHTML = '';        // Aufgabe 9
+    const g = m.groesster;
+    const z = zuletztGefallen(state.range.records, Date.now());
+    const groesstesBalken = Math.max(1, ...m.richtungen.map(r => r.rekordNm || 0));
+    const nm = v => (v === null || v === undefined ? '—' : v.toFixed(1));
+
+    spalte.innerHTML = `
+      <div class="tile">
+        <div class="lbl">Größter Empfang</div>
+        <div class="pol-troph">${nm(g.rekordNm)}<span class="unit-s">NM</span></div>
+        <div class="pol-troph-sub">${g.bereich} · ${flightLevel(g.altFt)} ·
+          ${g.halter} · ${datumKurz(g.seenAt)}</div>
+      </div>
+      <div class="tile" style="flex:1">
+        <div class="lbl">Maximum je Richtung — Rekord / letzte Stunde</div>
+        ${m.richtungen.map(r => `
+          <div class="pol-richt">
+            <span class="pol-richt-n">${r.name}</span>
+            <span class="pol-richt-b">${r.bereich}</span>
+            <span class="pol-richt-bar">
+              <i style="width:${((r.rekordNm || 0) / groesstesBalken * 100).toFixed(0)}%"></i>
+              <b style="width:${((r.stundeNm || 0) / groesstesBalken * 100).toFixed(0)}%"></b>
+            </span>
+            <span class="pol-richt-r">${nm(r.rekordNm)}</span>
+            <span class="pol-richt-s">${nm(r.stundeNm)}</span>
+          </div>`).join('')}
+      </div>
+      <div class="tile">
+        <div class="lbl">Zuletzt gefallen</div>
+        <div class="db-zeile">
+          <span class="db-label">${z ? `${z.bereich} · ${z.halter}` : 'noch kein Rekord'}</span>
+          <span class="db-wert">${z ? `${nm(z.nm)} NM · vor ${z.alterMin} min` : '—'}</span>
+        </div>
+      </div>`;
   },
 });

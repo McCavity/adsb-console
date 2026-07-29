@@ -202,6 +202,22 @@ html, body {
 .polar-svg .pol-stunde { fill: none; stroke: #3ddc84; stroke-width: 2.5;
                          stroke-linejoin: round; stroke-linecap: round; }
 .polar-spalte { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.pol-troph { font-size: 46px; font-weight: 600; font-variant-numeric: tabular-nums;
+             line-height: 1.05; }
+.pol-troph .unit-s { font-size: 20px; color: #4e9c6a; margin-left: 8px; }
+.pol-troph-sub { font-size: 17px; color: #4e9c6a; margin-top: 4px; }
+.pol-richt { display: flex; align-items: center; gap: 8px; margin-top: 6px;
+             font-variant-numeric: tabular-nums; }
+.pol-richt-n { flex: 0 0 44px; font-size: 17px; color: #b8f5cc; }
+.pol-richt-b { flex: 0 0 84px; font-size: 13px; color: #2f6b45; }
+.pol-richt-bar { flex: 1; height: 12px; background: #0b1f13; border: 1px solid #14361f;
+                 border-radius: 3px; position: relative; overflow: hidden; }
+.pol-richt-bar i { position: absolute; inset: 0 auto 0 0; display: block; height: 100%;
+                   background: #14512b; }
+.pol-richt-bar b { position: absolute; inset: 0 auto 0 0; display: block; height: 100%;
+                   background: #3ddc84; }
+.pol-richt-r { flex: 0 0 46px; font-size: 17px; text-align: right; }
+.pol-richt-s { flex: 0 0 46px; font-size: 17px; text-align: right; color: #4e9c6a; }
 
 /* Systemseite */
 .sys { flex: 1; display: flex; flex-direction: column; gap: 14px; min-height: 0; }

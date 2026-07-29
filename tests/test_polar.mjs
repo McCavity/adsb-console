@@ -4,7 +4,7 @@ import { formatBearing } from '../console/js/geo.js';
 import { SEKTOREN, SKALA_STUFE, skalaNm, sektorBereich, halterName, polarModell,
   RICHTUNGEN, SEKTOREN_JE_RICHTUNG, richtungen, zuletztGefallen,
   BILD, R_PX, MITTE, werteArray, keilPfad, treppenPfade,
-  markenPlatz, markenKasten, PEIL_SCHRIFT }
+  markenPlatz, markenKasten, PEIL_SCHRIFT, datumKurz }
   from '../console/js/pages/polar.js';
 
 test('36 Sektoren zu je zehn Grad', () => {
@@ -307,4 +307,21 @@ test('keine Peilungsmarke laeuft ueber die Bildkante oder in den Aussenring', ()
     assert.ok(draussen, `${grad}: Marke ueberlappt den Aussenring`);
   }
   assert.equal(markenPlatz(45), null);
+});
+
+test('datumKurz macht aus dem ISO-Stempel Tag und Uhrzeit', () => {
+  // Die Konsole zeigt Ortszeit des Geraets -- Browser und Daemon sitzen
+  // auf demselben Host, es gibt keinen Uhrenversatz zu ueberbruecken.
+  // Der Test prueft deshalb gegen Ortszeit. Die erste Zusicherung macht
+  // die Annahme sichtbar: Auf einer Maschine in einer anderen Zone waere
+  // die zweite Zeile zu Recht rot, und ohne diese Zeile saehe das nach
+  // einem Fehler in datumKurz aus.
+  assert.equal(new Date('2026-07-27T18:21:58+02:00').getTimezoneOffset(), -120,
+    'Dieser Test setzt Europe/Berlin in der Sommerzeit voraus');
+  assert.equal(datumKurz('2026-07-27T18:21:58+02:00'), '27.07. 18:21');
+});
+
+test('datumKurz gibt bei fehlendem oder unlesbarem Stempel einen Gedankenstrich', () => {
+  assert.equal(datumKurz(null), '—');
+  assert.equal(datumKurz('gestern'), '—');
 });
