@@ -11,20 +11,21 @@ async function getJSON(url) {
 const DATA = '/skyaware/data/';
 const OWN = 'data/';
 
-// Testmodus: ?source=... zeigt die Zielquelle auf eine praeparierte Datei.
-// Ohne diesen Haken laesst sich der Notfall-Squawk nicht herstellen, ohne in
-// den produktiven Datenpfad /run/dump1090-fa/ zu schreiben -- und ein Pfad,
-// den man nie ausloesen kann, ist unkalibriert (Spec 10.3).
+// Testmodus: ?source= zeigt die Zielquelle auf eine praeparierte Datei,
+// ?range= die Reichweitenquelle. Ohne diese Haken lassen sich weder der
+// Notfall-Squawk noch eine Sektorluecke herstellen, ohne in den
+// produktiven Datenpfad zu schreiben -- und ein Pfad, den man nie
+// ausloesen kann, ist unkalibriert (Spec 10.3).
+//
 // Erst beim Abruf ausgewertet, nicht beim Laden des Moduls: `location`
 // gibt es nur im Browser. Auf Modulebene gelesen macht es jeden Node-Test
 // unmoeglich, der dieses Modul auch nur mittelbar importiert -- und alle
-// Seitenmodule importieren es ueber console.js. Am 27.07. genau so
-// aufgetreten, als das erste Seitenmodul dazukam.
-function aircraftUrl() {
+// Seitenmodule importieren es ueber console.js.
+export function quellUrl(param, fallback) {
   const override = typeof location === 'undefined'
     ? null
-    : new URLSearchParams(location.search).get('source');
-  return override || DATA + 'aircraft.json';
+    : new URLSearchParams(location.search).get(param);
+  return override || fallback;
 }
 
 // Jedes truthy receiver.json wurde bisher ungeprueft uebernommen. Ein
@@ -51,7 +52,7 @@ export function createDataStore(onUpdate) {
   };
 
   async function pollAircraft() {
-    const d = await getJSON(aircraftUrl());
+    const d = await getJSON(quellUrl('source', DATA + 'aircraft.json'));
     if (d) {
       state.aircraft = d.aircraft || [];
       // now stammt vom selben Host wie der Browser -- kein Uhrenversatz.
@@ -69,7 +70,7 @@ export function createDataStore(onUpdate) {
     if (d) { state.stats = d; state.statsAt = Date.now(); onUpdate(); }
   }
   async function pollRange() {
-    const d = await getJSON(OWN + 'range.json');
+    const d = await getJSON(quellUrl('range', OWN + 'range.json'));
     if (d) { state.range = d; state.rangeAt = Date.now(); onUpdate(); }
   }
   // Die Systemseite ist die einzige, deren Quelle einen Unterprozess kostet
