@@ -96,11 +96,25 @@ Vierzehn Spalten je Punkt:
 | `keller_c` | `dwsapp01:8000/api/indoor` |
 | `raum_a_c`, `raum_b_c` | zwei Zigbee-Sensoren über ioBroker |
 
-**Zu `raum_a` und `raum_b`:** Es sind zwei Aqara-Sensoren, `…be8afd` und `…d3cb76`, die am
-29.07. 30,42 bzw. 29,57 °C und 34,6 bzw. 34,7 % rF lasen. **Welcher der beiden neben
-`adsapp01` steht, ist noch nicht zugeordnet** — die Meßwerte allein unterscheiden sie
-nicht, und ein Sensor, den man aus zwei Kandidaten errät, ist keine Messung. Beide werden
-mitgeschrieben; die Zuordnung wird nachgetragen.
+**Zu `raum_a` und `raum_b`** — am 29.07. von Henning zugeordnet:
+
+| Spalte | Sensor | Ort |
+|---|---|---|
+| `raum_a_c` | `…be8afd` | in einem unbenutzten, offenen Mini-Gewächshaus auf einem Regal an der gegenüberliegenden Wand, **kurz unter der Zimmerdecke**. Mißt Raumluft, aber oben. |
+| `raum_b_c` | `…d3cb76` | rund 3 m entfernt, **etwa auf Gerätehöhe** (rund 30 cm höher) |
+
+**`raum_b` ist der Bezugswert für die Zurechnung**, nicht `raum_a`: Gebraucht wird die
+Luft, die das Gerät ansaugt, und die steht auf Gerätehöhe.
+
+**Keiner der beiden steht neben `adsapp01`, und das ist richtig so.** Ein Sensor direkt am
+Gerät würde dessen Abwärme mitmessen — genau das ist dem BME280 auf `dwsapp01` am 24.07.
+passiert (**+14 °C**, 21 → 35 °C, weil er zu nah an Pi und Display saß), und behoben wurde
+es dort nicht durch einen Offset, sondern durch physische Verlegung. Ein Referenzwert, der
+die Abwärme der gemessenen Sache enthält, kann über die Umgebung nichts mehr aussagen.
+
+**Die Differenz der beiden Sensoren ist selbst eine Größe:** 0,85 K bei Meßbeginn (Decke
+wärmer als Gerätehöhe) ist normale Schichtung. Wächst dieser Abstand, staut sich Wärme
+oben — das kündigt an, was am Gerät ankommt, bevor es dort ankommt.
 
 ## Ergebnis
 
