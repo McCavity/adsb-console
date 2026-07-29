@@ -6,6 +6,10 @@
 // vierzehn Befunden kam kein einziger von der Testsuite, solange die
 // Rechnung in der Render-Closure steckte.
 
+import { projectToCanvas, flightLevel } from '../geo.js';
+import { registerPage } from '../console.js';
+import { leerUntertitel } from './gemeinsam.js';
+
 export const SEKTOREN = 36;
 export const SKALA_STUFE = 20;          // NM je Skalenstufe
 
@@ -159,4 +163,91 @@ export function zuletztGefallen(records, nowMs) {
     halter: halterName(bester),
     alterMin: Math.max(0, Math.round((nowMs - besteMs) / 60000)),
   };
+}
+
+// 620 ist die Buehnenhoehe: 720 minus 56 Kopfzeile minus 44 Punktreihe.
+// Der Rand haelt die Beschriftung des Aussenrings im Bild.
+export const BILD = Object.freeze({ groesse: 620, rand: 26 });
+export const R_PX = (BILD.groesse - 2 * BILD.rand) / 2;   // 284
+export const MITTE = BILD.groesse / 2;                    // 310
+
+const GRAD_JE_SEKTOR = 360 / SEKTOREN;                    // 10
+const fix = n => n.toFixed(1);
+const radiusPxVon = (nm, skala, radiusPx) => nm / skala * radiusPx;
+
+// Punkt auf dem Bild. projectToCanvas rechnet relativ zum Mittelpunkt
+// (geo.js) -- hier kommt die Verschiebung dazu.
+function punkt(nm, grad, skala, radiusPx) {
+  const p = projectToCanvas(nm, grad, skala, radiusPx);
+  return { x: MITTE + p.x, y: MITTE + p.y };
+}
+
+// Die 36 Plaetze, mit null wo kein Sektor vorliegt. Der Index IST die
+// Sektornummer -- ein dicht gepacktes Array waere gegen die Peilung
+// verschoben, sobald ein Sektor fehlt.
+export function werteArray(sektoren, feld) {
+  const out = Array.from({ length: SEKTOREN }, () => null);
+  for (const s of sektoren || []) {
+    const v = s[feld];
+    if (typeof v === 'number' && Number.isFinite(v)) out[s.sektor] = v;
+  }
+  return out;
+}
+
+// Ein Keil ueber die vollen zehn Grad eines Sektors, von der Mitte aus.
+// Die Flaeche wird aus 36 solchen Keilen gebaut und nicht aus einem
+// gefuellten Ringpolygon: Dann braucht ein fehlender Sektor keine
+// Sonderbehandlung -- er hat schlicht keinen Keil.
+export function keilPfad(nm, sektor, skala, radiusPx = R_PX) {
+  const r = radiusPxVon(nm, skala, radiusPx);
+  const a = punkt(nm, sektor * GRAD_JE_SEKTOR, skala, radiusPx);
+  const b = punkt(nm, (sektor + 1) * GRAD_JE_SEKTOR, skala, radiusPx);
+  return `M${fix(MITTE)},${fix(MITTE)} L${fix(a.x)},${fix(a.y)} `
+       + `A${fix(r)},${fix(r)} 0 0 1 ${fix(b.x)},${fix(b.y)} Z`;
+}
+
+function laufPfad(werte, von, laenge, skala, radiusPx, geschlossen) {
+  const teile = [];
+  for (let k = 0; k < laenge; k++) {
+    const s = (von + k) % SEKTOREN;
+    const nm = werte[s];
+    const r = radiusPxVon(nm, skala, radiusPx);
+    const a = punkt(nm, s * GRAD_JE_SEKTOR, skala, radiusPx);
+    const b = punkt(nm, (s + 1) * GRAD_JE_SEKTOR, skala, radiusPx);
+    teile.push(`${k === 0 ? 'M' : 'L'}${fix(a.x)},${fix(a.y)}`);
+    // Der Bogen, nicht die Sehne: Ein Sektormaximum gilt fuer seine vollen
+    // zehn Grad. Bei R_PX = 284 betruege der Sehnenfehler rund 1 px, und
+    // die Zusage "konstanter Radius je Sektor" waere nur fast wahr.
+    // sweep = 1, weil wachsende Peilung auf dem Bild im Uhrzeigersinn
+    // laeuft (y zeigt nach unten).
+    teile.push(`A${fix(r)},${fix(r)} 0 0 1 ${fix(b.x)},${fix(b.y)}`);
+  }
+  return teile.join(' ') + (geschlossen ? ' Z' : '');
+}
+
+// Der Treppenzug ueber die belegten Sektoren: zwei Ecken je Sektor und ein
+// radialer Sprung dazwischen. KEINE Linie durch die Sektormitten -- die
+// behauptete eine stetige Funktion der Peilung, die die Daten nicht
+// hergeben.
+//
+// Luecken reissen den Zug auf: Sie ergeben MEHRERE Pfade, nie einen Wert
+// 0. Nachts ist das der Regelfall.
+export function treppenPfade(werte, skala, radiusPx = R_PX) {
+  const da = werte.map(v => typeof v === 'number' && Number.isFinite(v));
+  if (da.every(Boolean)) {
+    return [laufPfad(werte, 0, SEKTOREN, skala, radiusPx, true)];
+  }
+  const pfade = [];
+  // Am ersten Loch beginnen, sonst zerschneidet der Index 0 einen Lauf,
+  // der ueber Nord hinweggeht.
+  const start = da.indexOf(false);
+  let i = 0;
+  while (i < SEKTOREN) {
+    if (!da[(start + i) % SEKTOREN]) { i++; continue; }
+    let laenge = 0;
+    while (i + laenge < SEKTOREN && da[(start + i + laenge) % SEKTOREN]) laenge++;
+    pfade.push(laufPfad(werte, start + i, laenge, skala, radiusPx, false));
+    i += laenge;
+  }
+  return pfade;
 }

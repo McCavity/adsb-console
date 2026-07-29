@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { formatBearing } from '../console/js/geo.js';
 import { SEKTOREN, SKALA_STUFE, skalaNm, sektorBereich, halterName, polarModell,
-  RICHTUNGEN, SEKTOREN_JE_RICHTUNG, richtungen, zuletztGefallen }
+  RICHTUNGEN, SEKTOREN_JE_RICHTUNG, richtungen, zuletztGefallen,
+  BILD, R_PX, MITTE, werteArray, keilPfad, treppenPfade }
   from '../console/js/pages/polar.js';
 
 test('36 Sektoren zu je zehn Grad', () => {
@@ -225,4 +226,64 @@ test('ein unlesbarer Zeitstempel wird uebersprungen, nicht als aeltester gewerte
   // ueberschreibt er den heilen -- und nur dann kann dieser Test den
   // fehlenden Schutz ueberhaupt sehen.
   assert.equal(zuletztGefallen([heil, kaputt], NOW).halter, 'HEIL1');
+});
+
+const voll = Array.from({ length: 36 }, () => 40);
+
+test('werteArray hat immer 36 Plaetze und fuellt Luecken mit null', () => {
+  const m = polarModell({ records: [rec(0, 10), rec(5, 20)], hour_max: { '5': 7 } });
+  const w = werteArray(m.sektoren, 'stundeNm');
+  assert.equal(w.length, 36);
+  assert.equal(w[5], 7);
+  assert.equal(w[0], null);
+  assert.equal(w[17], null);
+});
+
+test('ein vollstaendiger Kranz ergibt genau EINEN geschlossenen Pfad', () => {
+  const p = treppenPfade(voll, 80);
+  assert.equal(p.length, 1);
+  assert.ok(p[0].endsWith(' Z'), `Pfad muss geschlossen sein: ${p[0].slice(-20)}`);
+});
+
+test('eine Luecke reisst den Zug auf -- offene Pfade, kein Wert 0', () => {
+  // Die tragende Regel dieser Seite. Ein Polygon, das im Zentrum
+  // durchhaengt, behauptet "0 NM gemessen".
+  //
+  // EINE Luecke ergibt EINEN Lauf, keine zwei: Der Zug laeuft ueber Nord
+  // hinweg weiter und endet erst wieder am Loch. Er ist dann aber offen.
+  const w = voll.slice();
+  w[10] = null;
+  const p = treppenPfade(w, 80);
+  assert.equal(p.length, 1);
+  assert.ok(!p[0].endsWith(' Z'), 'ein aufgerissener Zug darf nicht geschlossen sein');
+
+  // Erst ZWEI Luecken ergeben zwei Laeufe.
+  const w2 = voll.slice();
+  w2[10] = null; w2[20] = null;
+  const p2 = treppenPfade(w2, 80);
+  assert.equal(p2.length, 2);
+  assert.ok(p2.every(d => !d.endsWith(' Z')));
+});
+
+test('ohne jeden Wert entsteht kein Pfad, kein Punkt im Zentrum', () => {
+  assert.deepEqual(treppenPfade(Array.from({ length: 36 }, () => null), 80), []);
+});
+
+test('ein Wert auf der Skalenstufe liegt auf dem Aussenring', () => {
+  // Die Gegenprobe, deren Antwort vorher feststeht: Sektor 0 beginnt bei
+  // Peilung 000, also senkrecht ueber der Mitte. Bei Skala 80 und Wert 80
+  // muss die erste Ecke genau MITTE - R_PX sein.
+  const w = Array.from({ length: 36 }, () => null);
+  w[0] = 80;
+  const d = treppenPfade(w, 80)[0];
+  assert.ok(d.startsWith(`M${MITTE.toFixed(1)},${(MITTE - R_PX).toFixed(1)}`),
+    `Anfang war ${d.slice(0, 24)}`);
+});
+
+test('der Keil beginnt in der Mitte und schliesst sich', () => {
+  const d = keilPfad(40, 0, 80);
+  assert.ok(d.startsWith(`M${MITTE.toFixed(1)},${MITTE.toFixed(1)}`));
+  assert.ok(d.endsWith(' Z'));
+  // Halbe Skala = halber Radius.
+  assert.ok(d.includes((MITTE - R_PX / 2).toFixed(1)));
 });
