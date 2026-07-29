@@ -300,6 +300,15 @@ export function datumKurz(iso) {
        + `${zwei(d.getHours())}:${zwei(d.getMinutes())}`;
 }
 
+// Eine Entfernung fuer die Anzeige. Nicht nur null und undefined werden zum
+// Gedankenstrich, sondern JEDER nicht-endliche Wert: NaN.toFixed(1) ergibt
+// die Zeichenkette "NaN", und die stuende dann als Messwert an der Wand.
+// flightLevel in geo.js haelt es genauso -- zwei Formatierungen derselben
+// Konsole duerfen nicht verschieden streng sein.
+export function zahlNm(v) {
+  return typeof v === 'number' && Number.isFinite(v) ? v.toFixed(1) : '—';
+}
+
 registerPage({
   id: 'polar',
   title: 'Reichweite',
@@ -374,12 +383,11 @@ registerPage({
     const g = m.groesster;
     const z = zuletztGefallen(state.range.records, Date.now());
     const groesstesBalken = Math.max(1, ...m.richtungen.map(r => r.rekordNm || 0));
-    const nm = v => (v === null || v === undefined ? '—' : v.toFixed(1));
 
     spalte.innerHTML = `
       <div class="tile">
         <div class="lbl">Größter Empfang</div>
-        <div class="pol-troph">${nm(g.rekordNm)}<span class="unit-s">NM</span></div>
+        <div class="pol-troph">${zahlNm(g.rekordNm)}<span class="unit-s">NM</span></div>
         <div class="pol-troph-sub">${g.bereich} · ${flightLevel(g.altFt)} ·
           ${g.halter} · ${datumKurz(g.seenAt)}</div>
       </div>
@@ -393,15 +401,15 @@ registerPage({
               <i style="width:${((r.rekordNm || 0) / groesstesBalken * 100).toFixed(0)}%"></i>
               <b style="width:${((r.stundeNm || 0) / groesstesBalken * 100).toFixed(0)}%"></b>
             </span>
-            <span class="pol-richt-r">${nm(r.rekordNm)}</span>
-            <span class="pol-richt-s">${nm(r.stundeNm)}</span>
+            <span class="pol-richt-r">${zahlNm(r.rekordNm)}</span>
+            <span class="pol-richt-s">${zahlNm(r.stundeNm)}</span>
           </div>`).join('')}
       </div>
       <div class="tile">
         <div class="lbl">Zuletzt gefallen</div>
         <div class="db-zeile">
           <span class="db-label">${z ? `${z.bereich} · ${z.halter}` : 'noch kein Rekord'}</span>
-          <span class="db-wert">${z ? `${nm(z.nm)} NM · vor ${z.alterMin} min` : '—'}</span>
+          <span class="db-wert">${z ? `${zahlNm(z.nm)} NM · vor ${z.alterMin} min` : '—'}</span>
         </div>
       </div>`;
   },

@@ -4,7 +4,7 @@ import { formatBearing } from '../console/js/geo.js';
 import { SEKTOREN, SKALA_STUFE, skalaNm, sektorBereich, halterName, polarModell,
   RICHTUNGEN, SEKTOREN_JE_RICHTUNG, richtungen, zuletztGefallen,
   BILD, R_PX, MITTE, werteArray, keilPfad, treppenPfade,
-  markenPlatz, markenKasten, PEIL_SCHRIFT, datumKurz }
+  markenPlatz, markenKasten, PEIL_SCHRIFT, datumKurz, zahlNm }
   from '../console/js/pages/polar.js';
 
 test('36 Sektoren zu je zehn Grad', () => {
@@ -324,4 +324,14 @@ test('datumKurz macht aus dem ISO-Stempel Tag und Uhrzeit', () => {
 test('datumKurz gibt bei fehlendem oder unlesbarem Stempel einen Gedankenstrich', () => {
   assert.equal(datumKurz(null), '—');
   assert.equal(datumKurz('gestern'), '—');
+});
+
+test('zahlNm macht aus jedem unbrauchbaren Wert einen Gedankenstrich, nie eine Zahl', () => {
+  assert.equal(zahlNm(79.37), '79.4');
+  assert.equal(zahlNm(0), '0.0');          // eine gemessene Null IST eine Aussage
+  assert.equal(zahlNm(null), '—');
+  assert.equal(zahlNm(undefined), '—');
+  assert.equal(zahlNm(NaN), '—');          // der Fall, den die erste Fassung durchliess
+  assert.equal(zahlNm(Infinity), '—');
+  assert.equal(zahlNm('22.6'), '—');       // eine Zeichenkette ist keine Messung
 });
