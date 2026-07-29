@@ -1279,6 +1279,19 @@ vollständigen Datei ansehen — sonst sieht „Lücke" genauso aus wie „heil"
 derselbe Fehler wie die kaputte Konfiguration bei der Stufe-2-Abnahme, die erst nach einer
 sichtbar anderen Zwischenstufe etwas bewies.
 
+> **Was beim Bauen anders wurde (29.07., nach der Sichtprüfung am gerenderten Bild):**
+> Die hier entworfene Hilfsfunktion `punktAussen` mit ihrem festen Versatz von −12 px
+> hat die `090`-Marke **6 px über die rechte Bildkante geschoben**, wo sie abgeschnitten
+> wurde — dieselbe Fehlerklasse wie Befund 5 der Stufe-1-Abnahme. Außerdem lagen drei
+> von vier Ringbeschriftungen **unter** der Füllfläche, weil SVG in Dokumentreihenfolge
+> zeichnet; nur „80 NM" ragte heraus und war lesbar.
+> Behoben in `e0a7654` und `0932335`: `BILD.rand` 26 → 34, `punktAussen` und die feste
+> `MARKEN`-Tabelle ersetzt durch `markenPlatz(grad)`/`markenKasten(grad)`, die **aus
+> `BILD.rand` rechnen**, Ringbeschriftungen zuletzt gezeichnet mit Aussparungsrand.
+> Dazu ein Test, den es beim ersten Mal nicht gab: keine Marke darf über die Bildkante
+> oder in den Außenring laufen. Er wird rot, sobald `BILD.rand` wieder auf 26 sinkt.
+> **Die Testzahl dieser Aufgabe endet damit bei 153, nicht bei 152.**
+
 - [ ] **Schritt 7: Commit**
 
 ```bash
@@ -1343,7 +1356,7 @@ export function datumKurz(iso) {
 - [ ] **Schritt 4: Grün sehen**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
-Erwartet: **`ℹ tests 154`, `ℹ fail 0`**
+Erwartet: **`ℹ tests 155`, `ℹ fail 0`**
 
 - [ ] **Schritt 5: Die Spalte füllen**
 
@@ -1409,7 +1422,7 @@ In `render` die Zeile `spalte.innerHTML = '';` ersetzen durch:
 - [ ] **Schritt 7: Volle Suite und lokaler Blick**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
-Erwartet: **`ℹ tests 154`, `ℹ fail 0`**
+Erwartet: **`ℹ tests 155`, `ℹ fail 0`**
 
 Dann erneut über `http://127.0.0.1:8099/?range=pruef-range.json` ansehen. **Der eine
 Layoutwert, den es zu prüfen gilt: Passen zwölf Zeilen plus Trophäe plus Puls ohne
