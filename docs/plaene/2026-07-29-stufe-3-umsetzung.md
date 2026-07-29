@@ -851,11 +851,18 @@ test('leere Liste ergibt null, nicht den Epochen-Nullpunkt', () => {
 });
 
 test('ein unlesbarer Zeitstempel wird uebersprungen, nicht als aeltester gewertet', () => {
-  const r = zuletztGefallen([
-    rec(5, 10, { seen_at: 'gestern abend', callsign: 'KAPUTT' }),
-    rec(6, 11, { seen_at: '2026-07-28T09:00:00+02:00', callsign: 'HEIL1' }),
-  ], NOW);
-  assert.equal(r.halter, 'HEIL1');
+  const kaputt = rec(5, 10, { seen_at: 'gestern abend', callsign: 'KAPUTT' });
+  const heil = rec(6, 11, { seen_at: '2026-07-28T09:00:00+02:00', callsign: 'HEIL1' });
+
+  assert.equal(zuletztGefallen([kaputt, heil], NOW).halter, 'HEIL1');
+
+  // BEIDE Reihenfolgen, und die zweite ist die, auf die es ankommt: Faellt
+  // der isFinite-Schutz weg, bleibt die erste Reihenfolge trotzdem heil,
+  // weil NaN <= x in JS immer false ist und der gueltige Rekord danach
+  // ohnehin gewinnt. Erst wenn der kaputte Eintrag ZULETZT kommt,
+  // ueberschreibt er den heilen -- und nur dann kann dieser Test den
+  // fehlenden Schutz ueberhaupt sehen.
+  assert.equal(zuletztGefallen([heil, kaputt], NOW).halter, 'HEIL1');
 });
 ```
 
