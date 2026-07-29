@@ -192,11 +192,22 @@ html, body {
 .polar-bild { flex: 0 0 620px; height: 620px; align-self: center; }
 .polar-svg { width: 620px; height: 620px; display: block; }
 .polar-svg .pol-ring { fill: none; stroke: #14361f; stroke-width: 1; }
+/* B612 fuer diese Seite ist OFFEN, nicht eingeloest. Die @font-face unten
+   registriert die Familie als 'B612Mono' (ohne Leerzeichen); "B612 Mono"
+   mit Leerzeichen matcht das fuer CSS nicht und faellt still auf
+   ui-monospace zurueck -- ein Name, der nichts bewirkt, behauptet eine
+   Zusage, die nicht gilt. Deshalb steht hier ehrlich, was laeuft. Mit der
+   echten Schrift waere "090" 31,95 px breit (gemessen, gegen 29,80 px mit
+   dem Fallback, identisch zu "monospace" pur), und PEIL_SCHRIFT in
+   polar.js -- am Fallback geeicht -- liesse der 090-Marke dann nur noch
+   0,05 px Abstand zum Aussenring; der Waechtertest in test_polar.mjs
+   schluege zu Recht an. Entscheidung faellt am Panel vor der
+   Geraeteabnahme, nicht hier. */
 .polar-svg .pol-ring-t { fill: #2f6b45; font-size: 13px;
-                         font-family: "B612 Mono", ui-monospace, monospace;
+                         font-family: ui-monospace, monospace;
                          paint-order: stroke; stroke: #04140a; stroke-width: 3px; }
 .polar-svg .pol-peil { fill: #3a8f57; font-size: 15px; letter-spacing: .06em;
-                       font-family: "B612 Mono", ui-monospace, monospace; }
+                       font-family: ui-monospace, monospace; }
 .polar-svg .pol-flaeche { fill: #14512b; stroke: none; }
 .polar-svg .pol-kante { fill: none; stroke: #2f8f52; stroke-width: 1.5; }
 .polar-svg .pol-stunde { fill: none; stroke: #3ddc84; stroke-width: 2.5;
