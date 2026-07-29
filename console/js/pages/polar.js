@@ -350,6 +350,41 @@ export function radialen(skala, ringeNm) {
   return out;
 }
 
+// NM, ab der eine Luecke zum Aussenring geteilt wird, und die Schrittweite
+// dafuer. Am Panel festgelegt (29.07.2026): Bei Skala 80 bleiben 50..80
+// ungeteilt, bei Skala 100 wird 50..100 bei 75 geteilt.
+export const RING_MAX_LUECKE = 35;
+export const RING_SCHRITT = 25;
+
+// Die Ringe des Bildes: die des Radars, soweit sie in die Skala passen,
+// eingefuegte Zwischenringe wo die Luecke zum Aussenring ausreisst, und der
+// Aussenring selbst.
+//
+// Die Zwischenringe sind kein Schoenheitsmittel: Ohne sie haette der
+// aeussere Bereich bei gewachsener Skala gar kein Gitter mehr, und die
+// Kopplung an cfg.radar.rings_nm -- wer den Radarmassstab umstellt,
+// verschiebt beide Seiten gemeinsam -- gilt weiterhin fuer die inneren.
+//
+// Die Formel garantiert, dass der aeusserste Abstand echt ueber
+// RING_MAX_LUECKE - RING_SCHRITT und hoechstens RING_MAX_LUECKE liegt: Ein
+// Zwischenring kann per Konstruktion nicht dicht neben dem Aussenring
+// landen. Der Test dazu prueft das ueber einen ganzen Skalenbereich, nicht
+// an einem Beispiel.
+export function ringe(skala, ringeNm) {
+  const basis = (Array.isArray(ringeNm) ? ringeNm : [])
+    .filter(r => typeof r === 'number' && Number.isFinite(r) && r > 0 && r < skala)
+    .slice().sort((a, b) => a - b);
+  const out = basis.slice();
+  const letzter = basis.length ? basis[basis.length - 1] : 0;
+  const luecke = skala - letzter;
+  if (luecke > RING_MAX_LUECKE) {
+    const k = Math.ceil((luecke - RING_MAX_LUECKE) / RING_SCHRITT);
+    for (let i = 1; i <= k; i++) out.push(letzter + i * RING_SCHRITT);
+  }
+  out.push(skala);
+  return out;
+}
+
 registerPage({
   id: 'polar',
   title: 'Reichweite',
@@ -391,21 +426,28 @@ registerPage({
     // Flaechenradius 56,1 px, 10-NM-Ring bei 34,5 px -- der Ring war
     // unsichtbar, und seine Beschriftung stand mitten in der Flaeche und
     // zeigte auf nichts.
-    const ringe = cfg.radar.rings_nm.filter(r => r < m.skalaNm).concat([m.skalaNm]);
+    const ringListe = ringe(m.skalaNm, cfg.radar.rings_nm);
     const ringGitter = [];
     // Die Radialen ZUERST in ringGitter, die Ringkreise danach: Beide
     // landen ueber der Flaeche (ringGitter wird ganz zum Schluss
     // angehaengt), aber innerhalb dieser Sammlung sollen die Ringe obenauf
     // liegen, nicht die Radialen -- dieselbe Reihenfolge-Regel wie zwischen
     // Flaeche und Gitter oben, nur eine Ebene tiefer.
-    for (const rad of radialen(m.skalaNm, cfg.radar.rings_nm)) {
+    //
+    // radialen() bekommt dieselbe berechnete Liste, nicht cfg.radar.rings_nm
+    // direkt: Sind dort gar keine brauchbaren Ringe angegeben, liefert
+    // radialen() sonst ein leeres Gitter, waehrend Ringe trotzdem gezeichnet
+    // wuerden -- mit ringListe haben die Radialen immer einen Anker. Bei
+    // der geltenden Konfiguration (10 · 25 · 50) aendert sich dadurch
+    // nichts, weil die ersten beiden Eintraege dieselben bleiben.
+    for (const rad of radialen(m.skalaNm, ringListe)) {
       const a = punkt(rad.vonNm, rad.grad, m.skalaNm, R_PX);
       const b = punkt(rad.bisNm, rad.grad, m.skalaNm, R_PX);
       const klasse = rad.gross ? 'pol-radial gross' : 'pol-radial';
       ringGitter.push(`<line class="${klasse}" x1="${fix(a.x)}" y1="${fix(a.y)}" `
         + `x2="${fix(b.x)}" y2="${fix(b.y)}"/>`);
     }
-    for (const ring of ringe) {
+    for (const ring of ringListe) {
       const rp = ring / m.skalaNm * R_PX;
       ringGitter.push(`<circle class="pol-ring" cx="${MITTE}" cy="${MITTE}" r="${rp.toFixed(1)}"/>`);
       ringGitter.push(`<text class="pol-ring-t" x="${MITTE + 5}" y="${(MITTE - rp + 15).toFixed(1)}">${ring} NM</text>`);
