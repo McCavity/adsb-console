@@ -376,6 +376,9 @@ export const SKALA_STUFE = 20;          // NM je Skalenstufe
 export function skalaNm(groessterNm) {
   const n = typeof groessterNm === 'number' && Number.isFinite(groessterNm)
     ? groessterNm : 0;
+  // Die Schranke traegt den nicht-positiven Fall: ceil(0/20)*20 waere 0,
+  // und ein Kreis mit Radius 0 ist keine Anzeige. Fuer 0 < n <= 20 liefert
+  // die Formel ohnehin schon 20 -- die Schranke ist dort nur deutlicher.
   if (n <= SKALA_STUFE) return SKALA_STUFE;
   return Math.ceil(n / SKALA_STUFE) * SKALA_STUFE;
 }
@@ -413,7 +416,7 @@ Vier Brüche nacheinander, jeweils nur einer, jeweils zurücknehmen:
 | Bruch in `polar.js` | erwartet rot |
 |---|---|
 | `SKALA_STUFE = 25` | „36 Sektoren…" bleibt grün, die drei Skalentests fallen |
-| `if (n < SKALA_STUFE)` statt `<=` | „ein Wert GENAU auf der Stufe" — und **nur** der |
+| `Math.floor(n / SKALA_STUFE) * SKALA_STUFE + SKALA_STUFE` statt `Math.ceil(…)` | „ein Wert GENAU auf der Stufe" — und **nur** der |
 | `grad3(i + 10)` statt `i + 9` | „der Sektorbereich ist ein Bereich" |
 | in `halterName` `return cs \|\| '—'` | „der Halter ist das Callsign…" |
 
