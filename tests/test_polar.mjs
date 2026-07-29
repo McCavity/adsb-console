@@ -4,7 +4,8 @@ import { formatBearing } from '../console/js/geo.js';
 import { SEKTOREN, SKALA_STUFE, skalaNm, sektorBereich, halterName, polarModell,
   RICHTUNGEN, SEKTOREN_JE_RICHTUNG, richtungen, zuletztGefallen,
   BILD, R_PX, MITTE, werteArray, keilPfad, treppenPfade,
-  markenPlatz, markenKasten, PEIL_SCHRIFT, datumKurz, zahlNm, radialen }
+  markenPlatz, markenKasten, PEIL_SCHRIFT, datumKurz, zahlNm, radialen,
+  ringe, RING_MAX_LUECKE, RING_SCHRITT }
   from '../console/js/pages/polar.js';
 
 test('36 Sektoren zu je zehn Grad', () => {
@@ -395,4 +396,44 @@ test('ohne brauchbaren Ring gibt es kein Gitter statt eines Sterns', () => {
   assert.deepEqual(radialen(80, []), []);
   assert.deepEqual(radialen(80, null), []);
   assert.deepEqual(radialen(80, [200]), []);
+});
+
+test('bei kleiner Luecke kommt kein Zwischenring dazu', () => {
+  // Der Stand, der am Panel als gut befunden wurde: 50..80 sind 30 NM und
+  // bleiben ungeteilt.
+  assert.deepEqual(ringe(80, [10, 25, 50]), [10, 25, 50, 80]);
+});
+
+test('bei grosser Luecke wird in 25-NM-Schritten geteilt', () => {
+  assert.deepEqual(ringe(100, [10, 25, 50]), [10, 25, 50, 75, 100]);
+  assert.deepEqual(ringe(120, [10, 25, 50]), [10, 25, 50, 75, 100, 120]);
+});
+
+test('ein umgestellter Radarmassstab traegt die Regel mit', () => {
+  // Ringe 5/12/25 gab es bei der Stufe-2-Abnahme wirklich. Eine naive
+  // Fassung zoege hier einen Ring bei 75 ein -- 5 NM neben dem Aussenring.
+  assert.deepEqual(ringe(80, [5, 12, 25]), [5, 12, 25, 50, 80]);
+});
+
+test('Ringe jenseits der Skala fallen raus, der Aussenring bleibt', () => {
+  assert.deepEqual(ringe(20, [10, 25, 50]), [10, 20]);
+});
+
+test('ohne brauchbare Ringe wird die ganze Skala geteilt', () => {
+  assert.deepEqual(ringe(80, []), [25, 50, 80]);
+  assert.deepEqual(ringe(80, null), [25, 50, 80]);
+});
+
+test('der aeusserste Abstand liegt IMMER zwischen 10 und 35 NM', () => {
+  // Die beweisbare Eigenschaft der Formel, und der eigentliche Wert dieses
+  // Tests: Er prueft einen ganzen Skalenbereich, nicht ein Beispiel. Eine
+  // Fassung, die 25-NM-Schritte einfuegt, ohne die Restluecke zu pruefen,
+  // faellt hier -- und zwar an einer Skala, an die niemand gedacht haette.
+  for (let skala = 20; skala <= 400; skala += 20) {
+    const r = ringe(skala, [10, 25, 50]);
+    const rest = r[r.length - 1] - r[r.length - 2];
+    assert.ok(rest > RING_MAX_LUECKE - RING_SCHRITT && rest <= RING_MAX_LUECKE,
+      `Skala ${skala}: aeusserster Abstand ${rest} NM, Ringe ${r.join('·')}`);
+    assert.deepEqual(r.slice().sort((a, b) => a - b), r, `Skala ${skala}: unsortiert`);
+  }
 });
