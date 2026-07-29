@@ -1356,7 +1356,7 @@ export function datumKurz(iso) {
 - [ ] **Schritt 4: Grün sehen**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
-Erwartet: **`ℹ tests 155`, `ℹ fail 0`**
+Erwartet: **`ℹ tests 156`, `ℹ fail 0`**
 
 - [ ] **Schritt 5: Die Spalte füllen**
 
@@ -1422,7 +1422,7 @@ In `render` die Zeile `spalte.innerHTML = '';` ersetzen durch:
 - [ ] **Schritt 7: Volle Suite und lokaler Blick**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
-Erwartet: **`ℹ tests 155`, `ℹ fail 0`**
+Erwartet: **`ℹ tests 156`, `ℹ fail 0`**
 
 Dann erneut über `http://127.0.0.1:8099/?range=pruef-range.json` ansehen. **Der eine
 Layoutwert, den es zu prüfen gilt: Passen zwölf Zeilen plus Trophäe plus Puls ohne
