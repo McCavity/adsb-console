@@ -94,7 +94,7 @@ export function polarModell(range) {
     : null;
 
   // Die Skala folgt der SPITZE beider Spuren, nicht nur den Rekorden:
-  // Nach einem zuruckgesetzten Rekordbestand kann ein Stundenwert daruber
+  // Nach einem zurueckgesetzten Rekordbestand kann ein Stundenwert darueber
   // liegen, und er soll aus der Flaeche ragen duerfen -- aber nicht aus
   // dem Bild.
   const spitze = sektoren.reduce(
@@ -405,7 +405,15 @@ registerPage({
 
     const g = m.groesster;
     const z = zuletztGefallen(state.range.records, Date.now());
-    const groesstesBalken = Math.max(1, ...m.richtungen.map(r => r.rekordNm || 0));
+    // Ueber BEIDE Spuren, nicht nur den Rekord: Nach einem zurueckgesetzten
+    // Rekordbestand kann ein Stundenwert darueber liegen (siehe
+    // polarModell), und im Kreis ragt die Linie dann bewusst aus der
+    // Flaeche. Skalierte man den Balken nur auf den groessten REKORD, ergaebe
+    // das eine Breite ueber 100 % -- .pol-richt-bar hat overflow:hidden,
+    // also klemmte der Stundenbalken lautlos auf dieselbe Laenge wie der
+    // Rekordbalken, ohne dass irgendwas das anzeigt.
+    const groesstesBalken = Math.max(1, ...m.richtungen.map(r => r.rekordNm || 0),
+      ...m.richtungen.map(r => r.stundeNm || 0));
 
     spalte.innerHTML = `
       <div class="tile">
