@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { formatBearing } from '../console/js/geo.js';
-import { SEKTOREN, SKALA_STUFE, skalaNm, sektorBereich, halterName, polarModell }
+import { SEKTOREN, SKALA_STUFE, skalaNm, sektorBereich, halterName, polarModell,
+  RICHTUNGEN, SEKTOREN_JE_RICHTUNG, richtungen }
   from '../console/js/pages/polar.js';
 
 test('36 Sektoren zu je zehn Grad', () => {
@@ -126,4 +127,61 @@ test('leerer oder fehlender Bestand ergibt ein leeres Modell mit Mindestskala', 
     assert.equal(m.groesster, null);
     assert.equal(m.skalaNm, 20);
   }
+});
+
+test('zwoelf Richtungen, jede GENAU drei Sektoren, zusammen 36', () => {
+  // Der Test, der die Entscheidung bewacht. Acht 45-Grad-Richtungen
+  // ergaeben abwechselnd vier und fuenf Sektoren -- bei einer
+  // Maximum-Statistik ein systematischer Bias, und die Balken waeren
+  // untereinander nicht vergleichbar. Eine Gruppierung, die 4,5 ergibt,
+  // wird hier rot.
+  assert.equal(RICHTUNGEN.length, 12);
+  assert.equal(SEKTOREN_JE_RICHTUNG, 3);
+  assert.equal(RICHTUNGEN.length * SEKTOREN_JE_RICHTUNG, SEKTOREN);
+
+  const m = polarModell({
+    records: reihe(0, 35, s => rec(s, 10 + s)), hour_max: {},
+  });
+  const gezaehlt = m.richtungen.flatMap(r => r.sektoren);
+  assert.equal(gezaehlt.length, 36);
+  assert.deepEqual([...new Set(gezaehlt)].sort((a, b) => a - b), gezaehlt.slice().sort((a, b) => a - b));
+  for (const r of m.richtungen) assert.equal(r.sektoren.length, 3);
+});
+
+test('die Kardinalrichtungen sind Grenzen, nicht Namen', () => {
+  assert.deepEqual([...RICHTUNGEN],
+    ['NNO', 'NO', 'ONO', 'OSO', 'SO', 'SSO', 'SSW', 'SW', 'WSW', 'WNW', 'NW', 'NNW']);
+  const m = polarModell({ records: reihe(0, 35, s => rec(s, 10)), hour_max: {} });
+  assert.equal(m.richtungen[0].bereich, '000–029°');
+  assert.equal(m.richtungen[0].sektoren.join(','), '0,1,2');
+  assert.equal(m.richtungen[11].bereich, '330–359°');
+  assert.equal(m.richtungen[11].sektoren.join(','), '33,34,35');
+});
+
+test('eine Richtung nimmt das Maximum ihrer Sektoren, nicht die Summe', () => {
+  const m = polarModell({
+    records: [rec(0, 10), rec(1, 40), rec(2, 25)],
+    hour_max: { '0': 5, '1': 30, '2': 9 },
+  });
+  assert.equal(m.richtungen[0].rekordNm, 40);
+  assert.equal(m.richtungen[0].stundeNm, 30);
+});
+
+test('eine Richtung ohne jeden Stundenwert ergibt null, niemals 0', () => {
+  // Nachts der Regelfall fuer den Westen. Dieselbe Regel wie bei der
+  // aufgerissenen Linie im Kreis -- zwei Stellen, eine Regel.
+  const m = polarModell({ records: [rec(0, 10), rec(1, 40), rec(2, 25)], hour_max: {} });
+  assert.equal(m.richtungen[0].stundeNm, null);
+  assert.equal(m.richtungen[0].rekordNm, 40);
+});
+
+test('Halter und Flugflaeche einer Richtung gehoeren ihrem groessten Sektor', () => {
+  const m = polarModell({
+    records: [rec(0, 10, { callsign: 'KLEIN1' }),
+              rec(1, 40, { callsign: 'GROSS1', alt_ft: 41000 }),
+              rec(2, 25, { callsign: 'MITTE1' })],
+    hour_max: {},
+  });
+  assert.equal(m.richtungen[0].halter, 'GROSS1');
+  assert.equal(m.richtungen[0].altFt, 41000);
 });

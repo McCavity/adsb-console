@@ -88,5 +88,55 @@ export function polarModell(range) {
   const spitze = sektoren.reduce(
     (m, s) => Math.max(m, s.rekordNm, s.stundeNm === null ? 0 : s.stundeNm), 0);
 
-  return { sektoren, groesster, skalaNm: skalaNm(spitze) };
+  return { sektoren, groesster, skalaNm: skalaNm(spitze), richtungen: richtungen(sektoren) };
+}
+
+// Zwoelf Kaesten zu 30 Grad, je GENAU drei Sektoren.
+//
+// 45 Grad teilt 36 Zehn-Grad-Sektoren nicht -- acht Richtungen ergaeben
+// abwechselnd vier und fuenf Sektoren, und eine Gruppe aus fuenf Sektoren
+// hat mehr Gelegenheiten, ein hohes Maximum zu tragen. Die Balken waeren
+// untereinander nicht vergleichbar.
+//
+// Dreiergruppen ab 0 Grad teilen exakt. Ihre Grenzen liegen dann aber auf
+// 0/30/60/90..., und genau dort liegen N, O, S und W: Die vier
+// Kardinalrichtungen werden zu Grenzen statt zu Namen. Eine auf Nord
+// zentrierte Gruppe muesste von 345 bis 015 Grad laufen, und 345 ist keine
+// Sektorgrenze -- das folgt aus dem 10-Grad-Raster des Daemons und ist
+// nicht waehlbar.
+//
+// Die Namen sind die zwoelf verbleibenden Striche des 16-Strich-Kompasses.
+// Vier treffen die Kastenmitte punktgenau (NO 45, SO 135, SW 225, NW 315),
+// die anderen acht liegen 7,5 Grad daneben. Deshalb traegt die Anzeige
+// IMMER auch den Gradbereich: Der Name ist die Merkhilfe, der Bereich ist
+// die Tatsache.
+export const RICHTUNGEN = Object.freeze([
+  'NNO', 'NO', 'ONO', 'OSO', 'SO', 'SSO',
+  'SSW', 'SW', 'WSW', 'WNW', 'NW', 'NNW',
+]);
+export const SEKTOREN_JE_RICHTUNG = SEKTOREN / RICHTUNGEN.length;   // 3
+
+export function richtungen(sektoren) {
+  const nach = new Map((sektoren || []).map(s => [s.sektor, s]));
+  return RICHTUNGEN.map((name, i) => {
+    const gruppe = [];
+    for (let k = 0; k < SEKTOREN_JE_RICHTUNG; k++) {
+      const s = nach.get(i * SEKTOREN_JE_RICHTUNG + k);
+      if (s) gruppe.push(s);
+    }
+    const grad = i * (360 / RICHTUNGEN.length);
+    const bester = gruppe.length
+      ? gruppe.reduce((a, b) => (b.rekordNm > a.rekordNm ? b : a)) : null;
+    const stunden = gruppe.map(s => s.stundeNm).filter(v => v !== null);
+    return {
+      name,
+      bereich: `${grad3(grad)}–${grad3(grad + 29)}°`,
+      sektoren: gruppe.map(s => s.sektor),
+      rekordNm: bester ? bester.rekordNm : null,
+      // Keine Stunde in allen drei Sektoren heisst null, nicht 0.
+      stundeNm: stunden.length ? Math.max(...stunden) : null,
+      halter: bester ? bester.halter : '—',
+      altFt: bester ? bester.altFt : null,
+    };
+  });
 }
