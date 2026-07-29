@@ -373,9 +373,13 @@ test('das Radialgitter hat 36 Grenzen, davon zwoelf grosse', () => {
 test('die grossen beginnen am innersten Ring, die kleinen erst am zweiten', () => {
   // Der Kern der Entscheidung am Panel: innerhalb von 10 NM bleibt es frei,
   // und die 24 kleinen setzen noch spaeter ein, damit die Mitte ruhig bleibt.
+  // Geprueft wird gegen den WINKEL, nicht gegen das eigene gross-Flag: Die
+  // erste Fassung schrieb `x.gross ? 10 : 25` und hielt damit die
+  // Implementierung gegen sich selbst. Bei einem falschen Teiler (20 statt
+  // 30) blieb sie gruen, weil vonNm und gross demselben Irrtum folgten.
   const r = radialen(80, [10, 25, 50]);
   for (const x of r) {
-    assert.equal(x.vonNm, x.gross ? 10 : 25, `${x.grad}° beginnt falsch`);
+    assert.equal(x.vonNm, x.grad % 30 === 0 ? 10 : 25, `${x.grad}° beginnt falsch`);
     assert.equal(x.bisNm, 80);
   }
 });
