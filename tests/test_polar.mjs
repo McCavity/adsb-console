@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { formatBearing } from '../console/js/geo.js';
 import { SEKTOREN, SKALA_STUFE, skalaNm, sektorBereich, halterName, polarModell,
-  RICHTUNGEN, SEKTOREN_JE_RICHTUNG, richtungen }
+  RICHTUNGEN, SEKTOREN_JE_RICHTUNG, richtungen, zuletztGefallen }
   from '../console/js/pages/polar.js';
 
 test('36 Sektoren zu je zehn Grad', () => {
@@ -184,4 +184,38 @@ test('Halter und Flugflaeche einer Richtung gehoeren ihrem groessten Sektor', ()
   });
   assert.equal(m.richtungen[0].halter, 'GROSS1');
   assert.equal(m.richtungen[0].altFt, 41000);
+});
+
+const NOW = Date.parse('2026-07-29T12:36:58+02:00');
+
+test('der juengste Rekord gewinnt, nicht der letzte im Array', () => {
+  const r = zuletztGefallen([
+    rec(1, 79, { seen_at: '2026-07-27T18:21:58+02:00', callsign: 'ALT1' }),
+    rec(23, 22, { seen_at: '2026-07-29T12:04:45+02:00', callsign: 'NEU1' }),
+    rec(8, 39, { seen_at: '2026-07-29T11:31:37+02:00', callsign: 'MITTE' }),
+  ], NOW);
+  assert.equal(r.halter, 'NEU1');
+  assert.equal(r.sektor, 23);
+  assert.equal(r.bereich, '230–239°');
+});
+
+test('das Alter kommt aus der uebergebenen Uhr, nicht aus Date.now', () => {
+  // Sonst waere die Funktion nicht testbar -- dieselbe Regel wie bei
+  // letzteZielzeit in data.js.
+  const r = zuletztGefallen(
+    [rec(23, 22, { seen_at: '2026-07-29T12:04:45+02:00' })], NOW);
+  assert.equal(r.alterMin, 32);
+});
+
+test('leere Liste ergibt null, nicht den Epochen-Nullpunkt', () => {
+  assert.equal(zuletztGefallen([], NOW), null);
+  assert.equal(zuletztGefallen(null, NOW), null);
+});
+
+test('ein unlesbarer Zeitstempel wird uebersprungen, nicht als aeltester gewertet', () => {
+  const r = zuletztGefallen([
+    rec(5, 10, { seen_at: 'gestern abend', callsign: 'KAPUTT' }),
+    rec(6, 11, { seen_at: '2026-07-28T09:00:00+02:00', callsign: 'HEIL1' }),
+  ], NOW);
+  assert.equal(r.halter, 'HEIL1');
 });
