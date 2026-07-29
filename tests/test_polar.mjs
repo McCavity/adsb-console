@@ -77,6 +77,20 @@ test('hour_max wird als Objekt mit Zeichenketten-Schluesseln gelesen', () => {
   assert.equal(m.sektoren[0].stundeNm, 12.3);
 });
 
+test('ein hour_max in Array-Form wird abgewiesen', () => {
+  // Der Test, der die Objektform WIRKLICH bewacht. Der Test darueber tut
+  // es naemlich nicht: JS wandelt Objektschluessel beim Zugriff selbst in
+  // Zeichenketten um, hm[7] und hm["7"] sind dasselbe. Das String(s) im
+  // Code dokumentiert die Form, es traegt sie nicht -- erst der
+  // Array.isArray-Schutz tut das, und der ist ohne diesen Fall ungeprueft.
+  //
+  // Ein Array an dieser Stelle waere ein Daemon, der seine Ausgabe
+  // umgestellt hat. Dann ist die Stunde unbekannt, und unbekannt ist null
+  // -- nicht der Wert, der zufaellig an Index 7 steht.
+  const m = polarModell({ records: [rec(7, 40)], hour_max: [0, 0, 0, 0, 0, 0, 0, 99] });
+  assert.equal(m.sektoren[0].stundeNm, null);
+});
+
 test('ein Sektor ohne Stundenwert ergibt null, niemals 0', () => {
   const m = polarModell({ records: [rec(7, 40)], hour_max: {} });
   assert.equal(m.sektoren[0].stundeNm, null);
