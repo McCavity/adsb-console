@@ -216,7 +216,7 @@ function laufPfad(werte, von, laenge, skala, radiusPx, geschlossen) {
     const b = punkt(nm, (s + 1) * GRAD_JE_SEKTOR, skala, radiusPx);
     teile.push(`${k === 0 ? 'M' : 'L'}${fix(a.x)},${fix(a.y)}`);
     // Der Bogen, nicht die Sehne: Ein Sektormaximum gilt fuer seine vollen
-    // zehn Grad. Bei R_PX = 284 betruege der Sehnenfehler rund 1 px, und
+    // zehn Grad. Bei R_PX = 276 betruege der Sehnenfehler rund 1 px, und
     // die Zusage "konstanter Radius je Sektor" waere nur fast wahr.
     // sweep = 1, weil wachsende Peilung auf dem Bild im Uhrzeigersinn
     // laeuft (y zeigt nach unten).
@@ -250,6 +250,42 @@ export function treppenPfade(werte, skala, radiusPx = R_PX) {
     i += laenge;
   }
   return pfade;
+}
+
+// Nennmasse der Peilungsschrift, am gerenderten Bild gemessen: 15 px
+// Schriftgroesse ergeben rund 30 x 18 px fuer eine dreistellige Marke,
+// Oberlaenge 14 px ueber der Grundlinie, Unterlaenge 4 px darunter.
+export const PEIL_SCHRIFT = Object.freeze({ breite: 30, oben: 14, unten: 4 });
+
+// Wo die vier Peilungsmarken sitzen -- GERECHNET aus BILD.rand, nicht als
+// Pixelzahl hingeschrieben. Die erste Fassung schrieb sie hin, mit einem
+// festen Versatz von -12 px, und die 090-Marke lief 6 px ueber die
+// Bildkante hinaus und wurde abgeschnitten. Sorgfalt haette das nicht
+// verhindert, eine Kopplung tut es: Aendert sich BILD.rand, wandern die
+// Marken mit, und der Test darunter faellt, wenn der Rand zu schmal wird.
+//
+// Gesetzt wird ueber text-anchor statt ueber einen Pixelversatz -- ein
+// fester Versatz ist fuer die waagerecht mittigen Marken ungefaehr richtig
+// und fuer die seitlichen falsch.
+export function markenPlatz(grad) {
+  const g = (((grad % 360) + 360) % 360);
+  if (g === 0)   return { x: MITTE, y: BILD.rand - PEIL_SCHRIFT.unten - 10, anker: 'middle' };
+  if (g === 90)  return { x: BILD.groesse - 2, y: MITTE + 5, anker: 'end' };
+  if (g === 180) return { x: MITTE, y: BILD.groesse - BILD.rand + PEIL_SCHRIFT.oben + 12, anker: 'middle' };
+  if (g === 270) return { x: 2, y: MITTE + 5, anker: 'start' };
+  return null;
+}
+
+// Der Kasten, den eine Marke belegt -- damit der Test ihn pruefen kann,
+// ohne einen Browser.
+export function markenKasten(grad) {
+  const p = markenPlatz(grad);
+  if (!p) return null;
+  const links = p.anker === 'end' ? p.x - PEIL_SCHRIFT.breite
+              : p.anker === 'start' ? p.x
+              : p.x - PEIL_SCHRIFT.breite / 2;
+  return { links, rechts: links + PEIL_SCHRIFT.breite,
+           oben: p.y - PEIL_SCHRIFT.oben, unten: p.y + PEIL_SCHRIFT.unten };
 }
 
 registerPage({
@@ -299,14 +335,9 @@ registerPage({
     // richtig und fuer die seitlichen falsch -- die 090 lief so 6 px ueber
     // den Rand hinaus und wurde abgeschnitten. Genau diese Fehlerklasse
     // hat in Stufe 1 schon einmal eine Flugplatzkennung gekostet.
-    const MARKEN = [
-      { grad: 0,   x: MITTE,                 y: 20,                    anker: 'middle' },
-      { grad: 90,  x: BILD.groesse - 2,      y: MITTE + 5,             anker: 'end' },
-      { grad: 180, x: MITTE,                 y: BILD.groesse - 6,      anker: 'middle' },
-      { grad: 270, x: 2,                     y: MITTE + 5,             anker: 'start' },
-    ];
-    for (const m2 of MARKEN) {
-      teile.push(`<text class="pol-peil" x="${m2.x}" y="${m2.y}" text-anchor="${m2.anker}">${String(m2.grad).padStart(3, '0')}</text>`);
+    for (const grad of [0, 90, 180, 270]) {
+      const p = markenPlatz(grad);
+      teile.push(`<text class="pol-peil" x="${p.x}" y="${p.y}" text-anchor="${p.anker}">${String(grad).padStart(3, '0')}</text>`);
     }
 
     // Rekord: Flaeche aus 36 Keilen, dazu die Kante als Treppenzug.

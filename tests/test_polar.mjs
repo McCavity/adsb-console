@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { formatBearing } from '../console/js/geo.js';
 import { SEKTOREN, SKALA_STUFE, skalaNm, sektorBereich, halterName, polarModell,
   RICHTUNGEN, SEKTOREN_JE_RICHTUNG, richtungen, zuletztGefallen,
-  BILD, R_PX, MITTE, werteArray, keilPfad, treppenPfade }
+  BILD, R_PX, MITTE, werteArray, keilPfad, treppenPfade,
+  markenPlatz, markenKasten, PEIL_SCHRIFT }
   from '../console/js/pages/polar.js';
 
 test('36 Sektoren zu je zehn Grad', () => {
@@ -286,4 +287,24 @@ test('der Keil beginnt in der Mitte und schliesst sich', () => {
   assert.ok(d.endsWith(' Z'));
   // Halbe Skala = halber Radius.
   assert.ok(d.includes((MITTE - R_PX / 2).toFixed(1)));
+});
+
+test('keine Peilungsmarke laeuft ueber die Bildkante oder in den Aussenring', () => {
+  // Der Test, den es beim ersten Mal nicht gab: Die 090-Marke lief 6 px
+  // ueber die rechte Kante und wurde abgeschnitten, gefunden erst am
+  // gerenderten Bild. Hier faellt es ohne Browser auf -- und es faellt
+  // auch dann auf, wenn jemand spaeter BILD.rand verkleinert.
+  const ringL = BILD.rand, ringR = BILD.groesse - BILD.rand;
+  for (const grad of [0, 90, 180, 270]) {
+    const k = markenKasten(grad);
+    assert.ok(k.links >= 0 && k.rechts <= BILD.groesse,
+      `${grad}: waagerecht ${k.links}..${k.rechts} passt nicht in 0..${BILD.groesse}`);
+    assert.ok(k.oben >= 0 && k.unten <= BILD.groesse,
+      `${grad}: senkrecht ${k.oben}..${k.unten} passt nicht in 0..${BILD.groesse}`);
+    // Ausserhalb des Aussenrings: eine Marke IM Bild waere keine Randmarke.
+    const draussen = k.rechts <= ringL || k.links >= ringR
+                  || k.unten <= ringL || k.oben >= ringR;
+    assert.ok(draussen, `${grad}: Marke ueberlappt den Aussenring`);
+  }
+  assert.equal(markenPlatz(45), null);
 });
