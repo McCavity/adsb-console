@@ -60,6 +60,20 @@ export function nmToPx(nm, rangeNm, radiusPx) {
   return nm / rangeNm * radiusPx;
 }
 
+// Polarkoordinaten auf Bildkoordinaten, relativ zum Mittelpunkt.
+// Norden ist oben (negatives y), Osten rechts.
+//
+// Lag bis zum 29.07.2026 in pages/radar.js. Sie ist eine reine
+// Geometriefunktion ohne DOM und ohne Zustand und gehoert damit hierher --
+// und vor allem: Die Polarseite braucht dieselbe Abbildung. Eine zweite
+// Fassung waere der Anfang davon, dass zwei Teile derselben Konsole
+// dieselbe Eingabe verschieden deuten.
+export function projectToCanvas(nm, brg, rangeNm, radiusPx) {
+  const r = nm / rangeNm * radiusPx;
+  const a = brg * Math.PI / 180;
+  return { x: r * Math.sin(a), y: -r * Math.cos(a) };
+}
+
 // Welches Ziel steht auf der Einzelziel-Seite? Anders als der Datenblock
 // neben dem Radarschirm haelt diese Seite ihr Ziel fest, solange sie steht:
 // Zwei Ziele bei 12,3 und 12,4 NM wuerden sonst im Sekundentakt tauschen,
