@@ -103,8 +103,11 @@ Skalenstufe. Wer auf dem Radar den 50-NM-Ring sieht, findet ihn hier wieder — 
 Kopplung wie beim Höhenprofil, und sie hat sich bei der Stufe-2-Abnahme als Beleg bewährt,
 daß eine Seite wirklich aus `cfg.radar` liest und nicht aus eigenen Zahlen.
 
-Peilungsmarken bei 000, 090, 180, 270 in B612 wie im Radarkreis. Norden oben, im
-Uhrzeigersinn.
+Peilungsmarken bei 000, 090, 180, 270 laufen heute in `ui-monospace`, nicht in B612 wie im
+Radarkreis. B612 ist für diese Seite offen und wird vor der Geräteabnahme entschieden: Die
+gemessene Zeichenbreite (31,95 gegen 29,80 px mit dem Fallback) drückt den Abstand der
+`090`-Marke zum Außenring auf 0,05 px, und `PEIL_SCHRIFT` wäre dann am Gerät neu zu messen.
+Norden oben, im Uhrzeigersinn.
 
 ### 2.3 Eine Funktion wandert
 
@@ -125,7 +128,7 @@ Drei Blöcke: eine Trophäe, die Physik, ein Puls.
 ### 3.1 Trophäe — der absolute Rekord
 
 ```
-79,4 NM
+79.4 NM
 Sektor 010–019°  ·  FL390  ·  502d65  ·  27.07. 18:21
 ```
 
@@ -143,25 +146,35 @@ Stunde) und einem Balken. Beschriftet mit Kompaßnamen **und** Gradbereich.
 
 | Richtung | Bereich | Rekord NM | Stunde NM |
 |---|---|---|---|
-| NNO | 000–029° | **79,4** | 59,4 |
-| NO | 030–059° | 58,6 | 49,4 |
-| ONO | 060–089° | 54,8 | 37,1 |
-| OSO | 090–119° | 51,4 | 42,7 |
-| SO | 120–149° | 53,0 | 44,1 |
-| SSO | 150–179° | 36,3 | 27,7 |
-| SSW | 180–209° | 23,2 | 19,4 |
-| SW | 210–239° | 22,6 | 22,6 |
-| WSW | 240–269° | **19,8** | 17,3 |
-| WNW | 270–299° | 26,2 | 18,0 |
-| NW | 300–329° | 37,3 | 31,1 |
-| NNW | 330–359° | 55,6 | 42,1 |
+| NNO | 000–029° | **79.4** | 59.4 |
+| NO | 030–059° | 58.6 | 49.4 |
+| ONO | 060–089° | 54.8 | 37.1 |
+| OSO | 090–119° | 51.4 | 42.7 |
+| SO | 120–149° | 53.0 | 44.1 |
+| SSO | 150–179° | 36.3 | 27.7 |
+| SSW | 180–209° | 23.2 | 19.4 |
+| SW | 210–239° | 22.6 | 22.6 |
+| WSW | 240–269° | **19.8** | 17.3 |
+| WNW | 270–299° | 26.2 | 18.0 |
+| NW | 300–329° | 37.3 | 31.1 |
+| NNW | 330–359° | 55.6 | 42.1 |
 
 Stand 29.07. 12:36. **Das Verhältnis NNO zu WSW ist 4 : 1** — das ist die Aussage der
 Seite, und sie steht damit in Zahlen neben dem Bild.
 
+Zahlen in diesem Abschnitt und in §3.1 stehen mit Dezimalpunkt, nicht Komma — konsistent
+mit dem Code (`zahlNm` nutzt `toFixed`, ebenso `board.js`, `radar.js` und `target.js` in der
+übrigen Konsole). Eine konsoleweite Umstellung auf `toLocaleString('de-DE')` wäre möglich,
+ist aber nicht Gegenstand dieser Stufe.
+
 Hat eine Gruppe für die letzte Stunde **keinen** Wert (alle drei Sektoren leer), steht dort
 ein **Gedankenstrich**, keine 0 — dieselbe Regel wie bei der aufgerissenen Linie im Kreis.
 Nachts wird das der Regelfall für den Westen sein.
+
+Eine Richtung ohne Stundenwert zeigt die Zahl als Gedankenstrich **und keinen Balken**. Ein
+Balken der Länge Null ist die einzige Stelle der Seite, an der ein fehlender Wert doch eine
+Pixelaussage macht — und das ist bewußt so: Kein Balken heißt kein Balken, nicht „0 NM
+gemessen".
 
 **Warum zwölf und nicht acht.** §2.3 des Hauptentwurfs nennt acht 45°-Sektoren. **45° teilt
 36 Zehn-Grad-Sektoren nicht** — es kämen 4,5 heraus, in der Praxis also abwechselnd vier
@@ -198,8 +211,13 @@ steht".
 
 ### 3.4 Höhenbudget
 
-620 px Rumpf: Trophäe rund 140, zwölf Zeilen à 28 = 336, Puls rund 40. Bleiben rund 100 px
-Luft. **Nichts scrollt.** Was nicht paßt, ist ein Layoutfehler und keine Scrollbar.
+Gemessen im Browser, nicht gerechnet: `.page` hat `padding: 16px 0 6px`, die Spalte also
+**598 px**, nicht 620. Die drei Kacheln brauchen 119 (Trophäe) + 364 (zwölf Zeilen) + 85
+(Puls) = 568 px, plus zwei Lücken à 12 px = **592 px**. Reserve: **6 px**, nicht rund 100.
+**Nichts scrollt.** Was nicht paßt, ist ein Layoutfehler und keine Scrollbar. Chromium auf
+dem Pi kann andere Zeilenhöhen liefern als der Meßbrowser — bei 6 px Reserve reicht das,
+um zu kippen. Der Rückzug (eine schmalere Trophäe) muß deshalb **vor** der Geräteabnahme
+bereitliegen, nicht erst danach gebaut werden.
 
 ## 4. Leerzustand und Alterung
 
@@ -285,7 +303,9 @@ Mit der siebten Seite: **Umlauf 45 + 6 × 15 = 135 s = 2:15**, Radaranteil **33,
 `polar` steht in `console.json` schon auf `true` und in `PAGE_ORDER` an vierter Stelle. Mit
 dem Renderer entfällt die Filterung in `console.js:12`; die Indikatorreihe bekommt
 **sieben** Punkte. Der Hinweistext in `console.json`, der `interrupt_carousel` als „noch
-nicht umgesetzt, frühestens Stufe 3" führt, bleibt wahr und bleibt stehen (§11).
+nicht umgesetzt" führte, sagte bislang „frühestens Stufe 3" — Stufe 3 ist jetzt fertig und
+enthält `interrupt_carousel` nicht. Der Text bleibt stehen, ist aber auf „frühestens
+Stufe 4" korrigiert (§11): Er bleibt stehen, wahr ist er nur in der korrigierten Fassung.
 
 ## 8. Was im Hauptentwurf nachgezogen wird
 
