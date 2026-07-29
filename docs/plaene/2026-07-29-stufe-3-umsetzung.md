@@ -509,7 +509,7 @@ test('ein Stundenwert ueber dem Rekord bleibt stehen und wird nicht geklemmt', (
 });
 
 test('die Skala folgt dem groessten Wert BEIDER Spuren', () => {
-  // Sonst raegte eine Stundenlinie ueber dem Rekord aus dem Bild.
+  // Sonst ragte eine Stundenlinie ueber dem Rekord aus dem Bild.
   const m = polarModell({ records: [rec(3, 20)], hour_max: { '3': 95 } });
   assert.equal(m.skalaNm, 100);
 });
