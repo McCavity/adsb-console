@@ -424,16 +424,28 @@ test('ohne brauchbare Ringe wird die ganze Skala geteilt', () => {
   assert.deepEqual(ringe(80, null), [25, 50, 80]);
 });
 
-test('der aeusserste Abstand liegt IMMER zwischen 10 und 35 NM', () => {
+test('der aeusserste Abstand reisst nie aus, und kein Ring draengt sich an den Rand', () => {
   // Die beweisbare Eigenschaft der Formel, und der eigentliche Wert dieses
-  // Tests: Er prueft einen ganzen Skalenbereich, nicht ein Beispiel. Eine
-  // Fassung, die 25-NM-Schritte einfuegt, ohne die Restluecke zu pruefen,
-  // faellt hier -- und zwar an einer Skala, an die niemand gedacht haette.
+  // Tests: Er prueft einen ganzen Skalenbereich, nicht ein Beispiel.
+  //
+  // ZWEI Aussagen, und die zweite gilt nur, WO geteilt wurde. Die erste
+  // Fassung dieses Tests forderte den Rest pauschal ueber 10 NM und
+  // widersprach damit dem Beispieltest daneben: Bei Skala 20 ist die
+  // Luecke von vornherein klein, es wird gar nicht geteilt, und ein roher
+  // Abstand von 10 NM ist dort richtig. Die Herleitung "Rest = 10 + eps"
+  // gilt eben nur fuer den Teilungsfall. Gefunden beim Ausfuehren, nicht
+  // beim Aufschreiben.
+  const BASIS = [10, 25, 50];
   for (let skala = 20; skala <= 400; skala += 20) {
-    const r = ringe(skala, [10, 25, 50]);
+    const r = ringe(skala, BASIS);
     const rest = r[r.length - 1] - r[r.length - 2];
-    assert.ok(rest > RING_MAX_LUECKE - RING_SCHRITT && rest <= RING_MAX_LUECKE,
+    assert.ok(rest <= RING_MAX_LUECKE,
       `Skala ${skala}: aeusserster Abstand ${rest} NM, Ringe ${r.join('·')}`);
+    const geteilt = r.length > BASIS.filter(x => x < skala).length + 1;
+    if (geteilt) {
+      assert.ok(rest > RING_MAX_LUECKE - RING_SCHRITT,
+        `Skala ${skala}: geteilt, aber nur ${rest} NM Rest -- ein Ring dicht am Aussenring`);
+    }
     assert.deepEqual(r.slice().sort((a, b) => a - b), r, `Skala ${skala}: unsortiert`);
   }
 });
