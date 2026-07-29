@@ -251,3 +251,69 @@ export function treppenPfade(werte, skala, radiusPx = R_PX) {
   }
   return pfade;
 }
+
+// Die Peilungsmarke sitzt im Rand ausserhalb des Aussenrings.
+function punktAussen(grad, skala) {
+  const p = punkt(skala, grad, skala, R_PX + 14);
+  return { x: p.x - 12, y: p.y + 5 };
+}
+
+registerPage({
+  id: 'polar',
+  title: 'Reichweite',
+  // Die Kopfzeile altert mit range.json. Steht der Daemon, altert die
+  // Seite sichtbar, statt Zahlen von vorgestern als frisch auszugeben.
+  ageSource: 'range',
+  mount(el) {
+    el.innerHTML = `
+      <div class="polar-bild">
+        <svg class="polar-svg" viewBox="0 0 ${BILD.groesse} ${BILD.groesse}"
+             aria-hidden="true"></svg>
+      </div>
+      <div class="polar-spalte value"></div>`;
+  },
+  render(el, cfg, state) {
+    const svg = el.querySelector('.polar-svg');
+    const spalte = el.querySelector('.polar-spalte');
+    const m = polarModell(state.range);
+
+    if (!m.sektoren.length) {
+      svg.innerHTML = '';
+      spalte.innerHTML = `<div class="tile ctr" style="flex:1">
+        <div class="empty">KEINE REICHWEITENDATEN
+          <div class="empty-sub">${leerUntertitel(state)}</div></div></div>`;
+      return;
+    }
+
+    const teile = [];
+    // Ringe: die des Radars, soweit sie in die Skala passen, dazu der
+    // beschriftete Aussenring. Wer auf dem Radar den 50-NM-Ring sieht,
+    // findet ihn hier wieder -- und ein umgestellter Radarmassstab
+    // verschiebt beide Seiten gemeinsam.
+    const ringe = cfg.radar.rings_nm.filter(r => r < m.skalaNm).concat([m.skalaNm]);
+    for (const ring of ringe) {
+      const rp = ring / m.skalaNm * R_PX;
+      teile.push(`<circle class="pol-ring" cx="${MITTE}" cy="${MITTE}" r="${rp.toFixed(1)}"/>`);
+      teile.push(`<text class="pol-ring-t" x="${MITTE + 5}" y="${(MITTE - rp + 15).toFixed(1)}">${ring} NM</text>`);
+    }
+    for (const grad of [0, 90, 180, 270]) {
+      const p = punktAussen(grad, m.skalaNm);
+      teile.push(`<text class="pol-peil" x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}">${String(grad).padStart(3, '0')}</text>`);
+    }
+
+    // Rekord: Flaeche aus 36 Keilen, dazu die Kante als Treppenzug.
+    for (const s of m.sektoren) {
+      teile.push(`<path class="pol-flaeche" d="${keilPfad(s.rekordNm, s.sektor, m.skalaNm)}"/>`);
+    }
+    for (const d of treppenPfade(werteArray(m.sektoren, 'rekordNm'), m.skalaNm)) {
+      teile.push(`<path class="pol-kante" d="${d}"/>`);
+    }
+    // Stunde: nur die Linie, aufgerissen wo nichts flog.
+    for (const d of treppenPfade(werteArray(m.sektoren, 'stundeNm'), m.skalaNm)) {
+      teile.push(`<path class="pol-stunde" d="${d}"/>`);
+    }
+    svg.innerHTML = teile.join('');
+
+    spalte.innerHTML = '';        // Aufgabe 9
+  },
+});

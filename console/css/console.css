@@ -188,6 +188,20 @@ html, body {
 .band-n { font-size: 22px; font-variant-numeric: tabular-nums; flex: 0 0 34px;
           text-align: right; }
 
+/* Polar: Windrose links, Datenspalte rechts */
+.polar-bild { flex: 0 0 620px; height: 620px; align-self: center; }
+.polar-svg { width: 620px; height: 620px; display: block; }
+.polar-svg .pol-ring { fill: none; stroke: #14361f; stroke-width: 1; }
+.polar-svg .pol-ring-t { fill: #2f6b45; font-size: 13px;
+                         font-family: "B612 Mono", ui-monospace, monospace; }
+.polar-svg .pol-peil { fill: #3a8f57; font-size: 15px; letter-spacing: .06em;
+                       font-family: "B612 Mono", ui-monospace, monospace; }
+.polar-svg .pol-flaeche { fill: #14512b; stroke: none; }
+.polar-svg .pol-kante { fill: none; stroke: #2f8f52; stroke-width: 1.5; }
+.polar-svg .pol-stunde { fill: none; stroke: #3ddc84; stroke-width: 2.5;
+                         stroke-linejoin: round; stroke-linecap: round; }
+.polar-spalte { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+
 /* Systemseite */
 .sys { flex: 1; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
 .sys-oben, .sys-unten { flex: 1; display: grid; gap: 14px; min-height: 0; }
