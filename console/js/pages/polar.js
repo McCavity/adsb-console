@@ -167,8 +167,8 @@ export function zuletztGefallen(records, nowMs) {
 
 // 620 ist die Buehnenhoehe: 720 minus 56 Kopfzeile minus 44 Punktreihe.
 // Der Rand haelt die Beschriftung des Aussenrings im Bild.
-export const BILD = Object.freeze({ groesse: 620, rand: 26 });
-export const R_PX = (BILD.groesse - 2 * BILD.rand) / 2;   // 284
+export const BILD = Object.freeze({ groesse: 620, rand: 34 });
+export const R_PX = (BILD.groesse - 2 * BILD.rand) / 2;   // 276
 export const MITTE = BILD.groesse / 2;                    // 310
 
 const GRAD_JE_SEKTOR = 360 / SEKTOREN;                    // 10
@@ -252,12 +252,6 @@ export function treppenPfade(werte, skala, radiusPx = R_PX) {
   return pfade;
 }
 
-// Die Peilungsmarke sitzt im Rand ausserhalb des Aussenrings.
-function punktAussen(grad, skala) {
-  const p = punkt(skala, grad, skala, R_PX + 14);
-  return { x: p.x - 12, y: p.y + 5 };
-}
-
 registerPage({
   id: 'polar',
   title: 'Reichweite',
@@ -286,19 +280,33 @@ registerPage({
     }
 
     const teile = [];
-    // Ringe: die des Radars, soweit sie in die Skala passen, dazu der
-    // beschriftete Aussenring. Wer auf dem Radar den 50-NM-Ring sieht,
-    // findet ihn hier wieder -- und ein umgestellter Radarmassstab
-    // verschiebt beide Seiten gemeinsam.
+    // Ringkreise: die des Radars, soweit sie in die Skala passen, dazu der
+    // Aussenring. Wer auf dem Radar den 50-NM-Ring sieht, findet ihn hier
+    // wieder -- und ein umgestellter Radarmassstab verschiebt beide Seiten
+    // gemeinsam. Die BESCHRIFTUNG der Ringe wird separat gesammelt (siehe
+    // ringBeschriftungen unten) und erst nach der Flaeche angehaengt.
     const ringe = cfg.radar.rings_nm.filter(r => r < m.skalaNm).concat([m.skalaNm]);
+    const ringBeschriftungen = [];
     for (const ring of ringe) {
       const rp = ring / m.skalaNm * R_PX;
       teile.push(`<circle class="pol-ring" cx="${MITTE}" cy="${MITTE}" r="${rp.toFixed(1)}"/>`);
-      teile.push(`<text class="pol-ring-t" x="${MITTE + 5}" y="${(MITTE - rp + 15).toFixed(1)}">${ring} NM</text>`);
+      ringBeschriftungen.push(`<text class="pol-ring-t" x="${MITTE + 5}" y="${(MITTE - rp + 15).toFixed(1)}">${ring} NM</text>`);
     }
-    for (const grad of [0, 90, 180, 270]) {
-      const p = punktAussen(grad, m.skalaNm);
-      teile.push(`<text class="pol-peil" x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}">${String(grad).padStart(3, '0')}</text>`);
+
+    // Die vier Peilungsmarken sitzen im Rand ausserhalb des Aussenrings.
+    // Gesetzt wird ueber text-anchor, NICHT ueber einen Pixelversatz: Ein
+    // fester Versatz ist fuer die waagerecht mittigen Marken ungefaehr
+    // richtig und fuer die seitlichen falsch -- die 090 lief so 6 px ueber
+    // den Rand hinaus und wurde abgeschnitten. Genau diese Fehlerklasse
+    // hat in Stufe 1 schon einmal eine Flugplatzkennung gekostet.
+    const MARKEN = [
+      { grad: 0,   x: MITTE,                 y: 20,                    anker: 'middle' },
+      { grad: 90,  x: BILD.groesse - 2,      y: MITTE + 5,             anker: 'end' },
+      { grad: 180, x: MITTE,                 y: BILD.groesse - 6,      anker: 'middle' },
+      { grad: 270, x: 2,                     y: MITTE + 5,             anker: 'start' },
+    ];
+    for (const m2 of MARKEN) {
+      teile.push(`<text class="pol-peil" x="${m2.x}" y="${m2.y}" text-anchor="${m2.anker}">${String(m2.grad).padStart(3, '0')}</text>`);
     }
 
     // Rekord: Flaeche aus 36 Keilen, dazu die Kante als Treppenzug.
@@ -312,6 +320,12 @@ registerPage({
     for (const d of treppenPfade(werteArray(m.sektoren, 'stundeNm'), m.skalaNm)) {
       teile.push(`<path class="pol-stunde" d="${d}"/>`);
     }
+    // Die Ringbeschriftung zuletzt: SVG zeichnet in Dokumentreihenfolge,
+    // und eine Beschriftung unter der Flaeche ist keine Beschriftung. Am
+    // 29.07.2026 lagen drei von vier Ringmarken (10/25/50 NM) unter einem
+    // Sektor mit 64-79 NM Rekord und waren dadurch zugemalt -- nur "80 NM"
+    // ragte heraus.
+    teile.push(...ringBeschriftungen);
     svg.innerHTML = teile.join('');
 
     spalte.innerHTML = '';        // Aufgabe 9

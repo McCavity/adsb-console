@@ -193,7 +193,8 @@ html, body {
 .polar-svg { width: 620px; height: 620px; display: block; }
 .polar-svg .pol-ring { fill: none; stroke: #14361f; stroke-width: 1; }
 .polar-svg .pol-ring-t { fill: #2f6b45; font-size: 13px;
-                         font-family: "B612 Mono", ui-monospace, monospace; }
+                         font-family: "B612 Mono", ui-monospace, monospace;
+                         paint-order: stroke; stroke: #04140a; stroke-width: 3px; }
 .polar-svg .pol-peil { fill: #3a8f57; font-size: 15px; letter-spacing: .06em;
                        font-family: "B612 Mono", ui-monospace, monospace; }
 .polar-svg .pol-flaeche { fill: #14512b; stroke: none; }
