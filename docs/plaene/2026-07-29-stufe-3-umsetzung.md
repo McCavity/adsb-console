@@ -1112,7 +1112,7 @@ Erwartet: **`ℹ tests 152`, `ℹ fail 0`**
 | Bruch | erwartet rot |
 |---|---|
 | in `treppenPfade` das `da.every`-Kürzel entfernen und immer Läufe bauen | „ein vollstaendiger Kranz ergibt genau EINEN geschlossenen Pfad" |
-| `if (!da[…]) { werte[…] = 0; }` statt `continue` | „eine Luecke reisst den Zug auf" |
+| die erste Zeile ersetzen durch `werte = werte.map(v => (typeof v === 'number' && Number.isFinite(v) ? v : 0)); const da = werte.map(() => true);` — das ist der Fehler „Lücke wird zur Null" in Reinform | **zwei** Tests: „eine Luecke reisst den Zug auf" und „ohne jeden Wert entsteht kein Pfad". Beide bewachen dieselbe Regel, deshalb fallen beide. **Am 29.07. selbst gemessen**, nicht angenommen |
 | in `laufPfad` `punkt(nm, s * GRAD_JE_SEKTOR + 5, …)` (Sektormitte) | „ein Wert auf der Skalenstufe liegt auf dem Aussenring" |
 
 - [ ] **Schritt 6: Commit**
