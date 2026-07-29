@@ -603,7 +603,7 @@ Erwartet: **`ℹ tests 137`, `ℹ fail 0`**
 
 | Bruch | erwartet rot |
 |---|---|
-| `const h = hm[Object.keys(hm).find(k => k === s)];` | „hour_max wird als Objekt…" |
+| `const h = hm[Object.keys(hm).find(k => k === s)];` | **drei** Tests, darunter „hour_max wird als Objekt…" — `Object.keys` liefert Zeichenketten, der Vergleich mit einer Zahl trifft nie, also fällt **jeder** Stundenwert weg. Ein grober Bruch, aber ein echter |
 | `const hm = range && range.hour_max ? range.hour_max : {};` (ohne `Array.isArray`-Schutz) | „ein hour_max in Array-Form wird abgewiesen" |
 | `stundeNm: … ? h : 0` | „ein Sektor ohne Stundenwert ergibt null" |
 | `skalaNm(sektoren.reduce((m,s) => Math.max(m, s.rekordNm), 0))` | „die Skala folgt … BEIDER Spuren" |
