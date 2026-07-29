@@ -140,3 +140,23 @@ export function richtungen(sektoren) {
     };
   });
 }
+
+// Liest keine Uhr -- der Zeitpunkt kommt herein. Sonst waere die Funktion
+// nicht testbar; dieselbe Regel wie bei letzteZielzeit in data.js.
+export function zuletztGefallen(records, nowMs) {
+  const liste = Array.isArray(records) ? records : [];
+  let bester = null, besteMs = -Infinity;
+  for (const r of liste) {
+    const ms = Date.parse(r && r.seen_at);
+    if (!Number.isFinite(ms) || ms <= besteMs) continue;
+    besteMs = ms; bester = r;
+  }
+  if (!bester) return null;
+  return {
+    sektor: bester.sector,
+    bereich: sektorBereich(bester.sector),
+    nm: bester.max_nm,
+    halter: halterName(bester),
+    alterMin: Math.max(0, Math.round((nowMs - besteMs) / 60000)),
+  };
+}
