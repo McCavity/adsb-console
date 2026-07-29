@@ -29,8 +29,16 @@ const grad3 = n => String(n).padStart(3, '0');
 // "000–009°" -- ein Bereich, keine Peilung. formatBearing() waere hier
 // falsch: Sie macht aus der 0 die 360, was fuer eine Peilung richtig ist
 // und fuer eine Bereichsuntergrenze nicht.
+//
+// Kein Modulo mehr: Das doppelte Modulo der ersten Fassung war kein
+// Schutz, sondern hat jeden Eingang plausibel aussehen lassen -- aus
+// null wurde die 0 und damit "000–009°", eine Falschaussage, die wie eine
+// Messung wirkt. Ein echter Bereichswaechter: kein ganzzahliger Sektor in
+// 0..35 ergibt den Gedankenstrich, denselben, den polarModell fuer solche
+// Saetze ohnehin verwirft.
 export function sektorBereich(s) {
-  const i = (((s % SEKTOREN) + SEKTOREN) % SEKTOREN) * (360 / SEKTOREN);
+  if (!Number.isInteger(s) || s < 0 || s >= SEKTOREN) return '—';
+  const i = s * (360 / SEKTOREN);
   return `${grad3(i)}–${grad3(i + 9)}°`;
 }
 
@@ -151,6 +159,13 @@ export function zuletztGefallen(records, nowMs) {
   const liste = Array.isArray(records) ? records : [];
   let bester = null, besteMs = -Infinity;
   for (const r of liste) {
+    const s = r && r.sector;
+    // Dieselbe Pruefung wie in polarModell: Zwei Teile derselben Konsole
+    // duerfen dieselbe Eingabe nicht verschieden deuten. Ohne sie reicht
+    // diese Funktion einen unbrauchbaren Sektor an sektorBereich weiter,
+    // die ihn jetzt zwar abweist ('—'), aber der Rekord selbst bliebe der
+    // falsche -- die juengste Zeitmarke, nicht die juengste GUELTIGE.
+    if (!Number.isInteger(s) || s < 0 || s >= SEKTOREN) continue;
     const ms = Date.parse(r && r.seen_at);
     if (!Number.isFinite(ms) || ms <= besteMs) continue;
     besteMs = ms; bester = r;
@@ -340,14 +355,22 @@ registerPage({
     // Ringkreise: die des Radars, soweit sie in die Skala passen, dazu der
     // Aussenring. Wer auf dem Radar den 50-NM-Ring sieht, findet ihn hier
     // wieder -- und ein umgestellter Radarmassstab verschiebt beide Seiten
-    // gemeinsam. Die BESCHRIFTUNG der Ringe wird separat gesammelt (siehe
-    // ringBeschriftungen unten) und erst nach der Flaeche angehaengt.
+    // gemeinsam. Das GANZE Gitter -- Ringe UND ihre Beschriftung -- wird
+    // separat gesammelt (ringGitter) und erst nach der Flaeche angehaengt,
+    // genau wie auf jedem Radarschirm: Das Gitter liegt ueber der Flaeche,
+    // nicht darunter. Die erste Fassung schob nur die BESCHRIFTUNG nach
+    // hinten und liess die Ringkreise selbst hier oben stehen -- die
+    // Flaeche (#14512b, heller als die Ringe bei #14361f) deckte sie
+    // dadurch vollstaendig zu. Gemessen am 29.07.2026: kleinster
+    // Flaechenradius 56,1 px, 10-NM-Ring bei 34,5 px -- der Ring war
+    // unsichtbar, und seine Beschriftung stand mitten in der Flaeche und
+    // zeigte auf nichts.
     const ringe = cfg.radar.rings_nm.filter(r => r < m.skalaNm).concat([m.skalaNm]);
-    const ringBeschriftungen = [];
+    const ringGitter = [];
     for (const ring of ringe) {
       const rp = ring / m.skalaNm * R_PX;
-      teile.push(`<circle class="pol-ring" cx="${MITTE}" cy="${MITTE}" r="${rp.toFixed(1)}"/>`);
-      ringBeschriftungen.push(`<text class="pol-ring-t" x="${MITTE + 5}" y="${(MITTE - rp + 15).toFixed(1)}">${ring} NM</text>`);
+      ringGitter.push(`<circle class="pol-ring" cx="${MITTE}" cy="${MITTE}" r="${rp.toFixed(1)}"/>`);
+      ringGitter.push(`<text class="pol-ring-t" x="${MITTE + 5}" y="${(MITTE - rp + 15).toFixed(1)}">${ring} NM</text>`);
     }
 
     // Die vier Peilungsmarken sitzen im Rand ausserhalb des Aussenrings.
@@ -372,12 +395,12 @@ registerPage({
     for (const d of treppenPfade(werteArray(m.sektoren, 'stundeNm'), m.skalaNm)) {
       teile.push(`<path class="pol-stunde" d="${d}"/>`);
     }
-    // Die Ringbeschriftung zuletzt: SVG zeichnet in Dokumentreihenfolge,
-    // und eine Beschriftung unter der Flaeche ist keine Beschriftung. Am
-    // 29.07.2026 lagen drei von vier Ringmarken (10/25/50 NM) unter einem
-    // Sektor mit 64-79 NM Rekord und waren dadurch zugemalt -- nur "80 NM"
-    // ragte heraus.
-    teile.push(...ringBeschriftungen);
+    // Das Ringgitter zuletzt: SVG zeichnet in Dokumentreihenfolge, und ein
+    // Gitter unter der Flaeche ist kein Gitter. Am 29.07.2026 lag der
+    // 10-NM-Ring komplett unter der Flaeche und war unsichtbar, dazu drei
+    // von vier Ringmarken (10/25/50 NM) unter einem Sektor mit 64-79 NM
+    // Rekord zugemalt -- nur "80 NM" ragte heraus.
+    teile.push(...ringGitter);
     svg.innerHTML = teile.join('');
 
     const g = m.groesster;

@@ -46,6 +46,19 @@ test('der Sektorbereich ist ein Bereich, keine Peilung', () => {
   assert.equal(sektorBereich(35), '350–359°');
 });
 
+test('sektorBereich weist einen unbrauchbaren Sektor ab, statt ihn plausibel zu machen', () => {
+  // Das doppelte Modulo der ersten Fassung war kein Schutz: Es machte aus
+  // null die 0 und damit "000–009°" -- eine Falschaussage, die wie eine
+  // Messung aussieht. Aus 'zwoelf' machte es "NaN–NaN°".
+  assert.equal(sektorBereich(0), '000–009°');
+  assert.equal(sektorBereich(35), '350–359°');
+  assert.equal(sektorBereich(36), '—');
+  assert.equal(sektorBereich(-1), '—');
+  assert.equal(sektorBereich(null), '—');
+  assert.equal(sektorBereich('zwoelf'), '—');
+  assert.equal(sektorBereich(2.5), '—');
+});
+
 test('der Halter ist das Callsign, ersatzweise der hex, nie eine Luecke', () => {
   // 19 von 36 Rekordhaltern hatten am 29.07.2026 kein Callsign -- der hex
   // ist hier der Regelfall, nicht die Ausnahme.
@@ -227,6 +240,19 @@ test('ein unlesbarer Zeitstempel wird uebersprungen, nicht als aeltester gewerte
   // ueberschreibt er den heilen -- und nur dann kann dieser Test den
   // fehlenden Schutz ueberhaupt sehen.
   assert.equal(zuletztGefallen([heil, kaputt], NOW).halter, 'HEIL1');
+});
+
+test('zuletztGefallen ueberspringt einen Satz mit unbrauchbarem Sektor', () => {
+  // Sonst schreibt die Wandanzeige den juengsten Rekord der falschen
+  // Himmelsrichtung zu. polarModell verwirft solche Saetze bereits -- zwei
+  // Teile derselben Konsole duerfen dieselbe Eingabe nicht verschieden
+  // deuten.
+  const r = zuletztGefallen([
+    rec(6, 11, { seen_at: '2026-07-28T09:00:00+02:00', callsign: 'HEIL1' }),
+    { sector: null, max_nm: 99, hex: 'ffffff', callsign: 'KAPUTT',
+      alt_ft: 1000, seen_at: '2026-07-29T12:00:00+02:00' },
+  ], Date.parse('2026-07-29T13:00:00+02:00'));
+  assert.equal(r.halter, 'HEIL1');
 });
 
 const voll = Array.from({ length: 36 }, () => 40);
