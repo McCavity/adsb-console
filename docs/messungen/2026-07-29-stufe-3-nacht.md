@@ -1,7 +1,8 @@
 # Wärmelauf Stufe 3 — die Nacht vom 29. auf den 30.07.
 
 > Begonnen 2026-07-29 17:43 auf `adsapp01`, **sieben Seiten**, Umlauf 135 s (2:15),
-> Radaranteil 33 %. Geplantes Ende 30.07. gegen 07:45.
+> Radaranteil 33 %. **Um 18:06 auf 24 Stunden verlängert**, Ende 30.07. gegen 18:06 —
+> rund 2370 Punkte in **einer durchgehenden Reihe**.
 > **Dieser Abschnitt ist vor dem Lauf geschrieben.** Die Ergebnisse stehen weiter unten
 > und werden nachgetragen — eine Grenze, die man nach der Messung verschiebt, ist keine.
 
@@ -116,6 +117,32 @@ die Abwärme der gemessenen Sache enthält, kann über die Umgebung nichts mehr 
 wärmer als Gerätehöhe) ist normale Schichtung. Wächst dieser Abstand, staut sich Wärme
 oben — das kündigt an, was am Gerät ankommt, bevor es dort ankommt.
 
+## Warum 24 Stunden und nicht drei Läufe
+
+Henning schlug am Abend zusätzliche Messungen gegen Mitternacht, in den frühen
+Morgenstunden und am heißesten Punkt des Folgetages vor. Die ersten beiden waren bereits
+enthalten — die Reihe ist **lückenlos**, Mitternacht und Morgengrauen sind Ausschnitte
+daraus, nicht eigene Läufe. Der Nachmittag fehlte, und statt einen dritten Lauf
+danebenzustellen, wurde die laufende Reihe verlängert.
+
+**Drei getrennte Läufe hätten drei Nähte**, an denen Startzeit, Phasenlage und
+Gerätezustand neu gesetzt werden — und jede Naht ist eine Stelle, an der sich ein Fehler
+verstecken kann. Eine durchgehende Reihe zeigt den Tagesgang, statt ihn aus Fragmenten zu
+rekonstruieren. Der Preis ist eine größere Datei; sie ist rund 280 kB groß.
+
+**Was der Nachmittag beitragen soll:** Der 30.07. ist laut Vorhersage der heißeste Tag der
+Hitzewelle. Damit fällt das Maximum der Kurve mit dem Maximum der Umgebungstemperatur
+zusammen, und die Frage „liegt es an der Konsole oder an der Umgebung" bekommt ihren
+schärfsten Fall — den, an dem sich die beiden Erklärungen am deutlichsten unterscheiden.
+
 ## Ergebnis
 
 > Wird nach dem Lauf nachgetragen.
+>
+> **Vor der Auswertung zu prüfen** (sonst wird eine Lücke als Verlauf gelesen):
+> - Läuft die Reihe wirklich durch? `pgrep -f stufe3-nacht.sh` und die Zeitstempel auf
+>   Sprünge ansehen. Erwartet sind ~2370 Zeilen; deutlich weniger heißt Abbruch.
+> - Genau **ein** Kopf in der Datei, nicht zwei — die Reihe wurde um 18:06 einmal
+>   neu gestartet und schreibt an dieselbe Datei an.
+> - Die Phasenlage: 37 s teilen 135 s nicht, also muß der Abstand zwischen Meßpunkt und
+>   Umlaufphase durchwandern. Wer einen sauberen Sägezahn sieht, hat einen Rechenfehler.
