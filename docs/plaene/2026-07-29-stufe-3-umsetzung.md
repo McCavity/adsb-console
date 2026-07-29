@@ -480,6 +480,20 @@ test('hour_max wird als Objekt mit Zeichenketten-Schluesseln gelesen', () => {
   assert.equal(m.sektoren[0].stundeNm, 12.3);
 });
 
+test('ein hour_max in Array-Form wird abgewiesen', () => {
+  // Der Test, der die Objektform WIRKLICH bewacht. Der Test darueber tut
+  // es naemlich nicht: JS wandelt Objektschluessel beim Zugriff selbst in
+  // Zeichenketten um, hm[7] und hm["7"] sind dasselbe. Das String(s) im
+  // Code dokumentiert die Form, es traegt sie nicht -- erst der
+  // Array.isArray-Schutz tut das, und der ist ohne diesen Fall ungeprueft.
+  //
+  // Ein Array an dieser Stelle waere ein Daemon, der seine Ausgabe
+  // umgestellt hat. Dann ist die Stunde unbekannt, und unbekannt ist null
+  // -- nicht der Wert, der zufaellig an Index 7 steht.
+  const m = polarModell({ records: [rec(7, 40)], hour_max: [0, 0, 0, 0, 0, 0, 0, 99] });
+  assert.equal(m.sektoren[0].stundeNm, null);
+});
+
 test('ein Sektor ohne Stundenwert ergibt null, niemals 0', () => {
   const m = polarModell({ records: [rec(7, 40)], hour_max: {} });
   assert.equal(m.sektoren[0].stundeNm, null);
@@ -583,13 +597,14 @@ export function polarModell(range) {
 - [ ] **Schritt 4: Grün sehen**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
-Erwartet: **`ℹ tests 136`, `ℹ fail 0`**
+Erwartet: **`ℹ tests 137`, `ℹ fail 0`**
 
 - [ ] **Schritt 5: Rot sehen — der teuerste Bruch zuerst**
 
 | Bruch | erwartet rot |
 |---|---|
-| `const h = hm[s];` (ohne `String`) | „hour_max wird als Objekt…" |
+| `const h = hm[Object.keys(hm).find(k => k === s)];` | „hour_max wird als Objekt…" |
+| `const hm = range && range.hour_max ? range.hour_max : {};` (ohne `Array.isArray`-Schutz) | „ein hour_max in Array-Form wird abgewiesen" |
 | `stundeNm: … ? h : 0` | „ein Sektor ohne Stundenwert ergibt null" |
 | `skalaNm(sektoren.reduce((m,s) => Math.max(m, s.rekordNm), 0))` | „die Skala folgt … BEIDER Spuren" |
 
@@ -756,7 +771,7 @@ Und in `polarModell` den Rückgabewert erweitern:
 - [ ] **Schritt 4: Grün sehen**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
-Erwartet: **`ℹ tests 141`, `ℹ fail 0`**
+Erwartet: **`ℹ tests 142`, `ℹ fail 0`**
 
 - [ ] **Schritt 5: Rot sehen**
 
@@ -876,7 +891,7 @@ export function zuletztGefallen(records, nowMs) {
 - [ ] **Schritt 4: Grün sehen**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
-Erwartet: **`ℹ tests 145`, `ℹ fail 0`**
+Erwartet: **`ℹ tests 146`, `ℹ fail 0`**
 
 - [ ] **Schritt 5: Rot sehen**
 
@@ -1083,7 +1098,7 @@ export function treppenPfade(werte, skala, radiusPx = R_PX) {
 - [ ] **Schritt 4: Grün sehen**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
-Erwartet: **`ℹ tests 151`, `ℹ fail 0`**
+Erwartet: **`ℹ tests 152`, `ℹ fail 0`**
 
 - [ ] **Schritt 5: Rot sehen**
 
@@ -1223,7 +1238,7 @@ An `console/css/console.css` nach dem Höhenprofil-Block:
 - [ ] **Schritt 4: Volle Suite — die Zahl darf nicht fallen**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
-Erwartet: **`ℹ tests 151`, `ℹ fail 0`**. Diese Aufgabe fügt keine Tests hinzu; **fällt** die
+Erwartet: **`ℹ tests 152`, `ℹ fail 0`**. Diese Aufgabe fügt keine Tests hinzu; **fällt** die
 Zahl, hat der Renderer ein Modul gebrochen, das andere Tests importieren.
 
 - [ ] **Schritt 5: Lokal ansehen — mit echten Daten**
@@ -1321,7 +1336,7 @@ export function datumKurz(iso) {
 - [ ] **Schritt 4: Grün sehen**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
-Erwartet: **`ℹ tests 153`, `ℹ fail 0`**
+Erwartet: **`ℹ tests 154`, `ℹ fail 0`**
 
 - [ ] **Schritt 5: Die Spalte füllen**
 
@@ -1387,7 +1402,7 @@ In `render` die Zeile `spalte.innerHTML = '';` ersetzen durch:
 - [ ] **Schritt 7: Volle Suite und lokaler Blick**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
-Erwartet: **`ℹ tests 153`, `ℹ fail 0`**
+Erwartet: **`ℹ tests 154`, `ℹ fail 0`**
 
 Dann erneut über `http://127.0.0.1:8099/?range=pruef-range.json` ansehen. **Der eine
 Layoutwert, den es zu prüfen gilt: Passen zwölf Zeilen plus Trophäe plus Puls ohne
