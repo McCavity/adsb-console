@@ -400,3 +400,28 @@ Der vorgesehene Weg beweist nur, daß es ihn gibt.
   zeigt, schlägt eine, deren Zustand jemand zurücksetzen müßte.
 - Spurhistorie, MLAT als zweite Zielklasse, Nachtabsenkung, umschaltbarer Radar-Maßstab —
   unverändert zurückgestellt (§12 des Hauptentwurfs).
+
+## 12. Was beim Bauen anders wurde
+
+Drei Abweichungen gegenüber diesem Entwurf, festgestellt am gebauten Stand vom
+29.07.2026 (`ℹ tests 156`, `ℹ fail 0`):
+
+1. **`BILD.rand` ist 34, nicht 26** ([`console/js/pages/polar.js`](../../console/js/pages/polar.js)),
+   und die vier Peilungsmarken werden aus ihm **gerechnet** (`markenPlatz`/`markenKasten`),
+   nicht als Pixelzahlen hingeschrieben. Die erste Fassung schrieb sie mit festem Versatz
+   hin, und die `090`-Marke lief 6 px über die Bildkante hinaus, wo sie abgeschnitten
+   wurde — dieselbe Fehlerklasse wie Befund 5 der Stufe-1-Abnahme. Ein Test bewacht die
+   Invariante seither ohne Browser: keine Marke über die Bildkante oder in den Außenring.
+2. **Die Ringbeschriftungen werden zuletzt gezeichnet**, mit Aussparungsrand. SVG zeichnet
+   in Dokumentreihenfolge; in der ersten Fassung lagen drei von vier Ringmarken
+   (10/25/50 NM) unter der Rekord-Fläche und waren zugemalt — nur „80 NM" ragte über den
+   größten Rekord hinaus und war lesbar. Der Maßstab der Seite war damit praktisch nicht
+   ablesbar. Jetzt werden erst Fläche und Kante gezeichnet, die Ringbeschriftungen danach.
+3. **Der Wortlaut von §2.2 ist ungenau**, das Verhalten ist es nicht. Die Formel dort
+   nennt den Eingabewert `größterRekord`; tatsächlich fließt die **Spitze beider Spuren**
+   ein — das Maximum über alle 36 Sektoren von `max(rekordNm, stundeNm ?? 0)`, nicht nur
+   der Rekord. Grund: §2.1 sieht ausdrücklich vor, daß ein Stundenwert über dem Rekord aus
+   der Fläche ragen darf (nach einem zurückgesetzten Rekordbestand) — eine allein am
+   Rekord bemessene Skala hätte diesen Fall aus dem **Bild** ragen lassen, nicht nur aus
+   der Fläche. Kein Verhaltensunterschied zur Absicht des Dokuments, nur ein Formelname,
+   der seine eigene Prämisse nicht abdeckte.

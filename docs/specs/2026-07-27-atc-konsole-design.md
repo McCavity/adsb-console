@@ -92,6 +92,13 @@ Nach Südwest und West bricht die Reichweite auf ein Viertel ein — eine reale
 Abschattung. Die 360 NM aus der dump1090-Konfiguration sind für die Anzeige
 bedeutungslos.
 
+**Diese acht Werte bleiben als historische Messung stehen und werden nicht zum
+Anzeigeformat.** Die Polar-Seite (§6.5) zeigt **zwölf 30°-Kästen**, nicht acht à 45° —
+45° teilt 36 Zehn-Grad-Sektoren nicht (§3.2 des Stufe-3-Entwurfs). Daß der Allzeit-Rekord
+(79,4 NM am 29.07.) über dem Stundenmaximum dieser Messung (69,1 NM) liegt, widerlegt
+keinen der beiden Werte — ein Allzeit-Rekord und das Maximum einer einzelnen Stunde,
+zwei Tage auseinander gemessen, beantworten verschiedene Fragen.
+
 ### 2.4 Was fehlt
 
 `seatd`, `labwc` und `chromium` sind **nicht installiert** — auf dwsapp01 waren sie es.
@@ -399,10 +406,30 @@ Empfangsgüte, den die SkyAware-Oberfläche so nicht zeigt.
 
 ### 6.5 Polar — Reichweite
 
-36 Sektoren à 10° als Radialdiagramm, zwei Spuren übereinander — beide aus `range.json`
-(§5.3): der Allzeit-Rekord aus SQLite, mit Datum, Callsign und Flugfläche des
-Rekordhalters, und das Maximum der letzten Stunde. Diese Seite zeigt reale Physik — die
-Abschattung nach Südwest (15 NM) gegen Nord und Ost (69 NM).
+**Neu gefaßt am 29.07.2026**, maßgeblich ist
+[`2026-07-29-stufe-3-entwurf.md`](2026-07-29-stufe-3-entwurf.md) §2 und §3.
+
+36 Sektoren à 10° als Windrose, zwei Spuren aus `range.json` (§5.3): der Allzeit-Rekord
+aus SQLite als gefüllte Fläche, das Maximum der letzten Stunde als Linie darin. Beide
+als **Treppe** über die vollen 10° je Sektor — ein Zug durch die Sektormitten behauptete
+eine stetige Funktion der Peilung, die die Daten nicht hergeben. Sektoren ohne
+Stundenwert **reißen die Linie auf**; sie fallen nicht auf 0.
+
+**Eigener Maßstab**, in 20-NM-Stufen über dem größten Wert (heute 80 NM): Am 29.07. lagen
+**13 von 36 Rekorden jenseits von 50 NM**, der größte bei 79,4 NM. Der Radarmaßstab
+klemmte damit genau den Gegenstand der Seite. Die Radarringe aus `cfg.radar.rings_nm`
+bleiben als Gitter erhalten.
+
+Die ursprüngliche Zusage „mit Datum, **Callsign** und Flugfläche des Rekordhalters" wird
+zurückgenommen: **19 von 36 Rekordhaltern hatten am 29.07. kein Callsign.** Es gilt die
+Regel von Board und Einzelziel — der `hex` steht in der Zeile, kein Gedankenstrich.
+
+Rechts eine Datenspalte mit dem absoluten Rekordhalter, **zwölf Richtungen à 30°** (nicht
+acht à 45° — das teilt 36 Sektoren nicht, siehe §3.2 des Stufe-3-Entwurfs) und dem
+zuletzt gefallenen Rekord.
+
+Diese Seite zeigt reale Physik — die Abschattung nach WSW (19,8 NM) gegen NNO (79,4 NM),
+ein Verhältnis von 4 : 1.
 
 ### 6.6 Höhenprofil
 
@@ -450,8 +477,8 @@ stehen in `console.json`.
 | Stand | aktive Seiten | Umlauf | Radaranteil |
 |---|---|---|---|
 | nach Stufe 1 | 3 (Radar, Board, Statistik) | 1:15 | **60 %** |
-| **heute, nach Stufe 2** | **6** (Polar fehlt noch) | **2:00** | **37,5 %** |
-| nach Stufe 3 | 7 | 2:15 | 33 % |
+| nach Stufe 2 | 6 (Polar fehlt noch) | 2:00 | 37,5 % |
+| **heute, nach Stufe 3** | **7** | **2:15** | **33 %** |
 
 Die Zeile für Stufe 1 steht hier, weil ihre Verwechslung mit der Stufe-3-Zeile schon
 einmal ein Meßprotokoll falsch gemacht hat (`docs/messungen/2026-07-27-variante-b-stunde.md`).
@@ -617,6 +644,17 @@ Der vorgesehene Weg beweist nur, daß es ihn gibt.
 8. **Wischen** darf Chromium nicht zurücknavigieren.
 9. Vor jedem Layout-Urteil sicherstellen, daß die geladene Fassung die gebaute ist.
    Layout-Kritik an einer gecachten Datei war beim letzten Bau ein Beinahe-Fehlurteil.
+10. **Sektor ohne Stundenwert** (über `?range=`, [§9.2 Punkt 1 des
+    Stufe-3-Entwurfs](2026-07-29-stufe-3-entwurf.md)): Die Stundenlinie **reißt auf** und
+    fällt nicht ins Zentrum. Gegenprobe vorher mit vollständiger Datei.
+11. **Rekord über der Skalenstufe** (95 NM präpariert, ebd. Punkt 2): Der Kreis atmet
+    sichtbar auf die nächste 20-NM-Stufe, der Außenring ändert seine Beschriftung, nichts
+    wird geklemmt.
+12. **Stundenwert größer als Rekord** (ebd. Punkt 3): Die Linie ragt aus der Fläche, kein
+    Absturz, keine stille Klemmung.
+13. **Leere `records` und fehlende Datei** (ebd. Punkt 4): Leerzustand mit Untertitel,
+    kein weißer Schirm, kein Kreis mit Radius 0. Rückbau danach gegengeprüft: Kiosk-URL
+    ohne `?range=`, Prüfdateien HTTP 404, Drop-in-Verzeichnis weg.
 
 Nicht abhakbar, sondern notiert: Die Polar-Seite braucht Laufzeit, bis die Rekorde
 aussagekräftig sind. Sie wird als „nach einer Woche noch einmal ansehen" vermerkt, nicht
@@ -629,16 +667,11 @@ als erledigt gemeldet.
 | 0 | Meß-Spike (§10.1). Entscheidet die Radar-Umsetzung. |
 | 1 | Daemon **inklusive Rekord-Sammlung** + Gerüst + Radar + Board + Statistik; Kiosk läuft am Panel |
 | 2 | Einzelziel, System, Höhenprofil — **umgesetzt am 28.07.2026** |
-| 3 | Polar mit Rekordhaltern |
+| 3 | Polar mit Rekordhaltern — **umgesetzt am 29.07.2026** |
 
 Der Daemon geht bewußt zuerst live: Dann sammelt SQLite bereits Rekorde, während der
 Rest gebaut wird, und die Polar-Seite hat bei ihrer Fertigstellung echte Daten statt
 einer leeren Tabelle.
-
-**Nach Stufe 2 laufen sechs Seiten**, nicht sieben: Polar hat noch keinen Renderer
-(`console/js/pages/polar.js` existiert erst mit Stufe 3) und wird von `console.js`
-gegen die registrierten Module gefiltert (§4.2, §6.5) — nicht ausgeblendet, sondern
-schlicht nicht registriert. Erst mit Stufe 3 wird daraus wieder ein Siebentel.
 
 ## 12. Zurückgestellt
 
