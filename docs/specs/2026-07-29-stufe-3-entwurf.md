@@ -103,10 +103,14 @@ Skalenstufe. Wer auf dem Radar den 50-NM-Ring sieht, findet ihn hier wieder — 
 Kopplung wie beim Höhenprofil, und sie hat sich bei der Stufe-2-Abnahme als Beleg bewährt,
 daß eine Seite wirklich aus `cfg.radar` liest und nicht aus eigenen Zahlen.
 
-Peilungsmarken bei 000, 090, 180, 270 laufen heute in `ui-monospace`, nicht in B612 wie im
-Radarkreis. B612 ist für diese Seite offen und wird vor der Geräteabnahme entschieden: Die
-gemessene Zeichenbreite (31,95 gegen 29,80 px mit dem Fallback) drückt den Abstand der
-`090`-Marke zum Außenring auf 0,05 px, und `PEIL_SCHRIFT` wäre dann am Gerät neu zu messen.
+Peilungsmarken bei 000, 090, 180, 270 liefen zunächst in `ui-monospace`, nicht in B612 wie
+im Radarkreis. **Am 30.07. am Gerät gemessen und entschieden: B612 auch hier**
+(`docs/messungen/2026-07-30-panel-schrift.md`, Entscheidung im Abnahmedokument). Der
+Radarkreis zeichnet dieselben zwei Elemente — Ringbeschriftung und Peilungsmarke — seit
+Stufe 2 in B612; zwei Schriften für dieselbe Sache waren keine Entscheidung, sondern ein
+Rest. Der gemessene Preis (Zeichenbreite 31,95 statt 29,80 px) drückte den Abstand der
+`090`- **und der `270`-Marke** auf 0,047 px zum Außenring und ist mit `BILD.rand` 34 → 36
+bezahlt; `PEIL_SCHRIFT.breite` steht auf dem gemessenen 32.
 Norden oben, im Uhrzeigersinn.
 
 ### 2.3 Eine Funktion wandert
@@ -432,6 +436,9 @@ Drei Abweichungen gegenüber diesem Entwurf, festgestellt am gebauten Stand vom
    hin, und die `090`-Marke lief 6 px über die Bildkante hinaus, wo sie abgeschnitten
    wurde — dieselbe Fehlerklasse wie Befund 5 der Stufe-1-Abnahme. Ein Test bewacht die
    Invariante seither ohne Browser: keine Marke über die Bildkante oder in den Außenring.
+   **Nachtrag 30.07.:** `rand` steht jetzt auf **36** (B612, §2.2), und der Test fordert
+   nicht mehr bloß Überlappungsfreiheit, sondern **1,5 px Abstand** (`PEIL_LUFT`) — die
+   erste Fassung hätte 0,047 px als „in Ordnung" durchgelassen.
 2. **Die Ringbeschriftungen werden zuletzt gezeichnet**, mit Aussparungsrand. SVG zeichnet
    in Dokumentreihenfolge; in der ersten Fassung lagen drei von vier Ringmarken
    (10/25/50 NM) unter der Rekord-Fläche und waren zugemalt — nur „80 NM" ragte über den

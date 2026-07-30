@@ -167,7 +167,8 @@ adsb-console/
     js/geo.js          — reine Funktionen: Entfernung, Peilung, FL, Formatierung
     js/console.js      — Karussell, Touch, Seitenauswahl
     js/pages/*.js      — je Seite ein Renderer
-    fonts/             — gebundelter Font, **nur im Radarkreis** benutzt
+    fonts/             — gebundelter Font, **nur in den Rundbildern** benutzt
+                         (Radarkreis Stufe 2, Polarkreis 30.07.)
     data/airports.json — statische Flugplatz- und Bahngeometrie
   daemon/
     atc_daemon.py
@@ -362,9 +363,12 @@ in wahrer Ausrichtung zeichenbar, einschließlich der 18/36. Kleinere Plätze im
 (Egelsbach, Mainz-Finthen, Reichelsheim, Aschaffenburg) bekommen Symbol plus
 ICAO-Kennung; ihre Bahnen wären bei 3–6 px Strichgekritzel.
 
-**Schrift.** Ein gebundelter Font, kein CDN, **nur im Radarkreis** (Kontakt-Overlays,
-Flugplatzkennungen, Ringbeschriftung) — Kacheln, Tabellen und alle übrigen Seiten
-bleiben bei `ui-monospace`. Erster Kandidat ist **B612** (von Airbus für
+**Schrift.** Ein gebundelter Font, kein CDN, **nur in den Rundbildern** (Kontakt-Overlays,
+Flugplatzkennungen, Ringbeschriftung, Peilungsmarken) — Kacheln, Tabellen und alle übrigen
+Seiten bleiben bei `ui-monospace`. Am 30.07. auf den Polarkreis erweitert: Er zeigt
+dieselben Elemente wie der Radarkreis, und zwei Schriften für dieselbe Sache in
+derselben Konsole waren eine Ungereimtheit
+(`docs/messungen/2026-07-30-panel-schrift.md`). Erster Kandidat ist **B612** (von Airbus für
 Cockpitanzeigen entworfen, offene Lizenz) — Lizenztext und Datei werden beim Bauen
 geprüft, nicht angenommen. Fällt er durch, ist die Rückfallposition eine echte
 Strichschrift (Hershey, gemeinfrei), als Pfade gezeichnet.

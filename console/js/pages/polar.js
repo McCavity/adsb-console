@@ -182,8 +182,15 @@ export function zuletztGefallen(records, nowMs) {
 
 // 620 ist die Buehnenhoehe: 720 minus 56 Kopfzeile minus 44 Punktreihe.
 // Der Rand haelt die Beschriftung des Aussenrings im Bild.
-export const BILD = Object.freeze({ groesse: 620, rand: 34 });
-export const R_PX = (BILD.groesse - 2 * BILD.rand) / 2;   // 276
+//
+// rand war 34, solange die Peilungsmarken im Fallback liefen. Mit B612
+// (Entscheidung vom 30.07., docs/messungen/2026-07-30-panel-schrift.md)
+// ist "090" 31,95 statt 29,80 px breit, und bei rand 34 blieben der 090-
+// UND der 270-Marke noch 0,047 px zum Aussenring -- gemessen im Chromium
+// des Geraets, nicht gerechnet. 36 gibt allen vier Marken ihre gut zwei
+// Pixel zurueck; der Kreis wird dadurch 4 px kleiner (R_PX 276 -> 274).
+export const BILD = Object.freeze({ groesse: 620, rand: 36 });
+export const R_PX = (BILD.groesse - 2 * BILD.rand) / 2;   // 274
 export const MITTE = BILD.groesse / 2;                    // 310
 
 const GRAD_JE_SEKTOR = 360 / SEKTOREN;                    // 10
@@ -231,7 +238,7 @@ function laufPfad(werte, von, laenge, skala, radiusPx, geschlossen) {
     const b = punkt(nm, (s + 1) * GRAD_JE_SEKTOR, skala, radiusPx);
     teile.push(`${k === 0 ? 'M' : 'L'}${fix(a.x)},${fix(a.y)}`);
     // Der Bogen, nicht die Sehne: Ein Sektormaximum gilt fuer seine vollen
-    // zehn Grad. Bei R_PX = 276 betruege der Sehnenfehler rund 1 px, und
+    // zehn Grad. Bei R_PX = 274 betruege der Sehnenfehler rund 1 px, und
     // die Zusage "konstanter Radius je Sektor" waere nur fast wahr.
     // sweep = 1, weil wachsende Peilung auf dem Bild im Uhrzeigersinn
     // laeuft (y zeigt nach unten).
@@ -268,9 +275,19 @@ export function treppenPfade(werte, skala, radiusPx = R_PX) {
 }
 
 // Nennmasse der Peilungsschrift, am gerenderten Bild gemessen: 15 px
-// Schriftgroesse ergeben rund 30 x 18 px fuer eine dreistellige Marke,
-// Oberlaenge 14 px ueber der Grundlinie, Unterlaenge 4 px darunter.
-export const PEIL_SCHRIFT = Object.freeze({ breite: 30, oben: 14, unten: 4 });
+// Schriftgroesse ergeben 31,95 x 18 px fuer eine dreistellige Marke in
+// B612 Mono, Oberlaenge 14 px ueber der Grundlinie, Unterlaenge 4 px
+// darunter. Ober- und Unterlaenge sind dieselben wie im Fallback -- nur
+// die Breite aendert sich (29,80 -> 31,95). Aufgerundet auf 32: Diese
+// Zahl bewacht einen Abstand, und ein Waechter rundet zu seinen Ungunsten.
+export const PEIL_SCHRIFT = Object.freeze({ breite: 32, oben: 14, unten: 4 });
+
+// Der Abstand, den eine Marke zum Aussenring und zur Bildkante mindestens
+// halten muss. Ohne diese Zahl prueft der Waechtertest nur auf echte
+// UEBERLAPPUNG -- und haette die B612-Umstellung mit 0,047 px Restabstand
+// anstandslos durchgelassen. Ein Abstand, den niemand bewacht, ist beim
+// naechsten Schriftwechsel wieder weg.
+export const PEIL_LUFT = 1.5;
 
 // Wo die vier Peilungsmarken sitzen -- GERECHNET aus BILD.rand, nicht als
 // Pixelzahl hingeschrieben. Die erste Fassung schrieb sie hin, mit einem

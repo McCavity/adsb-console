@@ -4,7 +4,7 @@ import { formatBearing } from '../console/js/geo.js';
 import { SEKTOREN, SKALA_STUFE, skalaNm, sektorBereich, halterName, polarModell,
   RICHTUNGEN, SEKTOREN_JE_RICHTUNG, richtungen, zuletztGefallen,
   BILD, R_PX, MITTE, werteArray, keilPfad, treppenPfade,
-  markenPlatz, markenKasten, PEIL_SCHRIFT, datumKurz, zahlNm, radialen,
+  markenPlatz, markenKasten, PEIL_SCHRIFT, PEIL_LUFT, datumKurz, zahlNm, radialen,
   ringe, RING_MAX_LUECKE, RING_SCHRITT }
   from '../console/js/pages/polar.js';
 
@@ -321,17 +321,27 @@ test('keine Peilungsmarke laeuft ueber die Bildkante oder in den Aussenring', ()
   // ueber die rechte Kante und wurde abgeschnitten, gefunden erst am
   // gerenderten Bild. Hier faellt es ohne Browser auf -- und es faellt
   // auch dann auf, wenn jemand spaeter BILD.rand verkleinert.
+  //
+  // Gefordert ist ABSTAND, nicht blosse Beruehrungsfreiheit: Beim Wechsel
+  // auf B612 am 30.07. blieben der 090- und der 270-Marke rechnerisch
+  // 0,047 px zum Aussenring -- ueberlappungsfrei, also fuer die erste
+  // Fassung dieses Tests in Ordnung, und am Panel doch eine Marke, die den
+  // Ring beruehrt. PEIL_LUFT macht die Forderung explizit.
   const ringL = BILD.rand, ringR = BILD.groesse - BILD.rand;
   for (const grad of [0, 90, 180, 270]) {
     const k = markenKasten(grad);
-    assert.ok(k.links >= 0 && k.rechts <= BILD.groesse,
-      `${grad}: waagerecht ${k.links}..${k.rechts} passt nicht in 0..${BILD.groesse}`);
-    assert.ok(k.oben >= 0 && k.unten <= BILD.groesse,
-      `${grad}: senkrecht ${k.oben}..${k.unten} passt nicht in 0..${BILD.groesse}`);
-    // Ausserhalb des Aussenrings: eine Marke IM Bild waere keine Randmarke.
-    const draussen = k.rechts <= ringL || k.links >= ringR
-                  || k.unten <= ringL || k.oben >= ringR;
-    assert.ok(draussen, `${grad}: Marke ueberlappt den Aussenring`);
+    assert.ok(k.links >= PEIL_LUFT && k.rechts <= BILD.groesse - PEIL_LUFT,
+      `${grad}: waagerecht ${k.links}..${k.rechts} haelt keine ${PEIL_LUFT} px `
+      + `zur Bildkante 0..${BILD.groesse}`);
+    assert.ok(k.oben >= PEIL_LUFT && k.unten <= BILD.groesse - PEIL_LUFT,
+      `${grad}: senkrecht ${k.oben}..${k.unten} haelt keine ${PEIL_LUFT} px `
+      + `zur Bildkante 0..${BILD.groesse}`);
+    // Ausserhalb des Aussenrings, mit Luft: eine Marke IM Bild waere keine
+    // Randmarke, und eine Marke AM Ring liest sich als Teil des Rings.
+    const draussen = k.rechts <= ringL - PEIL_LUFT || k.links >= ringR + PEIL_LUFT
+                  || k.unten <= ringL - PEIL_LUFT || k.oben >= ringR + PEIL_LUFT;
+    assert.ok(draussen, `${grad}: Marke haelt keine ${PEIL_LUFT} px zum Aussenring `
+      + `(Kasten ${k.links}..${k.rechts} / ${k.oben}..${k.unten}, Ring ${ringL}..${ringR})`);
   }
   assert.equal(markenPlatz(45), null);
 });
