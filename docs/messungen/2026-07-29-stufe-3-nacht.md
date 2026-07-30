@@ -1,5 +1,10 @@
 # Wärmelauf Stufe 3 — die Nacht vom 29. auf den 30.07.
 
+> **Ergebnis in einem Satz:** Das Temperaturkriterium ist gerissen (Maximum 76,4 °C gegen
+> Grenze 72), `samples_dropped` und `get_throttled` blieben über alle 2.317 Punkte auf 0 —
+> und die Ursache ist die **Umgebung**, nicht die Konsole (R² = 0,84 gegen die
+> Raumtemperatur, Karussell-Aufschlag nur 2,3 K). Ausführlich unter [Ergebnis](#ergebnis).
+
 > Begonnen 2026-07-29 17:43 auf `adsapp01`, **sieben Seiten**, Umlauf 135 s (2:15),
 > Radaranteil 33 %. **Um 18:06 auf 24 Stunden verlängert**, Ende 30.07. gegen 18:06 —
 > rund 2370 Punkte in **einer durchgehenden Reihe**.
@@ -81,6 +86,11 @@ deshalb **direkt an der Quelle** gemessen.
 
 `/var/tmp/stufe3-nacht.sh` auf dem Gerät, Ausgabe `/var/tmp/stufe3-nacht.csv`.
 
+**Die ausgewerteten Rohdaten liegen als [`2026-07-29-stufe-3-nacht.csv`](2026-07-29-stufe-3-nacht.csv)
+neben diesem Dokument** (2.317 Punkte, 205 kB) — erstmals in diesem Repo, weil die Auswertung
+mit Stundenmitteln und Regression nicht mehr aus dem Fließtext nachvollziehbar wäre. Wer die
+Zahlen unten prüfen will, soll sie nachrechnen können.
+
 **Meßabstand 37 s**, und das ist kein runder Wert aus Bequemlichkeit: 30 s teilen 120 s,
 und genau daran war die Messung vom 28.07. unterabgetastet — jeder Punkt traf dieselben
 vier Phasen des Umlaufs, mit **1,67 K systematischem Unterschied** zwischen ihnen, und aus
@@ -137,12 +147,85 @@ schärfsten Fall — den, an dem sich die beiden Erklärungen am deutlichsten un
 
 ## Ergebnis
 
-> Wird nach dem Lauf nachgetragen.
->
-> **Vor der Auswertung zu prüfen** (sonst wird eine Lücke als Verlauf gelesen):
-> - Läuft die Reihe wirklich durch? `pgrep -f stufe3-nacht.sh` und die Zeitstempel auf
->   Sprünge ansehen. Erwartet sind ~2370 Zeilen; deutlich weniger heißt Abbruch.
-> - Genau **ein** Kopf in der Datei, nicht zwei — die Reihe wurde um 18:06 einmal
->   neu gestartet und schreibt an dieselbe Datei an.
-> - Die Phasenlage: 37 s teilen 135 s nicht, also muß der Abstand zwischen Meßpunkt und
->   Umlaufphase durchwandern. Wer einen sauberen Sägezahn sieht, hat einen Rechenfehler.
+**Nachgetragen 2026-07-30 nach Laufende.** Die Prüfliste von oben wurde zuerst abgearbeitet:
+
+| Prüfung | Befund |
+|---|---|
+| Reihe durchgelaufen? | Prozeß sauber beendet (`/proc/169977` weg, Datei wächst nicht mehr) |
+| Genau ein Kopf? | ja, genau einer |
+| Fenster | **29.07. 18:05:57 – 30.07. 18:05:49 = 24,00 h**, **2.317 Punkte** |
+| Abstand | min/median/max **37 / 37 / 78 s** — ein einziger Aussetzer (06:41, ein übersprungener Punkt) |
+
+> **Zum Fenster:** Die Datei enthielt zusätzlich **35 Punkte vom 29.07. 17:43–18:05**, aus dem
+> ersten, noch auf 14 h gesetzten Start. Sie sind **nicht verunreinigt** — gleiches Skript,
+> gleiche Konfiguration, nur andere Laufzeitvorgabe — wurden aber abgeschnitten, damit das
+> ausgewertete Fenster exakt 24 h ist. Ungeschnittenes Original liegt auf dem Gerät als
+> `/var/tmp/stufe3-nacht-ungeschnitten-2026-07-30-182528.csv`. Ursache war
+> `if [[ ! -f "$AUS" ]]`: der Kopf wird nur bei fehlender Datei geschrieben, der Neustart
+> hängt sonst wortlos an. **Für künftige Läufe ein eindeutiger Dateiname**
+> (`stufe3-$(date +%F-%H%M%S).csv`) — dieselbe Lehre wie bei Sicherungszielen.
+
+### Die drei Kriterien
+
+| Kriterium | Grenze | Ergebnis | |
+|---|---|---|---|
+| `samples_dropped` (`total` **und** `last1min`) | 0 | **0 über alle 2.317 Punkte** | ✅ |
+| `get_throttled`, beide Hälften | `0x0` | **`throttle_now` und `throttle_ever` durchgehend 0** | ✅ |
+| CPU-Temperatur | < 72 °C | **Maximum 76,4 °C**, 32,8 % der Punkte ≥ 72 | ❌ |
+
+**Das Temperaturkriterium ist gerissen, das harte Kriterium nicht — und das ist die
+eigentliche Aussage des Laufs.** Kein einziger Punkt erreichte 77 °C, keiner 80 °C.
+
+```
+CPU max   76,4 °C   30.07. 15:56   (außen 39,8 °C, raum_b 31,34 °C)
+CPU min   63,8 °C   30.07. 07:00   (außen 17,7 °C, raum_b 28,02 °C)
+Mittel / Median      70,2 / 70,6 °C
+außen    17,3 … 39,8 °C      raum_b   27,21 … 31,73 °C
+```
+
+### Die Frage, für die der Lauf gebaut wurde: Umgebung, nicht Konsole
+
+Zwei Größen entscheiden es, und beide sind vom Karussell unabhängig:
+
+- Über **25 Stundenmittel** folgt die CPU-Temperatur der Raumtemperatur auf Gerätehöhe mit
+  **R² = 0,84**. Die Kurve ist ein sauberer Tagesgang: Minimum um 07:00 bei kühlster Nacht,
+  Maximum um 15:56 am heißesten Punkt des heißesten Tages der Hitzewelle.
+- Der **Karussell-Aufschlag** — Abstand vom Stundenmaximum zum Stundenmittel — beträgt im
+  Mittel nur **2,3 K**. Die sieben Seiten kosten gut zwei Kelvin; die übrigen zwölf zwischen
+  Nacht- und Nachmittagswert kommen von draußen.
+
+Ohne die von Henning vorgeschlagenen Umgebungsspalten stünde hier „76,4 °C, Kriterium
+gerissen" — und die Suche hätte an der Konsole begonnen.
+
+**Was hier bewußt nicht steht:** Die Regression liefert `CPU = 1,88 · raum_b + 15,0`, woraus
+sich „bei 24 °C Raum nur ~60 °C" ableiten ließe. Diese Zahl wird **nicht** behauptet. Raum-
+und Außentemperatur laufen an einem einzelnen Tag fast im Gleichtakt; die Regression kann
+die beiden nicht trennen, und die Steigung 1,88 ist deshalb kein physikalischer Koeffizient.
+24 °C liegt zudem **außerhalb** des gemessenen Bereichs (Minimum 27,21 °C). Für „im
+Normalsommer unkritisch" braucht es einen zweiten Lauf bei anderem Wetter — das Format
+dafür steht jetzt.
+
+### Schichtung
+
+`raum_a` (Decke) minus `raum_b` (Gerätehöhe): Mittel **0,39 K**, Maximum 1,36 K. Bei
+Meßbeginn waren es 0,85 K. Der Abstand ist also **nicht gewachsen** — es staut sich keine
+Wärme oben auf, die noch unterwegs wäre.
+
+### Unabhängige Bestätigung von außen
+
+Um **16:10:20 MESZ** kam eine FlightAware-Warnung „PiAware Receiver 'Bad Vilbel - Heilsberg'
+Overheating", ausgelöst „within the past hour". Das lokale Maximum lag um **15:56** — mitten
+in diesem Fenster. Zwei voneinander unabhängige Instrumente haben dasselbe Ereignis gesehen;
+FlightAwares Schwelle liegt unter 76,4 °C. Die Mail selbst enthält keine Meßwerte.
+
+### Bewertung der Abnahmegrenze
+
+Die 72 °C waren **vor** dem ersten Lauf gesetzt, als niemand die Zahlen kannte — ein Proxy
+für „wird zu heiß". Der Lauf zeigt: Der Proxy schlägt an, während die Größen, an denen
+tatsächlich etwas verlorengeht, sich nicht bewegen. Zur Drosselgrenze der Hardware (80 °C)
+blieben **3,6 K**.
+
+Die Grenze wird hier **nicht** nachträglich verschoben — eine Grenze, die man nach der
+Messung anpaßt, ist keine. Sie bleibt als Abnahmegrenze dokumentiert und als **gerissen**
+vermerkt; die Entscheidung über ein künftiges Kriterium ist eine eigene, ausdrückliche, und
+sie ist jetzt mit Daten statt mit Vermutung zu treffen.
