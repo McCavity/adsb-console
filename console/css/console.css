@@ -188,6 +188,72 @@ html, body {
 .band-n { font-size: 22px; font-variant-numeric: tabular-nums; flex: 0 0 34px;
           text-align: right; }
 
+/* Polar: Windrose links, Datenspalte rechts */
+.polar-bild { flex: 0 0 620px; height: 620px; align-self: center; }
+.polar-svg { width: 620px; height: 620px; display: block; }
+.polar-svg .pol-ring { fill: none; stroke: #14361f; stroke-width: 1; }
+/* B612 -- am 30.07. am Geraet gemessen und entschieden
+   (docs/messungen/2026-07-30-panel-schrift.md). Der Grund ist nicht
+   Geschmack, sondern Gleichlauf: Der Radarkreis zeichnet GENAU diese
+   beiden Elemente -- Ringbeschriftung und Peilungsmarke -- seit Stufe 1 in
+   B612 (radar.js, ctx.font '13px B612Mono, …'; am Geraet nachgemessen:
+   25,35 px gegen 23,48 px Fallback). Zwei Kreise derselben Konsole mit
+   zwei verschiedenen Schriften an derselben Stelle waren eine
+   Ungereimtheit, keine Entscheidung.
+   Der Name traegt hier ein Leerzeichen ZUVIEL nicht: Die @font-face unten
+   registriert 'B612Mono', und "B612 Mono" matcht das fuer CSS nicht -- die
+   erste Fassung fiel darauf still auf ui-monospace zurueck, waehrend
+   document.fonts.check() weiter true meldete (auch auf dem Pi
+   nachgestellt). Geprueft wird das deshalb an der Zeichenbreite, nicht an
+   einer Selbstauskunft.
+   Preis, gemessen: "090" wird 31,95 statt 29,80 px breit. Deshalb steht
+   BILD.rand in polar.js auf 36 statt 34 -- sonst blieben der 090- und der
+   270-Marke 0,047 px zum Aussenring. */
+.polar-svg .pol-ring-t { fill: #2f6b45; font-size: 13px;
+                         font-family: 'B612Mono', ui-monospace, monospace;
+                         paint-order: stroke; stroke: #04140a; stroke-width: 3px; }
+.polar-svg .pol-peil { fill: #3a8f57; font-size: 15px; letter-spacing: .06em;
+                       font-family: 'B612Mono', ui-monospace, monospace; }
+/* stroke in der eigenen Fuellfarbe: KEINE Kosmetik, sondern das Schliessen
+   einer Naht. 36 Keile stossen aneinander; an einer schraegen Kante rechnet
+   das Antialiasing die Teildeckung beider Seiten nacheinander gegen den
+   Hintergrund, und es bleibt eine dunkle Haarlinie -- am Geraet erst fuer
+   ein Radialgitter gehalten, das es nicht gab (0 <line>-Elemente im SVG).
+   Verraeterisch war die Ungleichmaessigkeit: Bei 000/090/180/270 fehlte die
+   Linie, weil dort die gemeinsame Kante achsparallel auf MITTE (310, einer
+   ganzen Zahl) liegt und die Deckung 0 oder 1 ist, nie dazwischen. Ein
+   halber Pixel Ueberlappung in der Fuellfarbe schliesst die Naht, ohne die
+   Flaeche sichtbar zu veraendern. */
+.polar-svg .pol-flaeche { fill: #14512b; stroke: #14512b; stroke-width: 1; }
+.polar-svg .pol-kante { fill: none; stroke: #2f8f52; stroke-width: 1.5; }
+.polar-svg .pol-stunde { fill: none; stroke: #3ddc84; stroke-width: 2.5;
+                         stroke-linejoin: round; stroke-linecap: round; }
+/* Beide Farben liegen zwischen dem Hintergrund (#04140a) und der Fuellflaeche
+   (#14512b) -- heller als der Hintergrund, dunkler als die Flaeche. Ein
+   Radial laeuft von innen (oft ueber der Flaeche) bis zum Aussenring (immer
+   ausserhalb, auf dem Hintergrund): eine Farbe, die nur auf einer der beiden
+   Seiten funktioniert, verschwindet auf der anderen -- und das bei JEDEM der
+   36 Radiale, weil jedes ueber die Flaechenkante hinaus nach aussen laeuft. */
+.polar-svg .pol-radial { stroke: #0f2a19; stroke-width: 1; }
+.polar-svg .pol-radial.gross { stroke: #14361f; stroke-width: 1; }
+.polar-spalte { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.pol-troph { font-size: 46px; font-weight: 600; font-variant-numeric: tabular-nums;
+             line-height: 1.05; }
+.pol-troph .unit-s { font-size: 20px; color: #4e9c6a; margin-left: 8px; }
+.pol-troph-sub { font-size: 17px; color: #4e9c6a; margin-top: 4px; }
+.pol-richt { display: flex; align-items: center; gap: 8px; margin-top: 6px;
+             font-variant-numeric: tabular-nums; }
+.pol-richt-n { flex: 0 0 44px; font-size: 17px; color: #b8f5cc; }
+.pol-richt-b { flex: 0 0 84px; font-size: 13px; color: #2f6b45; }
+.pol-richt-bar { flex: 1; height: 12px; background: #0b1f13; border: 1px solid #14361f;
+                 border-radius: 3px; position: relative; overflow: hidden; }
+.pol-richt-bar i { position: absolute; inset: 0 auto 0 0; display: block; height: 100%;
+                   background: #14512b; }
+.pol-richt-bar b { position: absolute; inset: 0 auto 0 0; display: block; height: 100%;
+                   background: #3ddc84; }
+.pol-richt-r { flex: 0 0 46px; font-size: 17px; text-align: right; }
+.pol-richt-s { flex: 0 0 46px; font-size: 17px; text-align: right; color: #4e9c6a; }
+
 /* Systemseite */
 .sys { flex: 1; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
 .sys-oben, .sys-unten { flex: 1; display: grid; gap: 14px; min-height: 0; }
@@ -210,10 +276,14 @@ html, body {
 .flag.an  { color: #ff5a5a; font-weight: 700; }
 .flag.unbekannt { color: #4e6b58; }
 
-/* B612 Mono, lokal gebundelt (console/fonts/HERKUNFT.md). NUR im
-   Radarkreis: Dort sind die Texte kurz und unumbrechbar (Callsign, FL,
-   Squawk, ICAO-Kennung). Kacheln und Tabellen bleiben bei ui-monospace --
-   eine andere Laufweite dort hiesse, jedes Layout neu zu beurteilen. */
+/* B612 Mono, lokal gebundelt (console/fonts/HERKUNFT.md). NUR in den
+   beiden RUNDBILDERN -- Radarkreis (Stufe 2) und Polarkreis (30.07.):
+   Dort sind die Texte kurz und unumbrechbar (Callsign, FL, Squawk,
+   ICAO-Kennung, Ringbeschriftung, Peilungsmarke), und beide Kreise zeigen
+   dieselben Elemente, also dieselbe Schrift. Kacheln und Tabellen bleiben
+   bei ui-monospace -- eine andere Laufweite dort hiesse, jedes Layout neu
+   zu beurteilen. Im Polarkreis war genau das noetig und ist geschehen:
+   BILD.rand 34 -> 36. */
 @font-face {
   font-family: 'B612Mono';
   src: url('../fonts/B612Mono-Regular.ttf') format('truetype');

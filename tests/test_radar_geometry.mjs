@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { projectToCanvas } from '../console/js/pages/radar.js';
+import { projectToCanvas } from '../console/js/geo.js';
 
 const R = 310, RANGE = 50;
 
