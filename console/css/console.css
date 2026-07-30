@@ -192,22 +192,28 @@ html, body {
 .polar-bild { flex: 0 0 620px; height: 620px; align-self: center; }
 .polar-svg { width: 620px; height: 620px; display: block; }
 .polar-svg .pol-ring { fill: none; stroke: #14361f; stroke-width: 1; }
-/* B612 fuer diese Seite ist OFFEN, nicht eingeloest. Die @font-face unten
-   registriert die Familie als 'B612Mono' (ohne Leerzeichen); "B612 Mono"
-   mit Leerzeichen matcht das fuer CSS nicht und faellt still auf
-   ui-monospace zurueck -- ein Name, der nichts bewirkt, behauptet eine
-   Zusage, die nicht gilt. Deshalb steht hier ehrlich, was laeuft. Mit der
-   echten Schrift waere "090" 31,95 px breit (gemessen, gegen 29,80 px mit
-   dem Fallback, identisch zu "monospace" pur), und PEIL_SCHRIFT in
-   polar.js -- am Fallback geeicht -- liesse der 090-Marke dann nur noch
-   0,05 px Abstand zum Aussenring; der Waechtertest in test_polar.mjs
-   schluege zu Recht an. Entscheidung faellt am Panel vor der
-   Geraeteabnahme, nicht hier. */
+/* B612 -- am 30.07. am Geraet gemessen und entschieden
+   (docs/messungen/2026-07-30-panel-schrift.md). Der Grund ist nicht
+   Geschmack, sondern Gleichlauf: Der Radarkreis zeichnet GENAU diese
+   beiden Elemente -- Ringbeschriftung und Peilungsmarke -- seit Stufe 1 in
+   B612 (radar.js, ctx.font '13px B612Mono, …'; am Geraet nachgemessen:
+   25,35 px gegen 23,48 px Fallback). Zwei Kreise derselben Konsole mit
+   zwei verschiedenen Schriften an derselben Stelle waren eine
+   Ungereimtheit, keine Entscheidung.
+   Der Name traegt hier ein Leerzeichen ZUVIEL nicht: Die @font-face unten
+   registriert 'B612Mono', und "B612 Mono" matcht das fuer CSS nicht -- die
+   erste Fassung fiel darauf still auf ui-monospace zurueck, waehrend
+   document.fonts.check() weiter true meldete (auch auf dem Pi
+   nachgestellt). Geprueft wird das deshalb an der Zeichenbreite, nicht an
+   einer Selbstauskunft.
+   Preis, gemessen: "090" wird 31,95 statt 29,80 px breit. Deshalb steht
+   BILD.rand in polar.js auf 36 statt 34 -- sonst blieben der 090- und der
+   270-Marke 0,047 px zum Aussenring. */
 .polar-svg .pol-ring-t { fill: #2f6b45; font-size: 13px;
-                         font-family: ui-monospace, monospace;
+                         font-family: 'B612Mono', ui-monospace, monospace;
                          paint-order: stroke; stroke: #04140a; stroke-width: 3px; }
 .polar-svg .pol-peil { fill: #3a8f57; font-size: 15px; letter-spacing: .06em;
-                       font-family: ui-monospace, monospace; }
+                       font-family: 'B612Mono', ui-monospace, monospace; }
 /* stroke in der eigenen Fuellfarbe: KEINE Kosmetik, sondern das Schliessen
    einer Naht. 36 Keile stossen aneinander; an einer schraegen Kante rechnet
    das Antialiasing die Teildeckung beider Seiten nacheinander gegen den
@@ -270,10 +276,14 @@ html, body {
 .flag.an  { color: #ff5a5a; font-weight: 700; }
 .flag.unbekannt { color: #4e6b58; }
 
-/* B612 Mono, lokal gebundelt (console/fonts/HERKUNFT.md). NUR im
-   Radarkreis: Dort sind die Texte kurz und unumbrechbar (Callsign, FL,
-   Squawk, ICAO-Kennung). Kacheln und Tabellen bleiben bei ui-monospace --
-   eine andere Laufweite dort hiesse, jedes Layout neu zu beurteilen. */
+/* B612 Mono, lokal gebundelt (console/fonts/HERKUNFT.md). NUR in den
+   beiden RUNDBILDERN -- Radarkreis (Stufe 2) und Polarkreis (30.07.):
+   Dort sind die Texte kurz und unumbrechbar (Callsign, FL, Squawk,
+   ICAO-Kennung, Ringbeschriftung, Peilungsmarke), und beide Kreise zeigen
+   dieselben Elemente, also dieselbe Schrift. Kacheln und Tabellen bleiben
+   bei ui-monospace -- eine andere Laufweite dort hiesse, jedes Layout neu
+   zu beurteilen. Im Polarkreis war genau das noetig und ist geschehen:
+   BILD.rand 34 -> 36. */
 @font-face {
   font-family: 'B612Mono';
   src: url('../fonts/B612Mono-Regular.ttf') format('truetype');
