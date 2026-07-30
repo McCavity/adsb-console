@@ -74,6 +74,49 @@ Touchfläche sieht mit den Augen völlig richtig aus.
 Der Schreiber-Daemon läuft unabhängig vom Kiosk weiter, auch wenn dieser neu installiert
 oder neugestartet wird.
 
+## Eine Änderung ausrollen
+
+Beide Installer lesen aus dem Repository-Baum, **in dem sie stehen** — die Quelle ist also
+der Baum auf dem Gerät, nicht das Remote. Auf `adsapp01` liegt er unter
+`/home/pi/adsb-console`. Er wird vom Arbeitsplatz aus gespiegelt:
+
+```bash
+rsync -a --delete --exclude '.superpowers' ./ adsapp01:/home/pi/adsb-console/
+```
+
+**Das Spiegeln ist der erste Schritt, nicht der optionale.** Bis zum 30.07.2026 lag auf
+dem Gerät ein Baum vom Stand *Stufe 1* — in `/tmp`, also nach dem nächsten Neustart weg.
+Ein `install-console.sh` von dort hätte die laufende Konsole zwei Stufen zurückgesetzt,
+und genau deshalb wurden Änderungen bis dahin als Einzeldateien am Installer vorbei
+kopiert.
+
+**Nur das Frontend geändert** (HTML/CSS/JS unter `console/`) — das sind die Zeilen des
+Installers, die den Docroot füllen, ohne Paketverwaltung, Benutzer und Units anzufassen:
+
+```bash
+ssh adsapp01 'cd /home/pi/adsb-console && sudo tar czf /var/tmp/sicherung-docroot-$(date +%F-%H%M%S).tar.gz -C /var/www/html atc && sudo cp -r console/. /var/www/html/atc/ && sudo chown -R atc:atc /var/www/html/atc && sudo systemctl restart atc-console'
+```
+
+Der Neustart ist nicht optional: Die Seite lädt sich im Betrieb **nie** neu (`data.js` —
+ein fehlgeschlagener Abruf läßt die letzten Werte stehen und altern), also sieht das Panel
+ohne ihn weiter die alte Fassung. Danach über HTTP gegenprüfen, nicht im Dateisystem
+nachsehen — die Abschrift ist nicht das Original:
+
+```bash
+ssh adsapp01 'curl -s http://127.0.0.1/atc/js/pages/polar.js | sha256sum'
+```
+
+Zwei Eigenschaften dieses Wegs, die man kennen muß: `cp -r console/.` ist **additiv** — im
+Repo gelöschte Dateien verschwinden im Docroot nicht von selbst. Und `console.json` wird
+nicht angefaßt; die Konfiguration am Gerät überlebt jedes Ausrollen (so auch im Installer,
+Zeile 361).
+
+**Dienste, Rechte, Pakete oder die Drehung geändert** → der volle `install-console.sh`.
+Er ist auf Wiederholung ausgelegt und startet den Dienst am Ende selbst neu, ruft aber
+auch `apt-get install` für `chromium`, `labwc`, `seatd` und `wlr-randr` auf: Ein
+Browserwechsel entwertet die am Gerät gemessenen Layout- und Wärmezahlen. Für eine
+Frontend-Änderung ist er das falsche Werkzeug.
+
 ## Lizenz
 
 MIT — siehe [LICENSE](LICENSE).
