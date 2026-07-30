@@ -25,8 +25,10 @@ sind nicht dekorativ: Maßstab, Standzeiten und Abbruchkriterien leiten sich aus
   externe Bibliothek. Alles wird lokal ausgeliefert. Diese Eigenschaft wird bei der
   Abnahme durch Ziehen des Netzsteckers geprüft, nicht behauptet.
   Die einzige gebundelte Fremddatei ist `console/fonts/B612Mono-Regular.ttf` (SIL OFL 1.1,
-  Herkunft und Prüfsumme in `console/fonts/HERKUNFT.md`) — sie wird **nur im Radarkreis**
-  benutzt und wie `console/data/airports.json` einmal beim Bauen eingefroren. Die Herkunft
+  Herkunft und Prüfsumme in `console/fonts/HERKUNFT.md`) — sie wird **nur in den beiden
+  Rundbildern** benutzt (Radarkreis seit Stufe 2, Polarkreis seit dem 30.07.: dieselben
+  Elemente, dieselbe Schrift) und wie `console/data/airports.json` einmal beim Bauen
+  eingefroren. Die Herkunft
   ist belegt, nicht behauptet: SHA256 geprüft gegen einen frischen Download der
   Originalquelle und gegen die am Gerät ausgelieferte Fassung, alle drei identisch.
 - **Kein Umbau am ADS-B-Stack.** Weder `dump1090-fa` noch die Feeder noch die
@@ -51,11 +53,13 @@ sind nicht dekorativ: Maßstab, Standzeiten und Abbruchkriterien leiten sich aus
 
 ```
 console/   Statik-Frontend (HTML/CSS/JS, gebundelter Font, statische Flugplatzdaten)
-  js/geo.js          reine Rechenfunktionen, ohne DOM und ohne Zustand — hier liegen die Tests
+  js/geo.js          reine Rechenfunktionen, ohne DOM und ohne Zustand — hier liegen die Tests;
+                     seit Stufe 3 auch `projectToCanvas` (aus radar.js verschoben)
   js/pages/target.js   Einzelziel — volles Datenblatt zum eingefrorenen Ziel
   js/pages/profile.js  Höhenprofil — Seitenriß über der Entfernung
+  js/pages/polar.js    Polar — Reichweite je Sektor als Windrose, mit Trophäe und zwölf Richtungen
   js/pages/system.js   System — Temperatur, Last, Dienste, samples_dropped
-  fonts/             B612 Mono, gebundelt, nur im Radarkreis (fonts/HERKUNFT.md)
+  fonts/             B612 Mono, gebundelt, nur in Radar- und Polarkreis (fonts/HERKUNFT.md)
 daemon/    Schreiber-Daemon, nur Python-Standardbibliothek
 config/    console.json — Seitenschalter und Standzeiten
 tests/     node --test für geo.js und die Seiten-Module, unittest für den Daemon

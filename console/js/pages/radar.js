@@ -1,19 +1,11 @@
-import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel, isEmergency }
-  from '../geo.js';
+import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel, isEmergency,
+         projectToCanvas } from '../geo.js';
 import { registerPage } from '../console.js';
 import { msgRate, leerUntertitel } from './gemeinsam.js';
 
 const SIZE = 620;               // Buehnenhoehe: 720 minus Kopf (56) und Punkte (44)
 const R = SIZE / 2;             // Radius in Pixeln
 const CENTER = SIZE / 2;
-
-// Rein, damit sie testbar ist: Ergebnis relativ zum Mittelpunkt.
-// Norden ist oben (negatives y), Osten rechts.
-export function projectToCanvas(nm, brg, rangeNm, radiusPx) {
-  const r = nm / rangeNm * radiusPx;
-  const a = brg * Math.PI / 180;
-  return { x: r * Math.sin(a), y: -r * Math.cos(a) };
-}
 
 // Nur die Farben der gezeichneten Ebene. Keule, Blips und Beschriftung
 // bekommen ihre Farben in der CSS-Datei -- sie werden nicht gezeichnet,
