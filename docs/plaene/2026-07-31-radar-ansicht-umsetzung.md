@@ -100,7 +100,7 @@ Diese gelten für **jede** Aufgabe, auch wo sie nicht wiederholt werden.
   > **eigene** Stufe; `harteStufe` bleibt für Einträge aus der Konfigurationsliste streng.
   > Kostet zwei zusätzliche Tests — daher 180 statt 178 nach Aufgabe 1.
 
-- [ ] **Schritt 1: Testdatei `tests/test_ansicht.mjs` anlegen**
+- [x] **Schritt 1: Testdatei `tests/test_ansicht.mjs` anlegen**
 
 ```js
 import test from 'node:test';
@@ -152,12 +152,12 @@ test('ansicht mutiert den uebergebenen Zustand nicht', () => {
 });
 ```
 
-- [ ] **Schritt 2: Lauf zur Bestätigung, daß er fehlschlägt**
+- [x] **Schritt 2: Lauf zur Bestätigung, daß er fehlschlägt**
 
 Lauf: `node --test tests/test_ansicht.mjs 2>&1 | tail -9`
 Erwartet: FAIL — `Cannot find module '../console/js/ansicht.js'`
 
-- [ ] **Schritt 3: `console/js/config.js` um die Stufen erweitern**
+- [x] **Schritt 3: `console/js/config.js` um die Stufen erweitern**
 
 In `DEFAULTS.radar` ergänzen (nach `labels`):
 
@@ -211,7 +211,7 @@ und unmittelbar nach dem `const radar = { ... };`-Block:
   radar.stufen = bauStufen(radarIn.stufen, radar.range_nm, radar.rings_nm);
 ```
 
-- [ ] **Schritt 4: `console/js/ansicht.js` schreiben**
+- [x] **Schritt 4: `console/js/ansicht.js` schreiben**
 
 ```js
 // Laufzeit-Ansicht: was jemand am Panel gedreht hat.
@@ -272,12 +272,12 @@ export function gilt(z, config) {
 }
 ```
 
-- [ ] **Schritt 5: Lauf zur Bestätigung, daß er besteht**
+- [x] **Schritt 5: Lauf zur Bestätigung, daß er besteht**
 
 Lauf: `node --test tests/test_ansicht.mjs 2>&1 | tail -9`
 Erwartet: `ℹ tests 6`, `ℹ fail 0`
 
-- [ ] **Schritt 6: Härtungstests an `tests/test_config.mjs` anhängen**
+- [x] **Schritt 6: Härtungstests an `tests/test_config.mjs` anhängen**
 
 ```js
 test('stufen: konfigurierte Reichweite 35 wird als eigene Stufe sortiert ergaenzt', () => {
@@ -306,18 +306,18 @@ test('stufen: ein Ring groesser als seine Reichweite wird aussortiert', () => {
 });
 ```
 
-- [ ] **Schritt 7: Jeden neuen Test einmal absichtlich rot sehen**
+- [x] **Schritt 7: Jeden neuen Test einmal absichtlich rot sehen**
 
 In `test_config.mjs` im ersten neuen Test `[10, 35, 50, 80]` auf `[10, 50, 80]` ändern.
 Lauf: `node --test tests/test_config.mjs 2>&1 | tail -9`
 Erwartet: FAIL. Danach zurückdrehen und erneut laufen — `ℹ fail 0`.
 
-- [ ] **Schritt 8: Gesamtlauf**
+- [x] **Schritt 8: Gesamtlauf**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
 Erwartet: `ℹ tests 180`, `ℹ fail 0`
 
-- [ ] **Schritt 9: Commit**
+- [x] **Schritt 9: Commit**
 
 ```bash
 git add console/js/ansicht.js console/js/config.js tests/test_ansicht.mjs tests/test_config.mjs
@@ -338,7 +338,7 @@ git commit -m "ansicht.js: Laufzeit-Zustand getrennt vom Bootvertrag"
 - Liefert: `sichtbareRinge(ringe, rangeNm) -> number[]` — aufsteigend, nur Ringe
   `> 0 && <= rangeNm`. Nicht-Arrays und ungültige Einträge ergeben `[]`.
 
-- [ ] **Schritt 1: Test an `tests/test_geo.mjs` anhängen**
+- [x] **Schritt 1: Test an `tests/test_geo.mjs` anhängen**
 
 ```js
 test('sichtbareRinge: bei Reichweite 10 bleibt von [10,25,50] nur die 10', () => {
@@ -360,12 +360,12 @@ test('sichtbareRinge: kein Array ergibt eine leere Liste, keinen Fehler', () => 
 
 Den Import oben in der Datei um `sichtbareRinge` erweitern.
 
-- [ ] **Schritt 2: Lauf zur Bestätigung, daß er fehlschlägt**
+- [x] **Schritt 2: Lauf zur Bestätigung, daß er fehlschlägt**
 
 Lauf: `node --test tests/test_geo.mjs 2>&1 | tail -9`
 Erwartet: FAIL — `sichtbareRinge is not a function`
 
-- [ ] **Schritt 3: `sichtbareRinge()` in `console/js/geo.js` anhängen**
+- [x] **Schritt 3: `sichtbareRinge()` in `console/js/geo.js` anhängen**
 
 ```js
 // Welche Ringe passen in diese Reichweite? Bis zum 31.07.2026 zeichnete
@@ -387,12 +387,12 @@ export function sichtbareRinge(ringe, rangeNm) {
 }
 ```
 
-- [ ] **Schritt 4: Lauf zur Bestätigung, daß er besteht**
+- [x] **Schritt 4: Lauf zur Bestätigung, daß er besteht**
 
 Lauf: `node --test tests/test_geo.mjs 2>&1 | tail -9`
 Erwartet: `ℹ fail 0`
 
-- [ ] **Schritt 5: `radar.js` auf den Filter umstellen**
+- [x] **Schritt 5: `radar.js` auf den Filter umstellen**
 
 Import oben in `console/js/pages/radar.js` um `sichtbareRinge` erweitern. Dann `radar.js:35`
 von
@@ -409,7 +409,7 @@ von
 
 (In Aufgabe 4 wird `cfg.radar` hier durch die Ansicht ersetzt; der Filter bleibt.)
 
-- [ ] **Schritt 6: `profile.js` auf dieselbe Funktion umstellen**
+- [x] **Schritt 6: `profile.js` auf dieselbe Funktion umstellen**
 
 Import erweitern. `console/js/pages/profile.js:105-107` von
 
@@ -426,12 +426,12 @@ Import erweitern. `console/js/pages/profile.js:105-107` von
       const x = punktX(ring, cfg.radar.range_nm);
 ```
 
-- [ ] **Schritt 7: Einmal absichtlich rot sehen**
+- [x] **Schritt 7: Einmal absichtlich rot sehen**
 
 Im ersten neuen Test `[10]` auf `[10, 25]` ändern, laufen lassen (FAIL erwartet),
 zurückdrehen, erneut laufen (`ℹ fail 0`).
 
-- [ ] **Schritt 8: Gesamtlauf und Commit**
+- [x] **Schritt 8: Gesamtlauf und Commit**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9` — erwartet `ℹ tests 184`, `ℹ fail 0`
 
@@ -458,7 +458,7 @@ bei `radar.js:124`) — eine Canvas-Schrift, die zum Zeichenzeitpunkt noch nicht
 fällt lautlos auf die Ersatzschrift zurück. „Einfach jedes Mal neu zeichnen" ist deshalb die
 **falsche** Antwort und wäre auf diesem Gerät außerdem Dauerwärme.
 
-- [ ] **Schritt 1: Test an `tests/test_radar_geometry.mjs` anhängen**
+- [x] **Schritt 1: Test an `tests/test_radar_geometry.mjs` anhängen**
 
 ```js
 import { hintergrundSignatur } from '../console/js/pages/radar.js';
@@ -487,12 +487,12 @@ test('Signatur: gleiche Reichweite, andere Ringe ergibt eine andere Zeichenkette
 });
 ```
 
-- [ ] **Schritt 2: Lauf zur Bestätigung, daß er fehlschlägt**
+- [x] **Schritt 2: Lauf zur Bestätigung, daß er fehlschlägt**
 
 Lauf: `node --test tests/test_radar_geometry.mjs 2>&1 | tail -9`
 Erwartet: FAIL — `hintergrundSignatur is not a function`
 
-- [ ] **Schritt 3: Signatur in `radar.js` einbauen**
+- [x] **Schritt 3: Signatur in `radar.js` einbauen**
 
 Vor `registerPage({` einfügen:
 
@@ -540,16 +540,16 @@ Flugplätze geladen sind, und muß mitziehen.
 
 Diese Zeile entfällt in Aufgabe 4 wieder.
 
-- [ ] **Schritt 4: Lauf zur Bestätigung, daß er besteht**
+- [x] **Schritt 4: Lauf zur Bestätigung, daß er besteht**
 
 Lauf: `node --test tests/test_radar_geometry.mjs 2>&1 | tail -9` — erwartet `ℹ fail 0`
 
-- [ ] **Schritt 5: Einmal absichtlich rot sehen**
+- [x] **Schritt 5: Einmal absichtlich rot sehen**
 
 Im dritten Test `assert.notEqual` auf `assert.equal` ändern, laufen lassen (FAIL),
 zurückdrehen, erneut laufen.
 
-- [ ] **Schritt 6: Gesamtlauf und Commit**
+- [x] **Schritt 6: Gesamtlauf und Commit**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9` — erwartet `ℹ tests 188`, `ℹ fail 0`
 
@@ -575,7 +575,7 @@ git commit -m "Hintergrund-Signatur statt drawnBg -- Umschalten zeichnet neu, Ru
 - Liefert: `export function ansichtAendern(fn)` aus `console.js` — nimmt eine Funktion
   `(z) => neuerZustand`, ersetzt den Zustand, rendert neu und meldet eine Berührung.
 
-- [ ] **Schritt 1: `console.js` umbauen**
+- [x] **Schritt 1: `console.js` umbauen**
 
 Import oben ergänzen:
 
@@ -625,7 +625,7 @@ let aenderer = null;
 export function ansichtAendern(fn) { if (aenderer) aenderer(fn); }
 ```
 
-- [ ] **Schritt 2: `radar.js` von `cfg.radar` auf `sicht` umstellen**
+- [x] **Schritt 2: `radar.js` von `cfg.radar` auf `sicht` umstellen**
 
 Die Hilfszeile aus Aufgabe 3 Schritt 3 **entfernen** und stattdessen `sicht` als vierten
 Parameter entgegennehmen: `mount(el, cfg, state, sicht)` und `render(el, cfg, state, sicht)`.
@@ -647,7 +647,7 @@ erweitern. Ersetzt werden **alle** Reichweiten-Lesestellen (Spec 4.3):
 Die Maßstabskachel (`:367`) ist keine Nebensache: Sie schriebe sonst weiter „50 NM", während
 der Schirm auf 10 steht — eine Anzeige, die die eigene Einstellung falsch meldet.
 
-- [ ] **Schritt 3: Flugplatz-Layer in `drawBackground` beachten**
+- [x] **Schritt 3: Flugplatz-Layer in `drawBackground` beachten**
 
 `radar.js:52` von
 
@@ -661,13 +661,13 @@ der Schirm auf 10 steht — eine Anzeige, die die eigene Einstellung falsch meld
   if (receiver && airports && sicht.layer.airports) drawAirports(ctx, receiver, sicht);
 ```
 
-- [ ] **Schritt 4: Gesamtlauf**
+- [x] **Schritt 4: Gesamtlauf**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
 Erwartet: `ℹ tests 188`, `ℹ fail 0` — **unverändert**. Diese Aufgabe verdrahtet nur um; wer
 hier eine steigende Zahl erwartet, hat einen Test zuviel geschrieben.
 
-- [ ] **Schritt 5: Commit**
+- [x] **Schritt 5: Commit**
 
 ```bash
 git add console/js/console.js console/js/pages/radar.js
@@ -686,7 +686,7 @@ git commit -m "Ansicht als vierter Parameter -- radar.js liest sie statt der Con
 **Hinweis:** Dies ist die Aufgabe mit dem einzigen Test, der einen **vorhandenen** Defekt
 zeigt statt nur eine neue Funktion abzusichern. Er muß vor der Änderung wirklich rot sein.
 
-- [ ] **Schritt 1: Kopplungstest an `tests/test_profile.mjs` anhängen**
+- [x] **Schritt 1: Kopplungstest an `tests/test_profile.mjs` anhängen**
 
 ```js
 import { mergeConfig } from '../console/js/config.js';
@@ -710,12 +710,12 @@ test('ohne Umschaltung ist die Profil-Reichweite die konfigurierte', () => {
 });
 ```
 
-- [ ] **Schritt 2: Lauf zur Bestätigung, daß er fehlschlägt**
+- [x] **Schritt 2: Lauf zur Bestätigung, daß er fehlschlägt**
 
 Lauf: `node --test tests/test_profile.mjs 2>&1 | tail -9`
 Erwartet: FAIL — `profilReichweite is not a function`
 
-- [ ] **Schritt 3: `profile.js` umstellen**
+- [x] **Schritt 3: `profile.js` umstellen**
 
 `profilReichweite` exportieren und die Lesestellen darauf umbiegen:
 
@@ -741,7 +741,7 @@ Die Seitenfunktionen nehmen `sicht` als vierten Parameter entgegen. In `:94`, `:
 bereits eingebaut ist). Die Zeile `:146` beschriftet mit `außerhalb N NM` — sie muß mitziehen,
 sonst nennt die Anzeige eine Zahl, die nicht gilt.
 
-- [ ] **Schritt 4: `polar.js` umstellen**
+- [x] **Schritt 4: `polar.js` umstellen**
 
 `polar.js:446` von
 
@@ -759,15 +759,15 @@ Die Seitenfunktionen nehmen `sicht` als vierten Parameter entgegen. Der Kommenta
 bleibt gültig und wird um einen Satz ergänzt: die Kopplung läuft ab jetzt über die Ansicht,
 nicht über die Konfiguration.
 
-- [ ] **Schritt 5: Lauf zur Bestätigung, daß er besteht**
+- [x] **Schritt 5: Lauf zur Bestätigung, daß er besteht**
 
 Lauf: `node --test tests/test_profile.mjs 2>&1 | tail -9` — erwartet `ℹ fail 0`
 
-- [ ] **Schritt 6: Einmal absichtlich rot sehen**
+- [x] **Schritt 6: Einmal absichtlich rot sehen**
 
 Im ersten Test die erwartete `10` auf `50` ändern, laufen lassen (FAIL), zurückdrehen.
 
-- [ ] **Schritt 7: Gesamtlauf und Commit**
+- [x] **Schritt 7: Gesamtlauf und Commit**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9` — erwartet `ℹ tests 190`, `ℹ fail 0`
 
@@ -790,7 +790,7 @@ git commit -m "Hoehenprofil und Reichweite folgen der umgeschalteten Radar-Reich
   wert: number|boolean, optionen?: Array<{wert: number, text: string}> }`.
   Aufgabe 7 rendert genau diese Form und kennt keine radarspezifischen Felder.
 
-- [ ] **Schritt 1: Test an `tests/test_radar_geometry.mjs` anhängen**
+- [x] **Schritt 1: Test an `tests/test_radar_geometry.mjs` anhängen**
 
 ```js
 import { radarEinstellungen } from '../console/js/pages/radar.js';
@@ -818,12 +818,12 @@ test('Einstellungen: der Flugplatz-Schalter spiegelt den Layer-Zustand', () => {
 });
 ```
 
-- [ ] **Schritt 2: Lauf zur Bestätigung, daß er fehlschlägt**
+- [x] **Schritt 2: Lauf zur Bestätigung, daß er fehlschlägt**
 
 Lauf: `node --test tests/test_radar_geometry.mjs 2>&1 | tail -9`
 Erwartet: FAIL — `radarEinstellungen is not a function`
 
-- [ ] **Schritt 3: `radarEinstellungen()` in `radar.js` schreiben**
+- [x] **Schritt 3: `radarEinstellungen()` in `radar.js` schreiben**
 
 ```js
 // Was die Radarseite im Einstellungsdialog anbietet. Bewusst DATEN, keine
@@ -848,16 +848,16 @@ Im `registerPage({ ... })`-Objekt ergänzen:
   einstellungen(cfg, sicht) { return radarEinstellungen(cfg, sicht); },
 ```
 
-- [ ] **Schritt 4: Lauf zur Bestätigung, daß er besteht**
+- [x] **Schritt 4: Lauf zur Bestätigung, daß er besteht**
 
 Lauf: `node --test tests/test_radar_geometry.mjs 2>&1 | tail -9` — erwartet `ℹ fail 0`
 
-- [ ] **Schritt 5: Einmal absichtlich rot sehen**
+- [x] **Schritt 5: Einmal absichtlich rot sehen**
 
 Im ersten Test `['10 NM', '50 NM', '80 NM']` auf `['10 NM', '50 NM']` ändern, laufen lassen
 (FAIL), zurückdrehen.
 
-- [ ] **Schritt 6: Gesamtlauf und Commit**
+- [x] **Schritt 6: Gesamtlauf und Commit**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9` — erwartet `ℹ tests 193`, `ℹ fail 0`
 
@@ -887,7 +887,7 @@ git commit -m "radarEinstellungen(): der Dialog bekommt Daten, keine DOM-Bauerei
   sich der Dialog. Damit kann er per Konstruktion nicht offen steckenbleiben.
 - Das Zahnrad erscheint **nur**, wenn die sichtbare Seite `einstellungen()` anbietet.
 
-- [ ] **Schritt 1: Kopf und Overlay in `console/index.html`**
+- [x] **Schritt 1: Kopf und Overlay in `console/index.html`**
 
 In `#head` vor `<div id="clock">` einfügen:
 
@@ -901,7 +901,7 @@ Nach `<div id="dots"></div>` einfügen:
     <div id="settings" hidden></div>
 ```
 
-- [ ] **Schritt 2: Dialog in `console.js` bauen**
+- [x] **Schritt 2: Dialog in `console.js` bauen**
 
 Import ergänzen: `import { erzeugeAnsicht, gilt, setzeStufe, schalteLayer } from './ansicht.js';`
 
@@ -968,7 +968,7 @@ In `goTo()` innerhalb des `if (next !== current)`-Blocks nach `betrete(current);
 
 Und vor `planeWechsel('automatisch');` am Ende von `startConsole()`: `zeigeZahnrad();`
 
-- [ ] **Schritt 3: CSS an `console/css/console.css` anhängen**
+- [x] **Schritt 3: CSS an `console/css/console.css` anhängen**
 
 ```css
 #cog { background: none; border: 0; color: var(--slate, #7f93a8); font-size: 22px;
@@ -988,13 +988,13 @@ Und vor `planeWechsel('automatisch');` am Ende von `startConsole()`: `zeigeZahnr
 .segmente button.an, .schalter.an { background: #1d4f74; color: #eaf4ff; }
 ```
 
-- [ ] **Schritt 4: Gesamtlauf**
+- [x] **Schritt 4: Gesamtlauf**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
 Erwartet: `ℹ tests 193`, `ℹ fail 0` — **unverändert**. Der Dialog ist DOM und wird am Gerät
 geprüft, nicht durch eine Attrappe (globale Randbedingung).
 
-- [ ] **Schritt 5: Commit**
+- [x] **Schritt 5: Commit**
 
 ```bash
 git add console/index.html console/js/console.js console/css/console.css

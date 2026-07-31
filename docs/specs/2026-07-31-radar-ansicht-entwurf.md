@@ -130,7 +130,17 @@ Ersatzschrift zurück. Ein „einfach immer neu zeichnen" wäre also die falsche
 | `profile.js` | `:94`, `:105`, `:106`, `:107`, `:112`, `:146` | Der Seitenriß rechnet auf derselben Reichweite |
 | `polar.js` | `:446`, `:454` | Innere Ringe bewußt an `cfg.radar.rings_nm` gekoppelt |
 
-`profile.js` und `polar.js` **müssen mitwandern**. Der Kommentar in `polar.js:382` sagt die
+> **Korrektur 31.07. nach der Schlußprüfung (Commit `407f2c4`): Für `polar.js` gilt das
+> Gegenteil.** Die Kopplung galt, solange die Radarreichweite eine Konstante war. Sobald sie am
+> Panel umschaltbar ist, trägt sie nicht mehr: Die Reichweite-Seite hat eine **eigene** Skala,
+> die mit dem Rekordbestand wächst (zuletzt 80 NM) und der Radarstufe nicht folgt. Bei 10 NM
+> bekäme sie die Ringe 2/5/10 in ein 80-NM-Bild — innerster Ring bei **6,9 px**, zwölf Radiale
+> laufen dort zusammen (genau der „Stern statt eines Zentrums", gegen den am 29.07. am Panel
+> entschieden wurde), zwei Beschriftungen überlappen bei 10,2 px Abstand und 13 px Schrift.
+> **`polar.js` bleibt deshalb am Bootvertrag.** Nur `profile.js` wandert mit — sein Seitenriß
+> zeigt dieselben Ziele auf derselben Achse, seine Skala *ist* die Radarreichweite.
+
+Der ursprüngliche Gedanke, der für `profile.js` weiterhin gilt: Der Kommentar in `polar.js:382` sagt die
 Absicht wörtlich: *„wer den Radarmaßstab umstellt, verschiebt beide Seiten gemeinsam"*. Bliebe
 `profile.js` auf der Konfiguration, zeigte der Seitenriß 50 NM, während das Radar auf 10 steht
 — zwei Seiten desselben Geräts, die sich widersprechen.
@@ -334,7 +344,11 @@ klären.
 ## 12. Erfolgskriterien
 
 - [ ] Reichweite am Panel zwischen 10 / 50 / 80 NM umschaltbar, Ringe wandern mit
-- [ ] Höhenprofil und Reichweite-Seite folgen der Umschaltung
+- [ ] **Höhenprofil** folgt der Umschaltung; die **Reichweite-Seite ausdrücklich nicht** (siehe
+      Korrektur in Abschnitt 4.3) — sie bleibt am Bootvertrag, weil ihre Skala eine andere ist
+- [ ] Einzelziel-Seite und Tafel filtern mit der eingestellten Reichweite — kein Ziel, das das
+      Radar als „außer Reichweite" behandelt, taucht fünfzehn Sekunden später als volles
+      Datenblatt auf
 - [ ] Flugplätze ein- und ausblendbar
 - [ ] Zahnrad nur auf Seiten mit Einstellungen
 - [ ] Dialog kann nicht offen steckenbleiben (60-Sekunden-Nachweis am Gerät)
