@@ -97,6 +97,13 @@ function drawAirports(ctx, cfg, receiver) {
   }
 }
 
+// Woraus besteht das gezeichnete Hintergrundbild? Genau daraus, und aus
+// nichts sonst -- wer hier ein Feld vergisst, bekommt einen Hintergrund,
+// der zum Vordergrund nicht mehr passt und sich nie korrigiert.
+export function hintergrundSignatur(sicht) {
+  return [sicht.range_nm, sicht.rings_nm.join(','), sicht.layer.airports ? 'ap' : '-'].join('|');
+}
+
 registerPage({
   id: 'radar',
   title: 'Radar',
@@ -115,26 +122,34 @@ registerPage({
     el._ctx = {
       bg: el.querySelector('.bg').getContext('2d'),
       blips: el.querySelector('.blips'),
-      drawnBg: false,
+      bgSig: null,
       // Startzeit der Keule. Jeder Blip rechnet sein animation-delay
       // gegen diesen Zeitpunkt, nicht gegen seine eigene Entstehung.
       sweepStart: performance.now(),
     };
     installDecayKeyframes(cfg);
-    // Der Hintergrund wird nur EINMAL gezeichnet (drawnBg). Eine Canvas-
-    // Schrift, die zum Zeichenzeitpunkt noch nicht geladen ist, faellt
-    // lautlos auf die Ersatzschrift zurueck -- und wird nie neu gezeichnet.
-    // Deshalb erst die Schrift, dann die Flugplaetze, dann freigeben.
+    // Der Hintergrund wird nur bei geaenderter Signatur neu gezeichnet
+    // (bgSig). Eine Canvas-Schrift, die zum Zeichenzeitpunkt noch nicht
+    // geladen ist, faellt lautlos auf die Ersatzschrift zurueck --
+    // deshalb erst die Schrift, dann die Flugplaetze, dann freigeben
+    // (bgSig zuruecksetzen erzwingt den naechsten Zeichenlauf).
     Promise.all([
       loadAirports(),
       document.fonts ? document.fonts.load('13px B612Mono').catch(() => null) : null,
-    ]).then(() => { el._ctx.drawnBg = false; });
+    ]).then(() => { el._ctx.bgSig = null; });
   },
   render(el, cfg, state) {
     const c = el._ctx;
-    if (!c.drawnBg && state.receiver) {
-      drawBackground(c.bg, cfg, state.receiver);
-      c.drawnBg = true;
+    // Behelfszeile bis Aufgabe 4: dort kommt `sicht` als vierter
+    // render()-Parameter aus ansicht.js herein, dann entfaellt diese
+    // Zeile wieder. Bis dahin haelt sie diese Aufgabe fuer sich allein
+    // lauffaehig und testbar.
+    const sicht = { range_nm: cfg.radar.range_nm, rings_nm: cfg.radar.rings_nm,
+                    layer: { airports: true } };
+    const sig = hintergrundSignatur(sicht);
+    if (c.bgSig !== sig && state.receiver) {
+      drawBackground(c.bg, cfg, state.receiver, sicht);
+      c.bgSig = sig;
     }
     const targets = state.receiver ? state.aircraft
       .filter(a => typeof a.lat === 'number' && typeof a.lon === 'number')
