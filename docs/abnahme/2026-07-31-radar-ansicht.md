@@ -137,21 +137,32 @@ in [[open-loops]] erfaßt.
 
 ## 8. Offen
 
-**Bedienprüfung am Touchpanel** — kann nicht ferngesteuert werden, es gibt keinen Weg,
-Berührungen einzuspeisen (`--remote-debugging-port` ist bewußt nicht gesetzt):
+### Bedienprüfung am Touchpanel — ✓ 31.07. durch Henning, alle elf bestanden
 
-- [ ] Zahnrad antippen → Dialog öffnet
-- [ ] Reichweite 10 / 50 / 80 durchschalten, **und wieder zurück auf 50**
-- [ ] Flugplätze aus, **und wieder an**
-- [ ] Zwei schnelle Umschaltungen hintereinander
-- [ ] Dialog offen lassen, 60 s warten → Karussell läuft weiter und schließt ihn
-- [ ] Einmal im 50-s-Takt tippen → Dialog bleibt offen, schließt danach trotzdem
-- [ ] Wischen bei offenem Dialog
-- [ ] Auf eine andere Seite blättern → Zahnrad verschwindet
-- [ ] Höhenprofil bei 10 NM: beschriftet es 10 NM?
-- [ ] Reichweite-Seite bei 10 NM: bleibt ihr Gitter unverändert? (**muß es** — siehe Korrektur
-      in Entwurf 4.3)
-- [ ] Tafel und Einzelziel bei 10 NM: kein Ziel jenseits von 10 NM mehr
+Konnte nicht ferngesteuert werden: Es gibt keinen Weg, Berührungen einzuspeisen
+(`--remote-debugging-port` ist bewußt nicht gesetzt, und für eine Abnahme wird er auch nicht
+angeschaltet).
+
+- [x] Zahnrad antippen → Dialog öffnet
+- [x] Reichweite 10 / 50 / 80 durchschalten, **und wieder zurück auf 50**
+- [x] Flugplätze aus, **und wieder an**
+- [x] Zwei schnelle Umschaltungen hintereinander
+- [x] Dialog offen lassen, 60 s warten → Karussell läuft weiter und schließt ihn
+- [x] Einmal im 50-s-Takt tippen → Dialog bleibt offen, schließt danach trotzdem
+- [x] Wischen bei offenem Dialog
+- [x] Auf eine andere Seite blättern → Zahnrad verschwindet
+- [x] Höhenprofil bei 10 NM: beschriftet 10 NM
+- [x] Reichweite-Seite bei 10 NM: Gitter unverändert (siehe Korrektur in Entwurf 4.3)
+- [x] Tafel und Einzelziel bei 10 NM: kein Ziel jenseits von 10 NM mehr
+
+**Unabhängig davon am Gerät nachgemessen** (`grim`, gezielter Ausschnitt der Maßstabskachel,
+drei Aufnahmen im 45-s-Abstand, damit mindestens eine die Radarseite trifft): Bei aktiver
+80-NM-Stufe zeigt die Kachel `80 NM · Ringe 20 · 50 · 80`.
+
+Das belegt nebenbei die ganze Stufenmechanik am realen Gerät, nicht nur im Test: Die
+80-NM-Stufe trägt ihre eingebauten Ringe, während `console.json` mit `rings_nm: [10, 25, 50]`
+ausschließlich die 50-NM-Stufe überschreibt — genau das Verhalten aus Befund A der
+Schlußprüfung.
 
 **Wärmemessung bei 80 NM** (Block 3, eigener Lauf): 30 Minuten auf der größten Stufe, dazu die
 Blip-Zahl bei 50 und bei 80 NM gegenübergestellt. Ausgangslage bei Abnahmeende: **74,5 °C**,
