@@ -118,3 +118,27 @@ export function sichtbareRinge(ringe, rangeNm) {
     .filter(n => typeof n === 'number' && Number.isFinite(n) && n > 0 && n <= rangeNm)
     .sort((a, b) => a - b);
 }
+
+// Dieselbe Regel, nur fuer Ziele: Was jenseits der eingestellten Reichweite
+// liegt, gehoert auf keine Seite dieser Konsole. Bis zum 31.07.2026 hielt
+// sich allein das Radar daran -- bei Reichweite 10 und einem Ziel bei 22 NM
+// meldete es "KEINE ZIELE IN REICHWEITE", waehrend die Einzelziel-Seite ein
+// volles Datenblatt fuer genau dieses Ziel zeigte und die Tafel zwoelf
+// Stueck bis ueber 100 NM listete. Drei Seiten desselben Geraets, drei
+// Antworten auf dieselbe Frage.
+//
+// Wie beim Aussenring gehoert das Ziel GENAU auf der Reichweite dazu.
+//
+// Keine brauchbare Reichweite heisst "keine Begrenzung", niemals "nichts
+// durchlassen": Ein leerer Schirm waere von einem Defekt nicht zu
+// unterscheiden. Ein Eintrag ohne brauchbare Entfernung faellt dagegen
+// heraus, sobald gefiltert wird -- er laesst sich gegen keine Reichweite
+// pruefen, und "unbekannt" ist kein Beleg fuer "nah".
+export function inReichweite(liste, rangeNm) {
+  if (!Array.isArray(liste)) return [];
+  if (typeof rangeNm !== 'number' || !Number.isFinite(rangeNm) || rangeNm <= 0) {
+    return liste.slice();
+  }
+  return liste.filter(t => t && typeof t.nm === 'number' && Number.isFinite(t.nm)
+                           && t.nm <= rangeNm);
+}

@@ -1,12 +1,23 @@
 import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel,
-         isEmergency, waehleDatenblattZiel } from '../geo.js';
+         isEmergency, waehleDatenblattZiel, inReichweite } from '../geo.js';
 import { registerPage } from '../console.js';
 import { leerUntertitel } from './gemeinsam.js';
 
 // Die Seite braucht den ROHEN aircraft.json-Eintrag, nicht nur das
 // angereicherte Ziel: ias, tas, mach, roll, nav_altitude_mcp und die
 // Guetefelder kommen dort und nur dort her. Deshalb reist a als `roh` mit.
-export function kandidatenAusZielen(aircraft, receiver, highlight) {
+//
+// rangeNm ist die eingestellte Reichweite (sicht.range_nm). Der Filter sitzt
+// HIER und nicht in render(): Was das Radar nicht zeigt, darf fuenfzehn
+// Sekunden spaeter nicht als Datenblatt wiederkommen -- und die Regel
+// gehoert in die geprueffte reine Funktion, nicht in die Render-Closure.
+// Ohne Angabe wird nicht gefiltert (siehe inReichweite).
+//
+// Ohne Empfaengerposition gibt es keine Entfernung und damit keinen
+// Kandidaten. Ausdruecklich KEIN Ersatzwert: Eine 0 hiesse "im
+// Mittelpunkt", und die Seite zeigte ein Datenblatt, dessen Ortsangabe
+// erfunden waere.
+export function kandidatenAusZielen(aircraft, receiver, highlight, rangeNm = null) {
   if (!receiver) return [];
   const liste = [];
   for (const a of aircraft || []) {
@@ -20,7 +31,7 @@ export function kandidatenAusZielen(aircraft, receiver, highlight) {
       roh: a,
     });
   }
-  return liste;
+  return inReichweite(liste, rangeNm);
 }
 
 // Zahl oder Gedankenstrich -- niemals eine 0 fuer einen fehlenden Wert.
@@ -95,16 +106,22 @@ registerPage({
   // Besuch frisch das naechste Ziel greift -- und es dann fuer die ganze
   // Standzeit haelt.
   onEnter(el) { el._ctx.gewaehlt = null; },
-  render(el, cfg, state) {
+  render(el, cfg, state, sicht) {
     const root = el.querySelector('.datenblatt');
-    const kandidaten =
-      kandidatenAusZielen(state.aircraft, state.receiver, cfg.emergency.highlight);
+    const kandidaten = kandidatenAusZielen(
+      state.aircraft, state.receiver, cfg.emergency.highlight, sicht.range_nm);
     const gewaehlt = waehleDatenblattZiel(kandidaten, el._ctx.gewaehlt);
     el._ctx.gewaehlt = gewaehlt;
     if (!gewaehlt) {
       // Nachts ist das der Normalfall, kein Defekt. Die Nachrichtenrate
       // bleibt stehen: Sie unterscheidet "nichts fliegt" von "Empfaenger tot".
-      root.innerHTML = `<div class="empty">KEIN ZIEL MIT POSITION
+      //
+      // Der Text nennt seit dem 31.07.2026 die Reichweite und nicht mehr die
+      // Position: Seit die Seite mitfiltert, ist "kein Ziel mit Position"
+      // schlicht falsch, sobald zehn Ziele bei 30 NM stehen und die
+      // Reichweite auf 10 NM steht. Derselbe Satz wie auf Radar und Tafel --
+      // drei Seiten, ein Leerzustand, ein Grund.
+      root.innerHTML = `<div class="empty">KEINE ZIELE IN REICHWEITE
         <div class="empty-sub">${leerUntertitel(state)}</div></div>`;
       return;
     }

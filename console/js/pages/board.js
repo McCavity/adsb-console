@@ -1,5 +1,5 @@
-import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel, isEmergency }
-  from '../geo.js';
+import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel,
+         isEmergency, inReichweite } from '../geo.js';
 import { registerPage } from '../console.js';
 import { leerUntertitel } from './gemeinsam.js';
 
@@ -7,7 +7,17 @@ import { leerUntertitel } from './gemeinsam.js';
 // Anzeigen stummschalten, nicht nur das Radar -- sonst schaltet er die
 // halbe Konsole. Vorgabewert true, damit ein Aufrufer ohne Konfiguration
 // (etwa ein Test) die Markierung sieht.
-export function splitTargets(aircraft, receiver, highlight = true) {
+//
+// rangeNm ist die eingestellte Reichweite (sicht.range_nm) und begrenzt die
+// erste Liste. Der Filter sitzt HIER, nicht in render(): Die Tafel zeigt
+// "die zwoelf naechsten", und wer erst abschneidet und dann filtert,
+// verlaesst sich darauf, dass die Liste sortiert ist -- eine stille
+// Abhaengigkeit, die niemand sieht, wenn die Sortierung einmal faellt.
+//
+// Ziele OHNE Position bleiben unberuehrt: Sie haben keine Entfernung, und
+// eine Reichweite laesst sich nicht gegen etwas pruefen, das es nicht gibt.
+// Sie stehen ohnehin in ihrer eigenen Zeile.
+export function splitTargets(aircraft, receiver, highlight = true, rangeNm = null) {
   const positioned = [], unpositioned = [];
   for (const a of aircraft || []) {
     const hasPos = receiver &&
@@ -32,7 +42,7 @@ export function splitTargets(aircraft, receiver, highlight = true) {
     }
   }
   positioned.sort((x, y) => x.nm - y.nm);
-  return { positioned, unpositioned };
+  return { positioned: inReichweite(positioned, rangeNm), unpositioned };
 }
 
 function arrow(rate) {
@@ -45,14 +55,26 @@ registerPage({
   title: 'Ziele',
   ageSource: 'aircraft',
   mount(el) { el.innerHTML = '<div class="board value"></div>'; },
-  render(el, cfg, state) {
-    const { positioned, unpositioned } =
-      splitTargets(state.aircraft, state.receiver, cfg.emergency.highlight);
+  render(el, cfg, state, sicht) {
+    const { positioned, unpositioned } = splitTargets(
+      state.aircraft, state.receiver, cfg.emergency.highlight, sicht.range_nm);
     const root = el.querySelector('.board');
-    if (!positioned.length && !unpositioned.length) {
-      // Nachts ist null Ziele der Normalfall, kein Defekt.
+    const nopos = `
+      <div class="nopos">ohne Position: ${unpositioned.length}
+        <span class="nopos-list">${unpositioned.slice(0, 10)
+          .map(t => `${t.callsign ? t.callsign : `<span class="hexkennung">${t.hex}</span>`} ${t.fl}`).join(' · ')}</span>
+      </div>`;
+    // Keine Zeile in Reichweite heisst Leerzustand, nicht Tabellenkopf ohne
+    // Inhalt: Eine leere Tabelle sagt nichts -- weder ob nichts fliegt noch
+    // ob der Empfaenger steht. Seit die Seite nach Entfernung filtert
+    // (31.07.2026), ist das kein Nachtfall mehr, sondern der Normalfall bei
+    // Reichweite 10. Die Zeile "ohne Position" bleibt daneben stehen, wenn
+    // es solche Ziele gibt: Sie sind empfangen worden, sie zu verschweigen
+    // waere derselbe Fehler wie sie zu zaehlen.
+    if (!positioned.length) {
       root.innerHTML = `<div class="empty">KEINE ZIELE IN REICHWEITE
-        <div class="empty-sub">${leerUntertitel(state)}</div></div>`;
+        <div class="empty-sub">${leerUntertitel(state)}</div></div>`
+        + (unpositioned.length ? nopos : '');
       return;
     }
     const rows = positioned.slice(0, 12).map(t => `
@@ -71,10 +93,6 @@ registerPage({
         <thead><tr><th>CALLSIGN</th><th>FL</th><th>GS</th><th>TRACK</th>
                    <th>ENTF</th><th>PEIL</th><th></th><th></th></tr></thead>
         <tbody>${rows}</tbody>
-      </table>
-      <div class="nopos">ohne Position: ${unpositioned.length}
-        <span class="nopos-list">${unpositioned.slice(0, 10)
-          .map(t => `${t.callsign ? t.callsign : `<span class="hexkennung">${t.hex}</span>`} ${t.fl}`).join(' · ')}</span>
-      </div>`;
+      </table>${nopos}`;
   },
 });

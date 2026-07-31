@@ -1,5 +1,5 @@
 import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel, isEmergency,
-         projectToCanvas, sichtbareRinge } from '../geo.js';
+         projectToCanvas, sichtbareRinge, inReichweite } from '../geo.js';
 import { registerPage } from '../console.js';
 import { msgRate, leerUntertitel } from './gemeinsam.js';
 
@@ -161,7 +161,11 @@ registerPage({
       drawBackground(c.bg, cfg, state.receiver, sicht);
       c.bgSig = sig;
     }
-    const targets = state.receiver ? state.aircraft
+    // Der Entfernungsfilter laeuft ueber inReichweite (geo.js) -- dieselbe
+    // Regel, die seit dem 31.07.2026 auch Tafel und Einzelziel benutzen.
+    // Vorher stand sie hier als eigener Ausdruck, und genau deshalb hatten
+    // die beiden anderen Seiten sie gar nicht.
+    const targets = inReichweite(state.receiver ? state.aircraft
       .filter(a => typeof a.lat === 'number' && typeof a.lon === 'number')
       .map(a => {
         const nm = haversineNm(state.receiver.lat, state.receiver.lon, a.lat, a.lon);
@@ -174,8 +178,7 @@ registerPage({
           heavy: a.category === 'A5',
           emergency: cfg.emergency.highlight && isEmergency(a),
         };
-      })
-      .filter(t => t.nm <= sicht.range_nm) : [];
+      }) : [], sicht.range_nm);
     const auswahl = waehleZiel(targets);
     renderBlips(c.blips, cfg, sicht, targets, c.sweepStart, auswahl);
     renderSide(el.querySelector('.radar-side'), cfg, sicht, state, targets, auswahl);

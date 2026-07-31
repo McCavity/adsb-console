@@ -80,3 +80,32 @@ test('highlight=false schaltet auch das Datenblatt stumm', () => {
   assert.equal(eins(notfall, true).emergency, true);
   assert.equal(eins(notfall, false).emergency, false);
 });
+
+// 50.36 / 9.0 liegt rund 21,6 NM vom Empfaenger entfernt -- der Fall aus
+// der Schlusspruefung: Reichweite 10, Ziel bei gut 22 NM. Das Radar meldete
+// "KEINE ZIELE IN REICHWEITE", das Datenblatt zeigte es trotzdem.
+const FERN = { hex: 'fe2f', flight: 'FERN01  ', alt_baro: 30000, lat: 50.36, lon: 9.0 };
+
+test('Ziele jenseits der Reichweite werden keine Kandidaten', () => {
+  const alle = kandidatenAusZielen([VOLL, FERN], RCV, true);
+  assert.equal(alle.length, 2, 'Voraussetzung: ohne Reichweite sind es zwei');
+  assert.ok(alle.find(t => t.hex === 'fe2f').nm > 20, 'Voraussetzung: das ferne Ziel liegt weit');
+
+  const nah = kandidatenAusZielen([VOLL, FERN], RCV, true, 10);
+  assert.deepEqual(nah.map(t => t.hex), ['c01753']);
+});
+
+test('bleibt kein Ziel in Reichweite, gibt es gar keinen Kandidaten', () => {
+  assert.deepEqual(kandidatenAusZielen([FERN], RCV, true, 10), []);
+});
+
+test('das Ziel GENAU auf der Reichweite bleibt drin', () => {
+  const t = kandidatenAusZielen([VOLL], RCV, true)[0];
+  assert.deepEqual(kandidatenAusZielen([VOLL], RCV, true, t.nm).map(x => x.hex), ['c01753']);
+});
+
+test('ohne vierten Parameter bleibt die Kandidatenliste unbegrenzt', () => {
+  // Die Tests aus Stufe 2 rufen mit drei Parametern -- und die Seite darf
+  // ohne Reichweite nicht stumm werden.
+  assert.equal(kandidatenAusZielen([VOLL, FERN], RCV, true).length, 2);
+});

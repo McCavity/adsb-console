@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   haversineNm, bearingDeg, formatBearing, flightLevel,
   formatCallsign, sectorOf, isEmergency, nmToPx, waehleDatenblattZiel,
-  sichtbareRinge,
+  sichtbareRinge, inReichweite,
 } from '../console/js/geo.js';
 
 test('ein Breitengrad ist 60 NM', () => {
@@ -169,4 +169,32 @@ test('sichtbareRinge: sortiert aufsteigend und wirft Unfug weg', () => {
 
 test('sichtbareRinge: kein Array ergibt eine leere Liste, keinen Fehler', () => {
   for (const k of [null, undefined, 'nein', 42]) assert.deepEqual(sichtbareRinge(k, 50), []);
+});
+
+// Dieselbe Regel wie sichtbareRinge, nur fuer Ziele: Bis zum 31.07.2026
+// filterten target.js und board.js gar nicht. Bei Reichweite 10 und einem
+// Ziel bei 22 NM meldete das Radar "KEINE ZIELE IN REICHWEITE", waehrend
+// die Einzelziel-Seite fuenfzehn Sekunden spaeter ein volles Datenblatt
+// fuer genau dieses Ziel zeigte.
+test('inReichweite: der Rand gehoert dazu, alles darueber nicht', () => {
+  const liste = [{ nm: 2 }, { nm: 10 }, { nm: 10.1 }, { nm: 22 }];
+  assert.deepEqual(inReichweite(liste, 10).map(t => t.nm), [2, 10]);
+});
+
+test('inReichweite: ohne brauchbare Reichweite wird nicht gefiltert', () => {
+  // Keine Angabe heisst "keine Begrenzung" -- niemals "nichts durchlassen".
+  // Ein leerer Schirm waere von einem Defekt nicht zu unterscheiden.
+  const liste = [{ nm: 2 }, { nm: 99 }];
+  for (const k of [null, undefined, 0, -5, NaN, 'zehn']) {
+    assert.equal(inReichweite(liste, k).length, 2, `${String(k)} hat gefiltert`);
+  }
+});
+
+test('inReichweite: ein Eintrag ohne brauchbare Entfernung faellt heraus', () => {
+  const liste = [{ nm: null }, { nm: NaN }, null, { nm: 3 }];
+  assert.deepEqual(inReichweite(liste, 10).map(t => t.nm), [3]);
+});
+
+test('inReichweite: kein Array ergibt eine leere Liste, keinen Fehler', () => {
+  for (const k of [null, undefined, 'nein', 42]) assert.deepEqual(inReichweite(k, 50), []);
 });
