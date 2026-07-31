@@ -6,7 +6,10 @@ export const DEFAULTS = Object.freeze({
            polar: true, profile: true, system: true },
   dwell_s: { radar: 45, default: 15 },
   radar: { range_nm: 50, rings_nm: [10, 25, 50], sweep_s: 5,
-           decay_s: 6, leader_s: 60, labels: ['callsign', 'fl', 'squawk'] },
+           decay_s: 6, leader_s: 60, labels: ['callsign', 'fl', 'squawk'],
+           stufen: [ { range_nm: 10, rings_nm: [2, 5, 10] },
+                     { range_nm: 50, rings_nm: [10, 25, 50] },
+                     { range_nm: 80, rings_nm: [20, 50, 80] } ] },
   emergency: { highlight: true, interrupt_carousel: false },
 });
 
@@ -23,6 +26,34 @@ function positiveNumber(value, fallback) {
 
 function plainObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+// Eine Stufe ist nur brauchbar, wenn beide Haelften stimmen. Ringe, die
+// nicht in ihre eigene Reichweite passen, werden hier schon aussortiert --
+// sonst zeichnet die Radarseite spaeter ausserhalb des Kreises.
+function harteStufe(roh) {
+  const s = plainObject(roh);
+  const range = positiveNumber(s.range_nm, null);
+  if (range == null) return null;
+  const ringe = Array.isArray(s.rings_nm)
+    ? s.rings_nm.filter(n => typeof n === 'number' && Number.isFinite(n) && n > 0 && n <= range)
+    : [];
+  return ringe.length ? { range_nm: range, rings_nm: ringe.slice().sort((a, b) => a - b) } : null;
+}
+
+// Die konfigurierte Reichweite MUSS erreichbar bleiben. Wer in console.json
+// 35 NM einstellt, darf sie durch die neue Stufenwahl nicht verlieren --
+// eine neue Funktion, die eine bestehende Konfiguration unerreichbar macht,
+// ist eine Verschlechterung, auch wenn sie mehr kann.
+function bauStufen(rohListe, range_nm, rings_nm) {
+  const aus = Array.isArray(rohListe)
+    ? rohListe.map(harteStufe).filter(Boolean) : [];
+  const liste = aus.length ? aus : DEFAULTS.radar.stufen.map(harteStufe).filter(Boolean);
+  if (!liste.some(s => s.range_nm === range_nm)) {
+    const eigen = harteStufe({ range_nm, rings_nm });
+    if (eigen) liste.push(eigen);
+  }
+  return liste.sort((a, b) => a.range_nm - b.range_nm);
 }
 
 export function mergeConfig(raw) {
@@ -53,7 +84,9 @@ export function mergeConfig(raw) {
     labels: Array.isArray(radarIn.labels)
             ? radarIn.labels.filter(l => DEFAULTS.radar.labels.includes(l))
             : DEFAULTS.radar.labels.slice(),
+    stufen: [],          // Platzhalter, wird direkt darunter gesetzt
   };
+  radar.stufen = bauStufen(radarIn.stufen, radar.range_nm, radar.rings_nm);
 
   const emIn = plainObject(src.emergency);
   const emergency = {
