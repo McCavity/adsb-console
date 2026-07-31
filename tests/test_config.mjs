@@ -116,6 +116,21 @@ test('stufen: eine unbrauchbare Ringliste ersetzt nichts', () => {
   }
 });
 
+// Zwei Angaben aus derselben Datei widersprechen sich: eine eigene
+// Stufenliste MIT Ringen fuer 50 und dazu ein eigenes rings_nm. Festgelegt,
+// nicht dahingestellt: rings_nm gewinnt fuer die Stufe, auf der die
+// konfigurierte Reichweite steht -- das ist die Stufe, die man am Panel
+// zuerst sieht, und rings_nm ist die Angabe, die vorher gar nichts bewirkt
+// hat. Alle uebrigen Stufen bleiben unangetastet. Die geltende console.json
+// hat keinen stufen-Schluessel; der Fall ist heute keiner.
+test('stufen: bei Widerspruch gewinnt rings_nm auf der konfigurierten Reichweite', () => {
+  const cfg = mergeConfig({ radar: { range_nm: 50, rings_nm: [5, 20, 50],
+    stufen: [{ range_nm: 10, rings_nm: [2, 5, 10] },
+             { range_nm: 50, rings_nm: [10, 25, 50] }] } });
+  assert.deepEqual(cfg.radar.stufen.find(s => s.range_nm === 50).rings_nm, [5, 20, 50]);
+  assert.deepEqual(cfg.radar.stufen.find(s => s.range_nm === 10).rings_nm, [2, 5, 10]);
+});
+
 test('stufen: der Normalfall bleibt unberuehrt (35 mit passenden Ringen, 50 ohne Dublette)', () => {
   const mit35 = mergeConfig({ radar: { range_nm: 35, rings_nm: [10, 20, 35] } });
   const fuenfunddreissig = mit35.radar.stufen.find(s => s.range_nm === 35);
