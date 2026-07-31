@@ -67,3 +67,20 @@ test('stufen: ein Ring groesser als seine Reichweite wird aussortiert', () => {
   const zehner = cfg.radar.stufen.find(s => s.range_nm === 10);
   assert.deepEqual(zehner.rings_nm, [2, 5, 10]);
 });
+
+test('stufen: konfigurierte Reichweite bleibt erreichbar, auch wenn kein Ring hineinpasst', () => {
+  const cfg = mergeConfig({ radar: { range_nm: 5 } });
+  const eigene = cfg.radar.stufen.find(s => s.range_nm === 5);
+  assert.ok(eigene, 'Reichweite 5 fehlt in der Stufenliste');
+  assert.deepEqual(eigene.rings_nm, [5]);
+});
+
+test('stufen: der Normalfall bleibt unberuehrt (35 mit passenden Ringen, 50 ohne Dublette)', () => {
+  const mit35 = mergeConfig({ radar: { range_nm: 35, rings_nm: [10, 20, 35] } });
+  const fuenfunddreissig = mit35.radar.stufen.find(s => s.range_nm === 35);
+  assert.deepEqual(fuenfunddreissig.rings_nm, [10, 20, 35]);
+
+  const mit50 = mergeConfig({ radar: { range_nm: 50 } });
+  const fuenfziger = mit50.radar.stufen.filter(s => s.range_nm === 50);
+  assert.equal(fuenfziger.length, 1);
+});

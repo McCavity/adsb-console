@@ -50,7 +50,11 @@ function bauStufen(rohListe, range_nm, rings_nm) {
     ? rohListe.map(harteStufe).filter(Boolean) : [];
   const liste = aus.length ? aus : DEFAULTS.radar.stufen.map(harteStufe).filter(Boolean);
   if (!liste.some(s => s.range_nm === range_nm)) {
-    const eigen = harteStufe({ range_nm, rings_nm });
+    // Passt keiner der konfigurierten Ringe in die eigene Reichweite, faellt
+    // harteStufe auf null zurueck -- dann ist der Aussenring selbst der
+    // sinnvolle Ersatz. Ein Radar ohne inneren Ring ist mager, aber ehrlich;
+    // eine Reichweite, die man nicht mehr waehlen kann, ist ein Verlust.
+    const eigen = harteStufe({ range_nm, rings_nm }) || harteStufe({ range_nm, rings_nm: [range_nm] });
     if (eigen) liste.push(eigen);
   }
   return liste.sort((a, b) => a.range_nm - b.range_nm);

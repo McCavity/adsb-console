@@ -28,7 +28,7 @@ export function schalteLayer(z, id, an) {
   // Unbekannte Kennung wird ignoriert statt angelegt: Sonst traegt die
   // Ansicht einen Layer, fuer den es keine Zeichenfunktion gibt -- genau
   // die Falle, die mergeConfig bei unbekannten Seitennamen schon vermeidet.
-  if (!LAYER.includes(id)) return z;
+  if (!LAYER.includes(id)) return { ...z };
   return { ...z, layer: { ...z.layer, [id]: !!an } };
 }
 
