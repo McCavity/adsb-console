@@ -5,8 +5,15 @@
 > Stand: Branch `session/2026-07-31-radar-ansicht`, 19 Commits, 210 Tests / 0 Fehler
 > Entwurf: [`docs/specs/2026-07-31-radar-ansicht-entwurf.md`](../specs/2026-07-31-radar-ansicht-entwurf.md)
 
-**Status: Block 1 und 2 teilweise abgenommen.** Rendering, Ausrollen und Glyph sind belegt.
-Die Bedienprüfung am Touchpanel und die Wärmemessung bei 80 NM stehen aus.
+**Status: Block 1 und 2 abgenommen** (Fazit in Abschnitt 9). Rendering, Ausrollen und Glyph
+sind belegt, die elf Bedienprüfungen am Touchpanel bestanden (Abschnitt 7) und die
+Wärmemessung bei 80 NM ist gelaufen (Abschnitt 8).
+
+> [!note]
+> Bis zum 31.07.2026 stand hier noch „teilweise abgenommen … stehen aus", während dasselbe
+> Dokument zwanzig Zeilen weiter unten beides als erledigt auswies. Eine Kopfzeile, die dem
+> eigenen Inhalt widerspricht, ist genau die Sorte Statuszeile, gegen die dieses Projekt
+> sonst anschreibt — aufgefallen erst beim Nachziehen des README für die Veröffentlichung.
 
 ## 1. Ausgangslage (read-only, vor jedem Eingriff)
 

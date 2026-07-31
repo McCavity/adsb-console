@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { hoehenprofil, BAENDER, FL_MAX, BILD, punktX, punktY, profilReichweite } from '../console/js/pages/profile.js';
+import { hoehenprofil, BAENDER, FL_MAX, BILD, punktX, punktY, profilReichweite,
+         ringBeschriftung, ZEICHEN_PX } from '../console/js/pages/profile.js';
 import { mergeConfig } from '../console/js/config.js';
 import { erzeugeAnsicht, setzeStufe, gilt } from '../console/js/ansicht.js';
 
@@ -185,4 +186,49 @@ test('Hoehenprofil folgt der umgeschalteten Reichweite, nicht der Config', () =>
   const sicht = gilt(setzeStufe(erzeugeAnsicht(), 0), cfg);   // 10 NM
   assert.equal(profilReichweite(sicht), 10);
   assert.notEqual(profilReichweite(sicht), cfg.radar.range_nm);
+});
+
+// --- Ringbeschriftung der Entfernungsachse -------------------------------
+//
+// Der aeusserste Ring ist per Konstruktion IMMER gleich der Reichweite
+// (Stufen 10/50/80 mit rings_nm [2,5,10] / [10,25,50] / [20,50,80]). Er
+// liegt damit bei x = 692 von 700, und eine stur nach rechts gesetzte
+// Beschriftung ragt aus der Leinwand. Am 31.07.2026 im Foto gesehen: von
+// "50 NM" war die "5" uebrig.
+//
+// Dieselbe Fehlerklasse wie EDFJ am Radarrand am 27.07. -- dort weicht die
+// Kennung laengst auf die Seite aus, auf der Platz ist. Das Geschwister auf
+// dieser Seite wurde damals nicht mitgezogen.
+//
+// ZEICHEN_PX ist gemessen, nicht geschaetzt: getComputedTextLength() im
+// Chromium des Geraets gegen die echte console.css -- "50 NM" = 39,14
+// Nutzereinheiten, "M" = 7,83.
+test('Ringbeschriftung bleibt in der Leinwand -- in jeder Reichweitenstufe', () => {
+  const stufen = [
+    { range: 10, ringe: [2, 5, 10] },
+    { range: 50, ringe: [10, 25, 50] },
+    { range: 80, ringe: [20, 50, 80] },
+  ];
+  for (const { range, ringe } of stufen) {
+    for (const ring of ringe) {
+      const b = ringBeschriftung(ring, range);
+      const text = `${ring} NM`;
+      const breite = text.length * ZEICHEN_PX;
+      const links = b.anchor === 'end' ? b.x - breite : b.x;
+      const rechts = links + breite;
+      assert.ok(links >= 0,
+        `Stufe ${range}, Ring ${ring}: Beschriftung beginnt bei ${links.toFixed(1)} < 0`);
+      assert.ok(rechts <= BILD.breite,
+        `Stufe ${range}, Ring ${ring}: Beschriftung endet bei ${rechts.toFixed(1)} > ${BILD.breite}`);
+    }
+  }
+});
+
+// Die Beschriftung soll nur ausweichen, wo sie MUSS -- ein Label, das
+// grundsaetzlich links vom Ring steht, waere schwerer zu lesen und haette
+// denselben Test bestanden.
+test('Ringbeschriftung weicht nur aus, wenn rechts kein Platz ist', () => {
+  assert.equal(ringBeschriftung(10, 50).anchor, 'start');
+  assert.equal(ringBeschriftung(25, 50).anchor, 'start');
+  assert.equal(ringBeschriftung(50, 50).anchor, 'end');
 });
