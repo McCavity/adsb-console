@@ -271,7 +271,7 @@ sei „rund ein Drittel der Zeit sichtbar" gewesen, „wie im Regelbetrieb". **D
 den eigenen Zahlen desselben Dokuments falsch.**
 
 - `console.js` filtert `activePages` gegen die **registrierten** Renderer.
-- Am Meßcommit `f2df217` selbst nachgesehen: `index.html` registrierte genau drei Seiten
+- Am Meßcommit `be74d8a` selbst nachgesehen: `index.html` registrierte genau drei Seiten
   — Radar, Board, Statistik.
 - Standzeiten 45 + 15 + 15 = 75 s Umlauf. Das Radar war **60 %** der Zeit sichtbar.
 

@@ -130,7 +130,7 @@ Ersatzschrift zurück. Ein „einfach immer neu zeichnen" wäre also die falsche
 | `profile.js` | `:94`, `:105`, `:106`, `:107`, `:112`, `:146` | Der Seitenriß rechnet auf derselben Reichweite |
 | `polar.js` | `:446`, `:454` | Innere Ringe bewußt an `cfg.radar.rings_nm` gekoppelt |
 
-> **Korrektur 31.07. nach der Schlußprüfung (Commit `407f2c4`): Für `polar.js` gilt das
+> **Korrektur 31.07. nach der Schlußprüfung (Commit `8f899e8`): Für `polar.js` gilt das
 > Gegenteil.** Die Kopplung galt, solange die Radarreichweite eine Konstante war. Sobald sie am
 > Panel umschaltbar ist, trägt sie nicht mehr: Die Reichweite-Seite hat eine **eigene** Skala,
 > die mit dem Rekordbestand wächst (zuletzt 80 NM) und der Radarstufe nicht folgt. Bei 10 NM
@@ -275,7 +275,7 @@ Was **wirklich** rot werden kann:
 1. **Höhenprofil und Radar melden dieselbe Reichweite.** ⚠️ **Zweite Korrektur, 31.07. nach der
    Umsetzung von Aufgabe 5:** Auch das stimmte nicht. Der Defekt war real und schwer —
    `profile.js` nahm `sicht` nicht einmal als Parameter an, das Umschalten hatte auf den
-   Seitenriß **null** Wirkung (am Vorzustand `69eae6b` unabhängig verifiziert). Aber er saß in
+   Seitenriß **null** Wirkung (am Vorzustand `a4d2240` unabhängig verifiziert). Aber er saß in
    `render()`, also in DOM-Code, den diese Codebasis bewußt nicht automatisiert prüft. Der Test
    greift stattdessen die frisch **extrahierte** reine Funktion `profilReichweite` — und die gab
    es vorher nicht. Der Rot-Lauf war deshalb ein Importfehler, keine fehlgeschlagene Behauptung

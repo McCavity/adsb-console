@@ -92,7 +92,7 @@ Diese gelten für **jede** Aufgabe, auch wo sie nicht wiederholt werden.
   `config.radar.stufen` ist nach `mergeConfig` **nie leer**, aufsteigend sortiert und enthält
   garantiert einen Eintrag mit `range_nm === config.radar.range_nm`.
 
-  > **Nachtrag 31.07. (Commit `5df3afc`, aus der Prüfung von Aufgabe 1):** Die Garantie hielt
+  > **Nachtrag 31.07. (Commit `eabf2d6`, aus der Prüfung von Aufgabe 1):** Die Garantie hielt
   > zunächst nicht. Bei `range_nm: 5` ohne eigene `rings_nm` filtert `harteStufe` alle
   > Vorgabe-Ringe (10/25/50) weg, liefert `null`, und die konfigurierte Reichweite fiel aus
   > der Liste — `gilt()` zeigte dann 10 NM, während `config.radar.range_nm` weiter 5 meldete.
@@ -727,7 +727,7 @@ export function profilReichweite(sicht) {
 }
 ```
 
-> **Korrektur 31.07. (Commit `d37404f`, aus der Prüfung von Aufgabe 5):** Der erste Entwurf
+> **Korrektur 31.07. (Commit `dddc96f`, aus der Prüfung von Aufgabe 5):** Der erste Entwurf
 > hatte hier einen Rückfall auf `cfg.radar.range_nm`, falls `sicht` fehlt. Das war ein Fehler:
 > `console.js` reicht die Ansicht immer durch, `gilt()` liefert immer eine finite Zahl — der
 > Zweig war unerreichbar und ungetestet. Vor allem aber hätte er eine künftig gebrochene
