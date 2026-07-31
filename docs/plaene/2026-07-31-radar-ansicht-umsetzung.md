@@ -92,6 +92,14 @@ Diese gelten für **jede** Aufgabe, auch wo sie nicht wiederholt werden.
   `config.radar.stufen` ist nach `mergeConfig` **nie leer**, aufsteigend sortiert und enthält
   garantiert einen Eintrag mit `range_nm === config.radar.range_nm`.
 
+  > **Nachtrag 31.07. (Commit `5df3afc`, aus der Prüfung von Aufgabe 1):** Die Garantie hielt
+  > zunächst nicht. Bei `range_nm: 5` ohne eigene `rings_nm` filtert `harteStufe` alle
+  > Vorgabe-Ringe (10/25/50) weg, liefert `null`, und die konfigurierte Reichweite fiel aus
+  > der Liste — `gilt()` zeigte dann 10 NM, während `config.radar.range_nm` weiter 5 meldete.
+  > Behoben durch einen Rückfall auf `rings_nm: [range_nm]` (nur der Außenring) für die
+  > **eigene** Stufe; `harteStufe` bleibt für Einträge aus der Konfigurationsliste streng.
+  > Kostet zwei zusätzliche Tests — daher 180 statt 178 nach Aufgabe 1.
+
 - [ ] **Schritt 1: Testdatei `tests/test_ansicht.mjs` anlegen**
 
 ```js
@@ -307,7 +315,7 @@ Erwartet: FAIL. Danach zurückdrehen und erneut laufen — `ℹ fail 0`.
 - [ ] **Schritt 8: Gesamtlauf**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
-Erwartet: `ℹ tests 178`, `ℹ fail 0`
+Erwartet: `ℹ tests 180`, `ℹ fail 0`
 
 - [ ] **Schritt 9: Commit**
 
@@ -425,7 +433,7 @@ zurückdrehen, erneut laufen (`ℹ fail 0`).
 
 - [ ] **Schritt 8: Gesamtlauf und Commit**
 
-Lauf: `node --test tests/*.mjs 2>&1 | tail -9` — erwartet `ℹ tests 182`, `ℹ fail 0`
+Lauf: `node --test tests/*.mjs 2>&1 | tail -9` — erwartet `ℹ tests 184`, `ℹ fail 0`
 
 ```bash
 git add console/js/geo.js console/js/pages/radar.js console/js/pages/profile.js tests/test_geo.mjs
@@ -543,7 +551,7 @@ zurückdrehen, erneut laufen.
 
 - [ ] **Schritt 6: Gesamtlauf und Commit**
 
-Lauf: `node --test tests/*.mjs 2>&1 | tail -9` — erwartet `ℹ tests 186`, `ℹ fail 0`
+Lauf: `node --test tests/*.mjs 2>&1 | tail -9` — erwartet `ℹ tests 188`, `ℹ fail 0`
 
 ```bash
 git add console/js/pages/radar.js tests/test_radar_geometry.mjs
@@ -656,7 +664,7 @@ der Schirm auf 10 steht — eine Anzeige, die die eigene Einstellung falsch meld
 - [ ] **Schritt 4: Gesamtlauf**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
-Erwartet: `ℹ tests 186`, `ℹ fail 0` — **unverändert**. Diese Aufgabe verdrahtet nur um; wer
+Erwartet: `ℹ tests 188`, `ℹ fail 0` — **unverändert**. Diese Aufgabe verdrahtet nur um; wer
 hier eine steigende Zahl erwartet, hat einen Test zuviel geschrieben.
 
 - [ ] **Schritt 5: Commit**
@@ -753,7 +761,7 @@ Im ersten Test die erwartete `10` auf `50` ändern, laufen lassen (FAIL), zurüc
 
 - [ ] **Schritt 7: Gesamtlauf und Commit**
 
-Lauf: `node --test tests/*.mjs 2>&1 | tail -9` — erwartet `ℹ tests 188`, `ℹ fail 0`
+Lauf: `node --test tests/*.mjs 2>&1 | tail -9` — erwartet `ℹ tests 190`, `ℹ fail 0`
 
 ```bash
 git add console/js/pages/profile.js console/js/pages/polar.js tests/test_profile.mjs
@@ -843,7 +851,7 @@ Im ersten Test `['10 NM', '50 NM', '80 NM']` auf `['10 NM', '50 NM']` ändern, l
 
 - [ ] **Schritt 6: Gesamtlauf und Commit**
 
-Lauf: `node --test tests/*.mjs 2>&1 | tail -9` — erwartet `ℹ tests 191`, `ℹ fail 0`
+Lauf: `node --test tests/*.mjs 2>&1 | tail -9` — erwartet `ℹ tests 193`, `ℹ fail 0`
 
 ```bash
 git add console/js/pages/radar.js tests/test_radar_geometry.mjs
@@ -975,7 +983,7 @@ Und vor `planeWechsel('automatisch');` am Ende von `startConsole()`: `zeigeZahnr
 - [ ] **Schritt 4: Gesamtlauf**
 
 Lauf: `node --test tests/*.mjs 2>&1 | tail -9`
-Erwartet: `ℹ tests 191`, `ℹ fail 0` — **unverändert**. Der Dialog ist DOM und wird am Gerät
+Erwartet: `ℹ tests 193`, `ℹ fail 0` — **unverändert**. Der Dialog ist DOM und wird am Gerät
 geprüft, nicht durch eine Attrappe (globale Randbedingung).
 
 - [ ] **Schritt 5: Commit**
