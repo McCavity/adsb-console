@@ -75,6 +75,47 @@ test('stufen: konfigurierte Reichweite bleibt erreichbar, auch wenn kein Ring hi
   assert.deepEqual(eigene.rings_nm, [5]);
 });
 
+// console.json ist die Vorgabe -- auch fuer die Ringe. Bis zum 31.07.2026
+// gewann die eingebaute Stufe, sobald die konfigurierte Reichweite zufaellig
+// auf sie passte: Wer rings_nm aenderte, sah nichts passieren, ohne
+// Fehlermeldung. Genau das prueft dieser Fall.
+test('stufen: konfigurierte Ringe ersetzen die Ringe der passenden Stufe', () => {
+  const cfg = mergeConfig({ radar: { range_nm: 50, rings_nm: [5, 20, 50] } });
+  const fuenfziger = cfg.radar.stufen.filter(s => s.range_nm === 50);
+  assert.equal(fuenfziger.length, 1, 'die Ersetzung darf keine Dublette erzeugen');
+  assert.deepEqual(fuenfziger[0].rings_nm, [5, 20, 50]);
+});
+
+test('stufen: auch die ersetzten Ringe werden gehaertet', () => {
+  // 90 passt nicht in 50 NM -- die Haertung muss auf dem Ersetzungsweg
+  // genauso greifen wie auf dem Ergaenzungsweg, sonst zeichnet die
+  // Radarseite ausserhalb ihres Kreises.
+  const cfg = mergeConfig({ radar: { range_nm: 50, rings_nm: [5, 90, 20, 50] } });
+  const fuenfziger = cfg.radar.stufen.find(s => s.range_nm === 50);
+  assert.deepEqual(fuenfziger.rings_nm, [5, 20, 50]);
+});
+
+// Die Kehrseite: Ohne eigene rings_nm gibt es nichts zu ersetzen. Die
+// Vorgabeliste (DEFAULTS.radar.rings_nm) ist KEINE Angabe aus console.json --
+// wer sie hier durchschlagen liesse, machte aus "range_nm: 10" eine Stufe
+// mit dem einzigen Ring 10 und naehme der 10-NM-Ansicht ihr Gitter.
+test('stufen: ohne eigene Ringliste behaelt die getroffene Stufe ihre Ringe', () => {
+  const cfg = mergeConfig({ radar: { range_nm: 10 } });
+  const zehner = cfg.radar.stufen.find(s => s.range_nm === 10);
+  assert.deepEqual(zehner.rings_nm, [2, 5, 10]);
+});
+
+test('stufen: eine unbrauchbare Ringliste ersetzt nichts', () => {
+  // ['a'] faellt schon bei radar.rings_nm auf die Vorgabe zurueck; eine
+  // leere Liste ist eine Angabe, aber keine, aus der eine Stufe wird.
+  for (const kaputt of [['weit'], [], [0], [-1]]) {
+    const cfg = mergeConfig({ radar: { range_nm: 80, rings_nm: kaputt } });
+    const achtziger = cfg.radar.stufen.find(s => s.range_nm === 80);
+    assert.deepEqual(achtziger.rings_nm, [20, 50, 80],
+      `${JSON.stringify(kaputt)} haette die eingebauten Ringe nicht antasten duerfen`);
+  }
+});
+
 test('stufen: der Normalfall bleibt unberuehrt (35 mit passenden Ringen, 50 ohne Dublette)', () => {
   const mit35 = mergeConfig({ radar: { range_nm: 35, rings_nm: [10, 20, 35] } });
   const fuenfunddreissig = mit35.radar.stufen.find(s => s.range_nm === 35);

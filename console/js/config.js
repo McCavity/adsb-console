@@ -45,17 +45,38 @@ function harteStufe(roh) {
 // 35 NM einstellt, darf sie durch die neue Stufenwahl nicht verlieren --
 // eine neue Funktion, die eine bestehende Konfiguration unerreichbar macht,
 // ist eine Verschlechterung, auch wenn sie mehr kann.
-function bauStufen(rohListe, range_nm, rings_nm) {
+//
+// Dieselbe Zusage gilt fuer die RINGE, und daran fehlte es bis zum
+// 31.07.2026: Passte die konfigurierte Reichweite zufaellig auf eine
+// eingebaute Stufe, gewann deren Ringliste, und rings_nm aus console.json
+// blieb wirkungslos -- ohne Fehlermeldung. Deshalb wird die getroffene
+// Stufe jetzt ERSETZT statt uebergangen.
+//
+// ringeAngegeben trennt dabei zwei Faelle, die sonst zusammenfielen: Die
+// Vorgabeliste aus DEFAULTS ist keine Angabe aus console.json. Wer sie
+// mit-ersetzen liesse, machte aus einem blossen "range_nm: 10" eine Stufe
+// mit dem einzigen Ring 10 -- die 10-NM-Ansicht verloere ihr Gitter, ohne
+// dass jemand danach gefragt haette.
+function bauStufen(rohListe, range_nm, rings_nm, ringeAngegeben) {
   const aus = Array.isArray(rohListe)
     ? rohListe.map(harteStufe).filter(Boolean) : [];
   const liste = aus.length ? aus : DEFAULTS.radar.stufen.map(harteStufe).filter(Boolean);
-  if (!liste.some(s => s.range_nm === range_nm)) {
-    // Passt keiner der konfigurierten Ringe in die eigene Reichweite, faellt
-    // harteStufe auf null zurueck -- dann ist der Aussenring selbst der
-    // sinnvolle Ersatz. Ein Radar ohne inneren Ring ist mager, aber ehrlich;
-    // eine Reichweite, die man nicht mehr waehlen kann, ist ein Verlust.
-    const eigen = harteStufe({ range_nm, rings_nm }) || harteStufe({ range_nm, rings_nm: [range_nm] });
+  const treffer = liste.findIndex(s => s.range_nm === range_nm);
+  // Passt keiner der konfigurierten Ringe in die eigene Reichweite, faellt
+  // harteStufe auf null zurueck -- dann ist der Aussenring selbst der
+  // sinnvolle Ersatz. Ein Radar ohne inneren Ring ist mager, aber ehrlich;
+  // eine Reichweite, die man nicht mehr waehlen kann, ist ein Verlust.
+  if (treffer < 0) {
+    const eigen = harteStufe({ range_nm, rings_nm })
+                  || harteStufe({ range_nm, rings_nm: [range_nm] });
     if (eigen) liste.push(eigen);
+  } else if (ringeAngegeben) {
+    // Hier NICHT auf [range_nm] ausweichen: Die getroffene Stufe hat schon
+    // brauchbare Ringe. Eine Angabe, aus der keine Stufe wird (leere Liste,
+    // nur Werte ueber der Reichweite), laesst sie deshalb unangetastet --
+    // schlechter als vorher darf eine Angabe es nicht machen.
+    const eigen = harteStufe({ range_nm, rings_nm });
+    if (eigen) liste[treffer] = eigen;
   }
   return liste.sort((a, b) => a.range_nm - b.range_nm);
 }
@@ -77,20 +98,23 @@ export function mergeConfig(raw) {
   };
 
   const radarIn = plainObject(src.radar);
+  // Wurde ueberhaupt eine eigene Ringliste angegeben? Die Antwort muss VOR
+  // dem Rueckfall auf die Vorgabe feststehen -- danach sind beide Faelle
+  // nicht mehr unterscheidbar (siehe bauStufen).
+  const ringeAngegeben = Array.isArray(radarIn.rings_nm) &&
+        radarIn.rings_nm.every(n => typeof n === 'number' && n > 0);
   const radar = {
     range_nm: positiveNumber(radarIn.range_nm, DEFAULTS.radar.range_nm),
     sweep_s: positiveNumber(radarIn.sweep_s, DEFAULTS.radar.sweep_s),
     decay_s: positiveNumber(radarIn.decay_s, DEFAULTS.radar.decay_s),
     leader_s: positiveNumber(radarIn.leader_s, DEFAULTS.radar.leader_s),
-    rings_nm: Array.isArray(radarIn.rings_nm) &&
-              radarIn.rings_nm.every(n => typeof n === 'number' && n > 0)
-              ? radarIn.rings_nm.slice() : DEFAULTS.radar.rings_nm.slice(),
+    rings_nm: ringeAngegeben ? radarIn.rings_nm.slice() : DEFAULTS.radar.rings_nm.slice(),
     labels: Array.isArray(radarIn.labels)
             ? radarIn.labels.filter(l => DEFAULTS.radar.labels.includes(l))
             : DEFAULTS.radar.labels.slice(),
     stufen: [],          // Platzhalter, wird direkt darunter gesetzt
   };
-  radar.stufen = bauStufen(radarIn.stufen, radar.range_nm, radar.rings_nm);
+  radar.stufen = bauStufen(radarIn.stufen, radar.range_nm, radar.rings_nm, ringeAngegeben);
 
   const emIn = plainObject(src.emergency);
   const emergency = {
