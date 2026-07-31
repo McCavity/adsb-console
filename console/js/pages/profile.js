@@ -1,4 +1,4 @@
-import { haversineNm, isEmergency, nmToPx } from '../geo.js';
+import { haversineNm, isEmergency, nmToPx, sichtbareRinge } from '../geo.js';
 import { registerPage } from '../console.js';
 import { leerUntertitel } from './gemeinsam.js';
 
@@ -102,8 +102,7 @@ registerPage({
       teile.push(`<line class="g-h" x1="0" y1="${y}" x2="${BILD.breite}" y2="${y}"/>`);
       teile.push(`<text class="g-t" x="4" y="${y - 5}">FL${ft / 100}</text>`);
     }
-    for (const ring of cfg.radar.rings_nm) {
-      if (ring > cfg.radar.range_nm) continue;
+    for (const ring of sichtbareRinge(cfg.radar.rings_nm, cfg.radar.range_nm)) {
       const x = punktX(ring, cfg.radar.range_nm);
       teile.push(`<line class="g-v" x1="${x}" y1="0" x2="${x}" y2="${BILD.hoehe}"/>`);
       teile.push(`<text class="g-t" x="${x + 5}" y="${BILD.hoehe - 6}">${ring} NM</text>`);

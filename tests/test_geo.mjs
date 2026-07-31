@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   haversineNm, bearingDeg, formatBearing, flightLevel,
   formatCallsign, sectorOf, isEmergency, nmToPx, waehleDatenblattZiel,
+  sichtbareRinge,
 } from '../console/js/geo.js';
 
 test('ein Breitengrad ist 60 NM', () => {
@@ -152,4 +153,20 @@ test('Gegenprobe: der Rueckweg ist gleich lang', () => {
   const hin = haversineNm(EMPF.lat, EMPF.lon, EDDF.lat, EDDF.lon);
   const zurueck = haversineNm(EDDF.lat, EDDF.lon, EMPF.lat, EMPF.lon);
   assert.ok(Math.abs(hin - zurueck) < 1e-9);
+});
+
+test('sichtbareRinge: bei Reichweite 10 bleibt von [10,25,50] nur die 10', () => {
+  assert.deepEqual(sichtbareRinge([10, 25, 50], 10), [10]);
+});
+
+test('sichtbareRinge: der Ring AUF der Reichweite bleibt (er ist der Aussenring)', () => {
+  assert.deepEqual(sichtbareRinge([20, 50, 80], 80), [20, 50, 80]);
+});
+
+test('sichtbareRinge: sortiert aufsteigend und wirft Unfug weg', () => {
+  assert.deepEqual(sichtbareRinge([50, 'x', -3, 10, null, 25], 50), [10, 25, 50]);
+});
+
+test('sichtbareRinge: kein Array ergibt eine leere Liste, keinen Fehler', () => {
+  for (const k of [null, undefined, 'nein', 42]) assert.deepEqual(sichtbareRinge(k, 50), []);
 });

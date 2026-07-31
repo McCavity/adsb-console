@@ -1,5 +1,5 @@
 import { haversineNm, bearingDeg, formatBearing, formatCallsign, flightLevel, isEmergency,
-         projectToCanvas } from '../geo.js';
+         projectToCanvas, sichtbareRinge } from '../geo.js';
 import { registerPage } from '../console.js';
 import { msgRate, leerUntertitel } from './gemeinsam.js';
 
@@ -32,7 +32,7 @@ function drawBackground(ctx, cfg, receiver) {
   ctx.translate(CENTER, CENTER);
   ctx.strokeStyle = COL.ring;
   ctx.lineWidth = 1;
-  for (const nm of cfg.radar.rings_nm) {
+  for (const nm of sichtbareRinge(cfg.radar.rings_nm, cfg.radar.range_nm)) {
     const r = nm / cfg.radar.range_nm * R;
     ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
     ctx.fillStyle = COL.ringText;

@@ -100,3 +100,21 @@ export function waehleDatenblattZiel(kandidaten, bisher) {
   }
   return naechster(liste);
 }
+
+// Welche Ringe passen in diese Reichweite? Bis zum 31.07.2026 zeichnete
+// drawBackground() ALLE rings_nm ohne Filter -- unsichtbar, solange
+// [10, 25, 50] zufaellig zu range_nm 50 passte. Mit umschaltbarer
+// Reichweite tritt die Bedingung erstmals ein: bei 10 NM laegen zwei von
+// drei Ringen ausserhalb des Kreises.
+//
+// profile.js hatte die Regel bereits richtig, radar.js nicht. Sie steht
+// deshalb ab jetzt genau einmal hier.
+//
+// Der Ring GENAU AUF der Reichweite bleibt: Er ist der Aussenring, nicht
+// ein Ueberstand.
+export function sichtbareRinge(ringe, rangeNm) {
+  if (!Array.isArray(ringe)) return [];
+  return ringe
+    .filter(n => typeof n === 'number' && Number.isFinite(n) && n > 0 && n <= rangeNm)
+    .sort((a, b) => a - b);
+}
