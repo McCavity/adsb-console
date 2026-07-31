@@ -379,8 +379,11 @@ export const RING_SCHRITT = 25;
 //
 // Die Zwischenringe sind kein Schoenheitsmittel: Ohne sie haette der
 // aeussere Bereich bei gewachsener Skala gar kein Gitter mehr, und die
-// Kopplung an cfg.radar.rings_nm -- wer den Radarmassstab umstellt,
-// verschiebt beide Seiten gemeinsam -- gilt weiterhin fuer die inneren.
+// Kopplung an die Radarringe -- wer den Radarmassstab umstellt, verschiebt
+// beide Seiten gemeinsam -- gilt weiterhin fuer die inneren. Seit Aufgabe 5
+// laeuft diese Kopplung ueber sicht.rings_nm (die Laufzeit-Ansicht aus
+// ansicht.js), nicht mehr ueber cfg.radar.rings_nm direkt -- wer hier nach
+// der Konfiguration sucht, findet die falsche Stelle.
 //
 // Die Formel garantiert, dass der aeusserste Abstand echt ueber
 // RING_MAX_LUECKE - RING_SCHRITT und hoechstens RING_MAX_LUECKE liegt: Ein
@@ -416,7 +419,7 @@ registerPage({
       </div>
       <div class="polar-spalte value"></div>`;
   },
-  render(el, cfg, state) {
+  render(el, cfg, state, sicht) {
     const svg = el.querySelector('.polar-svg');
     const spalte = el.querySelector('.polar-spalte');
     const m = polarModell(state.range);
@@ -443,7 +446,7 @@ registerPage({
     // Flaechenradius 56,1 px, 10-NM-Ring bei 34,5 px -- der Ring war
     // unsichtbar, und seine Beschriftung stand mitten in der Flaeche und
     // zeigte auf nichts.
-    const ringListe = ringe(m.skalaNm, cfg.radar.rings_nm);
+    const ringListe = ringe(m.skalaNm, sicht.rings_nm);
     const ringGitter = [];
     // Die Radialen ZUERST in ringGitter, die Ringkreise danach: Beide
     // landen ueber der Flaeche (ringGitter wird ganz zum Schluss
@@ -451,7 +454,7 @@ registerPage({
     // liegen, nicht die Radialen -- dieselbe Reihenfolge-Regel wie zwischen
     // Flaeche und Gitter oben, nur eine Ebene tiefer.
     //
-    // radialen() bekommt dieselbe berechnete Liste, nicht cfg.radar.rings_nm
+    // radialen() bekommt dieselbe berechnete Liste, nicht sicht.rings_nm
     // direkt: Sind dort gar keine brauchbaren Ringe angegeben, liefert
     // radialen() sonst ein leeres Gitter, waehrend Ringe trotzdem gezeichnet
     // wuerden -- mit ringListe haben die Radialen immer einen Anker. Bei

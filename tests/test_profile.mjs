@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { hoehenprofil, BAENDER, FL_MAX, BILD, punktX, punktY } from '../console/js/pages/profile.js';
+import { hoehenprofil, BAENDER, FL_MAX, BILD, punktX, punktY, profilReichweite } from '../console/js/pages/profile.js';
+import { mergeConfig } from '../console/js/config.js';
+import { erzeugeAnsicht, setzeStufe, gilt } from '../console/js/ansicht.js';
 
 const RCV = { lat: 50.0, lon: 9.0 };
 // 50.05 / 9.05 liegt rund 4 NM vom erfundenen Empfaenger entfernt,
@@ -172,4 +174,20 @@ test('punktY bildet die halbe Hoehe auf die Bildmitte ab', () => {
 test('ein anderer Maszstab verschiebt beide Enden mit', () => {
   assert.ok(punktX(0, 25) - BILD.punkt >= 0);
   assert.ok(punktX(25, 25) + BILD.punkt <= BILD.breite);
+});
+
+// Der Seitenriss zeigt dieselben Ziele wie der Radarschirm. Stellt jemand
+// die Reichweite auf 10 NM und das Profil rechnet weiter auf 50, dann
+// widersprechen sich zwei Seiten desselben Geraets -- und zwar lautlos,
+// weil beide fuer sich plausibel aussehen.
+test('Hoehenprofil folgt der umgeschalteten Reichweite, nicht der Config', () => {
+  const cfg = mergeConfig({});
+  const sicht = gilt(setzeStufe(erzeugeAnsicht(), 0), cfg);   // 10 NM
+  assert.equal(profilReichweite(cfg, sicht), 10);
+  assert.notEqual(profilReichweite(cfg, sicht), cfg.radar.range_nm);
+});
+
+test('ohne Umschaltung ist die Profil-Reichweite die konfigurierte', () => {
+  const cfg = mergeConfig({});
+  assert.equal(profilReichweite(cfg, gilt(erzeugeAnsicht(), cfg)), cfg.radar.range_nm);
 });
