@@ -76,8 +76,17 @@ nachziehen.
 
 ## Was daraus für den Deploy folgt
 
-Der Ausfall lag zeitlich hinter zwei `rsync`-Trockenläufen und einem `tar` über rund
-zehntausend lose Git-Objekte. Ein Zusammenhang ist **nicht belegt** — und die naheliegenden
-Mechanismen sind oben gerade ausgeschlossen. Trotzdem trägt der Spiegel-Befehl im README seit
-dem 31.07. ein `--exclude '.git'`: Der Baum auf dem Gerät existiert, damit die Installer
-daraus lesen können, die Historie braucht es dafür nicht. Der Lauf dauert damit **1,1 s**.
+Der Ausfall lag zeitlich hinter zwei `rsync`-Trockenläufen und einem `tar` über das
+Geräte-`.git`. Ein Zusammenhang ist **nicht belegt**, und die naheliegenden Mechanismen sind
+oben ausgeschlossen.
+
+> [!warning]
+> Die erste Fassung dieses Abschnitts sprach von „rund zehntausend losen Git-Objekten".
+> Nachgezählt sind es **883 Objekte, 6,2 MB, 341 Dateien im rsync-Vergleich** — für einen
+> Pi keine nennenswerte Last. Die Zahl war geschätzt und hat die Lasthypothese größer
+> aussehen lassen, als sie ist. Wer eine Größenordnung in eine Ursachenanalyse schreibt,
+> ohne sie zu zählen, stützt damit genau die Erklärung, die er sucht.
+
+Der Spiegel-Befehl im README trägt trotzdem seit dem 31.07. ein `--exclude '.git'` — nicht
+als Fehlerbehebung, sondern weil der Lauf damit **1,1 s** dauert und die Historie auf dem
+Gerät niemand braucht.
