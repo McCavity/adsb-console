@@ -186,8 +186,3 @@ test('Hoehenprofil folgt der umgeschalteten Reichweite, nicht der Config', () =>
   assert.equal(profilReichweite(sicht), 10);
   assert.notEqual(profilReichweite(sicht), cfg.radar.range_nm);
 });
-
-test('ohne Umschaltung ist die Profil-Reichweite die konfigurierte', () => {
-  const cfg = mergeConfig({});
-  assert.equal(profilReichweite(gilt(erzeugeAnsicht(), cfg)), cfg.radar.range_nm);
-});

@@ -26,7 +26,7 @@ async function loadAirports() {
   return airports;
 }
 
-function drawBackground(ctx, cfg, receiver, sicht) {
+function drawBackground(ctx, receiver, sicht) {
   ctx.clearRect(0, 0, SIZE, SIZE);
   ctx.save();
   ctx.translate(CENTER, CENTER);
@@ -109,7 +109,13 @@ export function hintergrundSignatur(sicht) {
 // nichts ueber Radar. Spaetere Layer -- Staedte, Sektoren, Luftraeume,
 // Anflug- und Holding-Muster -- legen hier einen Eintrag dazu, statt die
 // Kopfzeile anzufassen.
-export function radarEinstellungen(cfg, sicht) {
+//
+// Ohne cfg: Die Stufenliste kommt vollstaendig aus sicht (ansicht.js hat
+// Bootvertrag und Ueberschreibung dort schon EINMAL verrechnet). Ein
+// Parameter, den eine reine Funktion nicht liest, behauptet eine
+// Abhaengigkeit, die es nicht gibt. Der HOOK unten behaelt cfg trotzdem --
+// er muss zum Aufrufmuster von mount/render passen.
+export function radarEinstellungen(sicht) {
   return [
     { kennung: 'stufe', beschriftung: 'Reichweite', art: 'auswahl',
       wert: sicht.stufeIndex,
@@ -123,7 +129,7 @@ registerPage({
   id: 'radar',
   title: 'Radar',
   ageSource: 'aircraft',
-  einstellungen(cfg, sicht) { return radarEinstellungen(cfg, sicht); },
+  einstellungen(cfg, sicht) { return radarEinstellungen(sicht); },
   mount(el, cfg, state, sicht) {
     // Drei Ebenen: eine gezeichnete (Hintergrund) und zwei, die der
     // Compositor bewegt. Kein requestAnimationFrame, keine Bildschleife.
@@ -158,7 +164,7 @@ registerPage({
     const c = el._ctx;
     const sig = hintergrundSignatur(sicht);
     if (c.bgSig !== sig && state.receiver) {
-      drawBackground(c.bg, cfg, state.receiver, sicht);
+      drawBackground(c.bg, state.receiver, sicht);
       c.bgSig = sig;
     }
     // Der Entfernungsfilter laeuft ueber inReichweite (geo.js) -- dieselbe

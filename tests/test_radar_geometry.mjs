@@ -57,7 +57,7 @@ test('Signatur: gleiche Reichweite, andere Ringe ergibt eine andere Zeichenkette
 
 test('Einstellungen: Reichweitenauswahl bietet genau die konfigurierten Stufen', () => {
   const cfg = mergeConfig({});
-  const e = radarEinstellungen(cfg, gilt(erzeugeAnsicht(), cfg));
+  const e = radarEinstellungen(gilt(erzeugeAnsicht(), cfg));
   const auswahl = e.find(x => x.kennung === 'stufe');
   assert.deepEqual(auswahl.optionen.map(o => o.wert), [0, 1, 2]);
   assert.deepEqual(auswahl.optionen.map(o => o.text), ['10 NM', '50 NM', '80 NM']);
@@ -65,12 +65,12 @@ test('Einstellungen: Reichweitenauswahl bietet genau die konfigurierten Stufen',
 
 test('Einstellungen: der aktuelle Wert ist die aktive Stufe, nicht die Vorgabe', () => {
   const cfg = mergeConfig({});
-  const e = radarEinstellungen(cfg, gilt(setzeStufe(erzeugeAnsicht(), 2), cfg));
+  const e = radarEinstellungen(gilt(setzeStufe(erzeugeAnsicht(), 2), cfg));
   assert.equal(e.find(x => x.kennung === 'stufe').wert, 2);
 });
 
 test('Einstellungen: der Flugplatz-Schalter spiegelt den Layer-Zustand', () => {
   const cfg = mergeConfig({});
   const aus = gilt(schalteLayer(erzeugeAnsicht(), 'airports', false), cfg);
-  assert.equal(radarEinstellungen(cfg, aus).find(x => x.kennung === 'airports').wert, false);
+  assert.equal(radarEinstellungen(aus).find(x => x.kennung === 'airports').wert, false);
 });

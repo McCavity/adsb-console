@@ -136,6 +136,19 @@ export async function startConsole() {
 
   function schliesseDialog() { panel.hidden = true; panel.innerHTML = ''; }
 
+  // Heute sind alle Quellen des Dialogs Literale oder gehaertete Zahlen --
+  // die Luecke gibt es also noch nicht. Sie entstuende aber, ohne dass
+  // jemand diese Datei anfasst: einstellungen() ist der vorgesehene
+  // Anschlusspunkt fuer spaetere Layer (Staedte, Sektoren, Luftraeume), und
+  // deren Beschriftungen kaemen aus einer Datendatei. Ein Anschlusspunkt,
+  // der erst beim zweiten Eintrag sicher wird, ist eine Falle fuer den, der
+  // ihn benutzt.
+  function escapeHtml(v) {
+    return String(v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
   function baueDialog() {
     const page = pages.get(order[current]);
     let eintraege;
@@ -147,11 +160,11 @@ export async function startConsole() {
       cog.hidden = true; schliesseDialog(); return;
     }
     panel.innerHTML = eintraege.map(e => e.art === 'auswahl'
-      ? `<div class="setzeile"><span>${e.beschriftung}</span><span class="segmente">${
+      ? `<div class="setzeile"><span>${escapeHtml(e.beschriftung)}</span><span class="segmente">${
           e.optionen.map(o => `<button data-k="${e.kennung}" data-w="${o.wert}"${
-            o.wert === e.wert ? ' class="an"' : ''}>${o.text}</button>`).join('')
+            o.wert === e.wert ? ' class="an"' : ''}>${escapeHtml(o.text)}</button>`).join('')
         }</span></div>`
-      : `<div class="setzeile"><span>${e.beschriftung}</span><button data-k="${e.kennung}"
+      : `<div class="setzeile"><span>${escapeHtml(e.beschriftung)}</span><button data-k="${e.kennung}"
            data-w="${e.wert ? 'aus' : 'an'}" class="schalter${e.wert ? ' an' : ''}">${
            e.wert ? 'an' : 'aus'}</button></div>`).join('');
     panel.hidden = false;
@@ -189,6 +202,13 @@ export async function startConsole() {
   function goTo(index, ausloeser = 'automatisch', wischRichtung = null) {
     const next = ((index % order.length) + order.length) % order.length;
     try {
+      // VOR dem Vergleich, nicht darin: Bei genau einer aktiven Seite ist
+      // next immer current, der Block darunter wird nie betreten -- und der
+      // Dialog bliebe offen, bis ihn jemand von Hand schliesst. Eine Seite
+      // ist erreichbar: ueber config.pages und ueber den Notfall-Rueckfall
+      // activePages = ['radar']. Die Zusage "kann per Konstruktion nicht
+      // offen steckenbleiben" galt bis zum 31.07.2026 nur ab zwei Seiten.
+      schliesseDialog();
       if (next !== current) {
         const alt = els.get(order[current]);
         alt.classList.remove('active');
@@ -199,7 +219,6 @@ export async function startConsole() {
         }
         current = next;
         betrete(current);
-        schliesseDialog();
         zeigeZahnrad();
         renderCurrent();
         const neu = els.get(order[current]);
