@@ -104,10 +104,26 @@ export function hintergrundSignatur(sicht) {
   return [sicht.range_nm, sicht.rings_nm.join(','), sicht.layer.airports ? 'ap' : '-'].join('|');
 }
 
+// Was die Radarseite im Einstellungsdialog anbietet. Bewusst DATEN, keine
+// DOM-Bauerei: Der Dialog (console.js) kennt nur diese Form und weiss
+// nichts ueber Radar. Spaetere Layer -- Staedte, Sektoren, Luftraeume,
+// Anflug- und Holding-Muster -- legen hier einen Eintrag dazu, statt die
+// Kopfzeile anzufassen.
+export function radarEinstellungen(cfg, sicht) {
+  return [
+    { kennung: 'stufe', beschriftung: 'Reichweite', art: 'auswahl',
+      wert: sicht.stufeIndex,
+      optionen: sicht.stufen.map((s, i) => ({ wert: i, text: `${s.range_nm} NM` })) },
+    { kennung: 'airports', beschriftung: 'Flugplätze', art: 'schalter',
+      wert: sicht.layer.airports },
+  ];
+}
+
 registerPage({
   id: 'radar',
   title: 'Radar',
   ageSource: 'aircraft',
+  einstellungen(cfg, sicht) { return radarEinstellungen(cfg, sicht); },
   mount(el, cfg, state, sicht) {
     // Drei Ebenen: eine gezeichnete (Hintergrund) und zwei, die der
     // Compositor bewegt. Kein requestAnimationFrame, keine Bildschleife.
