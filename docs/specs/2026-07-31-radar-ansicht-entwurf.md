@@ -343,17 +343,47 @@ klären.
 
 ## 12. Erfolgskriterien
 
-- [ ] Reichweite am Panel zwischen 10 / 50 / 80 NM umschaltbar, Ringe wandern mit
-- [ ] **Höhenprofil** folgt der Umschaltung; die **Reichweite-Seite ausdrücklich nicht** (siehe
+Jedes Häkchen nennt seinen Beleg. Ein abgehaktes Kriterium ohne Fundstelle ist eine
+Statuszeile, und die lügt irgendwann.
+
+- [x] Reichweite am Panel zwischen 10 / 50 / 80 NM umschaltbar, Ringe wandern mit
+      — [Abnahme §7](../abnahme/2026-07-31-radar-ansicht.md), durchgeschaltet *und zurück*;
+      unabhängig per `grim` nachgemessen: Kachel zeigt `80 NM · Ringe 20 · 50 · 80`
+- [x] **Höhenprofil** folgt der Umschaltung; die **Reichweite-Seite ausdrücklich nicht** (siehe
       Korrektur in Abschnitt 4.3) — sie bleibt am Bootvertrag, weil ihre Skala eine andere ist
-- [ ] Einzelziel-Seite und Tafel filtern mit der eingestellten Reichweite — kein Ziel, das das
+      — Abnahme §7: „Höhenprofil bei 10 NM: beschriftet 10 NM" *und* „Reichweite-Seite bei
+      10 NM: Gitter unverändert"
+- [x] Einzelziel-Seite und Tafel filtern mit der eingestellten Reichweite — kein Ziel, das das
       Radar als „außer Reichweite" behandelt, taucht fünfzehn Sekunden später als volles
       Datenblatt auf
-- [ ] Flugplätze ein- und ausblendbar
-- [ ] Zahnrad nur auf Seiten mit Einstellungen
-- [ ] Dialog kann nicht offen steckenbleiben (60-Sekunden-Nachweis am Gerät)
-- [ ] Der Kopplungstest (Höhenprofil/Radar) war vor der Änderung rot und ist danach grün
-- [ ] Der Ring-Überstand bei 10 NM wurde vor dem Filter am Gerät im Bild gesehen
-- [ ] Fotosession mit synthetischer Quelle gelaufen, Gegenprobe leer und der Grep einmal
+      — Abnahme §7: „Tafel und Einzelziel bei 10 NM: kein Ziel jenseits von 10 NM mehr"
+- [x] Flugplätze ein- und ausblendbar — Abnahme §7: „Flugplätze aus, **und wieder an**"
+- [x] Zahnrad nur auf Seiten mit Einstellungen — Abnahme §7: „auf eine andere Seite blättern
+      → Zahnrad verschwindet"
+- [x] Dialog kann nicht offen steckenbleiben (60-Sekunden-Nachweis am Gerät) — Abnahme §7,
+      dazu der Gegenfall „im 50-s-Takt tippen → bleibt offen, schließt danach trotzdem"
+- [x] Der Kopplungstest (Höhenprofil/Radar) war vor der Änderung rot und ist danach grün
+      — `tests/test_profile.mjs`, eingeführt mit `ea3a8ce`.
+      **Mit einer Einschränkung, die hier hingehört:** Vor der Änderung las das Profil
+      `cfg.radar.range_nm` direkt in der Render-Closure, `profilReichweite()` gab es nicht.
+      Der Rot-Lauf war damit ein **Importfehler** — er belegt die fehlende Funktion, nicht das
+      Fehlverhalten. Aussagekräftig wäre erst ein zweiter Rot-Lauf gewesen, in dem die neue
+      Funktion mit dem *alten* Verhalten drinsteht. So gemacht wurde es am 31.07. bei
+      `ringBeschriftung()` (`docs/messungen/2026-07-31-fotosession.md`).
+- [ ] ~~Der Ring-Überstand bei 10 NM wurde vor dem Filter am Gerät im Bild gesehen~~
+      **Kriterium zurückgezogen: Es beschreibt eine Beobachtung, die es nicht geben konnte.**
+      Die Messung in [Abnahme §2](../abnahme/2026-07-31-radar-ansicht.md) zeigt, daß die
+      überzähligen Ringe außerhalb der 620-px-Leinwand lagen und deshalb abgeschnitten, also
+      unsichtbar waren. Der Defekt war nie ein sichtbarer Überstand, sondern: **Die
+      Maßstabskachel behauptete drei Ringe, von denen zwei gar nicht im Bild sein konnten.**
+      In dieser Form ist er belegt. Wer eine Vorhersage in einen Prüfplan schreibt, ohne sie
+      zu rechnen, prüft am Ende gegen die eigene Erwartung.
+- [x] Fotosession mit synthetischer Quelle gelaufen, Gegenprobe leer und der Grep einmal
       absichtlich rot gewesen
-- [ ] Konsole nach der Session verifiziert zurück auf der echten Quelle
+      — [Fotosession](../messungen/2026-07-31-fotosession.md): 105 Kennungen ohne Treffer,
+      Köder `EWG6AZ` schlägt an; kein Bild trägt einen Metadatenblock, Köder-JPEG mit GPS
+      wird gefunden
+- [x] Konsole nach der Session verifiziert zurück auf der echten Quelle
+      — 31.07. nach dem Public-Schalten: Kiosk auf `http://127.0.0.1/atc/`, `data.js` liest
+      `/skyaware/data/`, kein synthetischer Unterbaum im Docroot, Quelle liefert 18 echte
+      Ziele (Zeitstempel 0,2 s alt), **null** `SYN`-Kennungen
