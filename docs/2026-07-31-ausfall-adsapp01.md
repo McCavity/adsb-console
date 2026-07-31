@@ -114,6 +114,17 @@ Kein Leck: Nach den Läufen sind alle zwölf laufenden Chromium-Prozesse **4363 
 vom Kiosk-Start — keiner stammt aus den Testläufen, und die Dateideskriptoren fallen auf den
 Ausgangswert zurück.
 
+**Von außen gegengeprüft, unabhängig von den Zahlen aus dem Gerät:** Eine Sonde vom
+Arbeitsplatz aus fragte 20 Minuten lang alle 5 s Ping, Port 22 und HTTP ab — **240 Meßpunkte,
+fünf Störungen, und alle fünf im Fenster des abschließenden `reboot`** (22:06:36–22:07:11).
+Während der gesamten Last war das Gerät durchgehend erreichbar. Am Ausfallabend zeigte
+dieselbe Sonde fünf Minuten am Stück `ssh=zu` und `http=000`.
+
+Der Unterschied im Verlauf ist dabei aufschlußreich: Beim gewollten Neustart geht zuerst SSH,
+dann HTTP, dann der Ping — und nach 25 s ist alles zurück. Am Ausfallabend blieb der **Ping
+minutenlang beantwortet**, während der Userspace schon stand. Ein geordnetes Herunterfahren
+sieht anders aus als das, was dort passiert ist.
+
 **Damit ist die Lasthypothese erledigt.** Sie war ohnehin nur eine zeitliche Koinzidenz, und
 die Zahl, die sie stützte, war geschätzt (siehe Warnung oben). Die Ursache des Ausfalls
 bleibt unbekannt.
