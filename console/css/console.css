@@ -292,3 +292,19 @@ html, body {
   font-display: block;
 }
 .radar-wrap .blip .lab { font-family: 'B612Mono', ui-monospace, monospace; }
+
+#cog { background: none; border: 0; color: var(--slate, #7f93a8); font-size: 22px;
+       line-height: 1; padding: 0 10px; cursor: pointer; }
+#cog[hidden] { display: none; }
+#settings { position: absolute; top: 56px; right: 12px; z-index: 20;
+            background: #0d1620; border: 1px solid #24425c; border-radius: 6px;
+            padding: 10px 12px; min-width: 320px; }
+#settings[hidden] { display: none; }
+.setzeile { display: flex; align-items: center; justify-content: space-between;
+            gap: 18px; padding: 7px 0; font-size: 17px; }
+.segmente button, .schalter { background: #16273a; border: 1px solid #24425c;
+            color: #b7c8d8; font: inherit; padding: 5px 11px; cursor: pointer; }
+.segmente button:first-child { border-radius: 4px 0 0 4px; }
+.segmente button:last-child { border-radius: 0 4px 4px 0; }
+.schalter { border-radius: 4px; min-width: 62px; }
+.segmente button.an, .schalter.an { background: #1d4f74; color: #eaf4ff; }

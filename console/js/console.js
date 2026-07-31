@@ -1,7 +1,7 @@
 import { loadConfig } from './config.js';
 import { createDataStore, ageState } from './data.js';
 import { naechsterWechsel } from './carousel.js';
-import { erzeugeAnsicht, gilt } from './ansicht.js';
+import { erzeugeAnsicht, gilt, setzeStufe, schalteLayer } from './ansicht.js';
 
 const pages = new Map();          // id -> {id, title, ageSource, mount, render, onEnter?}
 let aenderer = null;
@@ -123,6 +123,56 @@ export async function startConsole() {
     if (ausloeser === 'beruehrung') resumeTimer = timer; else rotateTimer = timer;
   }
 
+  const cog = document.getElementById('cog');
+  const panel = document.getElementById('settings');
+
+  // Zahnrad nur, wo es etwas zu stellen gibt. Ein Knopf, der auf fuenf von
+  // sieben Seiten nichts tut, ist schlimmer als keiner.
+  function zeigeZahnrad() {
+    const page = pages.get(order[current]);
+    cog.hidden = !(page && typeof page.einstellungen === 'function');
+    if (cog.hidden) schliesseDialog();
+  }
+
+  function schliesseDialog() { panel.hidden = true; panel.innerHTML = ''; }
+
+  function baueDialog() {
+    const page = pages.get(order[current]);
+    let eintraege;
+    try {
+      eintraege = page.einstellungen(config, gilt(ansicht, config));
+    } catch (_) {
+      // Eine Seite, deren Einstellungen werfen, darf die Konsole nicht
+      // anhalten -- dieselbe Haltung wie das finally in goTo().
+      cog.hidden = true; schliesseDialog(); return;
+    }
+    panel.innerHTML = eintraege.map(e => e.art === 'auswahl'
+      ? `<div class="setzeile"><span>${e.beschriftung}</span><span class="segmente">${
+          e.optionen.map(o => `<button data-k="${e.kennung}" data-w="${o.wert}"${
+            o.wert === e.wert ? ' class="an"' : ''}>${o.text}</button>`).join('')
+        }</span></div>`
+      : `<div class="setzeile"><span>${e.beschriftung}</span><button data-k="${e.kennung}"
+           data-w="${e.wert ? 'aus' : 'an'}" class="schalter${e.wert ? ' an' : ''}">${
+           e.wert ? 'an' : 'aus'}</button></div>`).join('');
+    panel.hidden = false;
+  }
+
+  cog.addEventListener('pointerup', e => {
+    e.stopPropagation();
+    if (panel.hidden) baueDialog(); else schliesseDialog();
+    planeWechsel('beruehrung');
+  });
+
+  panel.addEventListener('pointerup', e => {
+    e.stopPropagation();
+    const b = e.target.closest('button');
+    if (!b) { planeWechsel('beruehrung'); return; }
+    const k = b.dataset.k, w = b.dataset.w;
+    ansichtAendern(z => k === 'stufe' ? setzeStufe(z, Number(w))
+                                      : schalteLayer(z, k, w === 'an'));
+    baueDialog();
+  });
+
   // ausloeser: Was den Wechsel anstoesst -- 'automatisch' (der Umlauf) oder
   // 'beruehrung' (Wisch/Tipp/Punkt). Ausdruecklich als Parameter und nicht
   // ueber die Aufrufreihenfolge: Vorher rief die Touch-Behandlung erst
@@ -149,6 +199,8 @@ export async function startConsole() {
         }
         current = next;
         betrete(current);
+        schliesseDialog();
+        zeigeZahnrad();
         renderCurrent();
         const neu = els.get(order[current]);
         raeumeWisch(neu);
@@ -194,6 +246,7 @@ export async function startConsole() {
   renderCurrent();
   tickClock();
   setInterval(tickClock, 1000);
+  zeigeZahnrad();
   planeWechsel('automatisch');
 
   // Naechtlicher Reload -- nur wenn die Quelle vorher antwortet. Ohne diese
