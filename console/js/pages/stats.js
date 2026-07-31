@@ -57,7 +57,7 @@ registerPage({
         </tbody>
       </table>
       <div class="stats-foot">
-        <span>Verstaerkung <b>${n(s.gain)} dB</b></span>
+        <span>Verstärkung <b>${n(s.gain)} dB</b></span>
         <span>Tracks <b>${s.tracks?.all ?? '—'}</b></span>
         <span>davon single-message <b>${s.tracks?.single_message ?? '—'}</b></span>
         <span>unreliable <b>${s.tracks?.unreliable ?? '—'}</b></span>

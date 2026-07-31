@@ -3,7 +3,8 @@
 > 31.07.2026 · Gerät `adsapp01` · Chromium 150.0.7871.181 (Debian 13, aarch64)
 > Anlaß: Bilder für die Veröffentlichung; Vorbedingung war [Spec 11](2026-07-31-spec-11-frischeanzeige.md)
 > Ergebnis: **sieben Bilder in `docs/bilder/`**, beide Gegenproben grün und beide
-> Detektoren nachweislich rot-fähig. **Zwei Darstellungsfehler gefunden**, siehe unten.
+> Detektoren nachweislich rot-fähig. **Zwei Darstellungsfehler gefunden und behoben**,
+> beide mit einem Test, der vorher rot war — siehe unten.
 
 ## Warum synthetisch
 
@@ -105,21 +106,47 @@ Der erste Entwurf dieses Detektors suchte das GPS-Tag als Byte-Muster und löste
 Kalibrierung **nicht** aus, obwohl GPS drinstand — ein Zweig, der ohne den erzwungenen
 Fehlerfall nie betreten worden wäre. Er parst den TIFF-Kopf jetzt wirklich.
 
-## Zwei Darstellungsfehler, die dabei aufgefallen sind
+## Zwei Darstellungsfehler, die dabei aufgefallen sind — und behoben wurden
 
-**1. Höhenprofil: das äußerste Achsenlabel steht außerhalb der Leinwand.** `profile.js:121`
-zeichnet die Ringbeschriftung stur bei `x + 5`. Der äußerste Ring ist per Konstruktion immer
-gleich der Reichweite, liegt also bei x = 692 von 700 — das Label `50 NM` beginnt bei 697,
-braucht rund 33 px und ragt **30 px** hinaus. Gerechnet für alle drei Stufen: 10, 50 und 80 NM
-ergeben denselben Überstand, der Fehler tritt also **immer** auf. Im Bild ist von `50 NM` nur
-die `5` übrig.
+**1. Höhenprofil: das äußerste Achsenlabel steht außerhalb der Leinwand.** `profile.js`
+zeichnete die Ringbeschriftung stur bei `x + 5`. Der äußerste Ring ist per Konstruktion immer
+gleich der Reichweite, liegt also bei x = 692 von 700 — das Label `50 NM` beginnt bei 697 und
+ragt **36,1 px** hinaus. Der Überstand ist gerechnet, nicht geschätzt: Die Zeichenbreite wurde
+mit `getComputedTextLength()` im Chromium des Geräts gegen die echte `console.css` gemessen —
+**7,83** Nutzereinheiten je Zeichen, `50 NM` also 39,14. Eine geschätzte Breite hätte den
+Überstand um 6 px zu klein gerechnet.
 
-Das ist dieselbe Fehlerklasse wie EDFJ am Radarrand am 27.07. — dort weicht die Beschriftung
-inzwischen auf die Seite aus, auf der Platz ist (`radar.js`, `passtRechts`). Das Geschwister
-auf der Nachbarseite ist damals nicht mitgezogen worden.
+Für alle drei Stufen gerechnet: 10, 50 und 80 NM ergeben denselben Überstand, der Fehler trat
+also **immer** auf. Im Bild war von `50 NM` nur die `5` übrig.
 
-**2. `Verstaerkung` statt `Verstärkung`** auf der Empfangsseite (`stats.js:60`). Einziger
-Digraph im sichtbaren UI-Text; `Daemon` daneben ist ein Fachbegriff und bleibt.
+Dieselbe Fehlerklasse wie EDFJ am Radarrand am 27.07. — dort weicht die Beschriftung längst
+auf die Seite aus, auf der Platz ist (`radar.js`, `passtRechts`). Das Geschwister auf der
+Nachbarseite war damals nicht mitgezogen worden.
+
+**Behoben** mit `ringBeschriftung()` als reiner Funktion. Der erste Rot-Lauf konnte nur ein
+Importfehler sein (die Funktion gab es noch nicht) und belegt nichts; aussagekräftig ist der
+zweite, in dem die Funktion mit dem **alten** Verhalten drinstand: `Beschriftung endet bei
+736.1 > 700`. Danach grün.
+
+**2. `Verstaerkung` statt `Verstärkung`** auf der Empfangsseite. **Behoben**, mit einem
+Wächter über den sichtbaren UI-Text (`tests/test_ui_text.mjs`).
+
+Der Wächter hat sich zweimal selbst korrigiert, bevor er etwas taugte:
+
+- Die erste Fassung las **Kommentare** mit. Der Quelltext dieses Projekts ist bewußt ohne
+  Umlaute kommentiert — sie beantwortete also eine andere Frage als die gestellte.
+- Die zweite verbrauchte beim Zerlegen das `<` des nächsten Tags. In `stats.js` fraß der
+  Treffer auf `<div class="stats-foot">` genau das `<` von `<span>`, und `Verstaerkung` —
+  der Fall, dessentwegen der Test existiert — wurde übersprungen. **Der Test meldete grün,
+  während der Fehler dastand.** Aufgefallen ist das allein am eingebauten Kalibrierfall.
+
+Er prüft bewußt nur `ae`/`oe`: `ue` und `ss` kommen in korrektem Deutsch ständig vor
+(„Ste**ue**rung"), eine Blanko-Regel darauf fände vor allem sich selbst. Für solche Fälle
+gibt es eine explizite Wortliste.
+
+Als `grep` war der Test nicht zu haben: `grep -E '>[^<>]*ae[^<>]*<'` findet die Zeile auf
+diesem Rechner **nicht**, dieselbe Regex in Python schon — dieselbe Werkzeugfalle wie
+`git grep -o` am 31.07.
 
 ## Der Wächter hat mich selbst erwischt
 
@@ -148,10 +175,12 @@ sind identisch. Reproduzierbar ist die Szene, nicht das Einzelbild.
 
 ## Offen für die Veröffentlichung
 
-- Die beiden Fehler oben sind Einzeiler, aber sie stehen im Bild. Vor Schritt 3 zu entscheiden.
+- Beide Fehler sind behoben, `hoehenprofil.png` und `empfang.png` neu aufgenommen. Der Fix
+  liegt aber **nur im Repo** — das Panel zeigt weiter den alten Stand, bis regulär ausgerollt
+  wird.
 - Die Systemseite zeigt **72,1 °C** und damit orange, weil das die eigene Abnahmegrenze ist.
-  Der Wert ist echt gemessen und die Markenlogik arbeitet korrekt — die Frage ist nur, ob das
-  ins README soll. Ein Bild bei kühlerem Gerät wäre in Minuten neu geschossen.
+  Bleibt so: Der Wert ist echt gemessen, die Markenlogik arbeitet korrekt, und im Raum sind
+  30,5 °C — das Bild zeigt schlicht, daß es warm ist.
 - Der Flugplatz-Layer läßt sich nur zur Laufzeit am Zahnrad abschalten, nicht über
   `console.json`. Ein aufgeräumtes Radarbild ohne Flugplätze ist headless deshalb nicht zu
   bekommen, ohne den Dialog zu bedienen.

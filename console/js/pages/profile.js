@@ -77,6 +77,31 @@ export function punktY(altFt) {
   return BILD.rand + (1 - altFt / FL_MAX) * (BILD.hoehe - 2 * BILD.rand);
 }
 
+// Breite eines Zeichens der Achsenschrift in Nutzereinheiten des viewBox.
+// GEMESSEN, nicht geschaetzt: getComputedTextLength() im Chromium des
+// Geraets gegen die echte console.css ergab 7,83 fuer "M" und 39,14 fuer
+// "50 NM" (13px ui-monospace). Eine geschaetzte Breite haette den Ueberstand
+// unten um 6 px zu klein gerechnet.
+export const ZEICHEN_PX = 7.83;
+
+// Wo steht die Beschriftung eines Entfernungsrings?
+//
+// Rein und exportiert, aus demselben Grund wie punktX: In der Render-Closure
+// hat monatelang niemand gesehen, dass der aeusserste Ring seine Beschriftung
+// aus dem Bild schiebt.
+// Sie weicht auf die Seite aus, auf der Platz ist -- dieselbe Regel, die das
+// Radar seit dem 27.07. fuer Flugplatzkennungen anwendet (radar.js,
+// passtRechts). Sie war dort noetig, weil EDFJ am oestlichen Rand bis auf das
+// J abgeschnitten war; hier ist es der aeusserste Ring, der per Konstruktion
+// IMMER auf der Reichweite sitzt und damit immer am Rand steht.
+export function ringBeschriftung(nm, rangeNm) {
+  const x = punktX(nm, rangeNm);
+  const breite = `${nm} NM`.length * ZEICHEN_PX;
+  return x + 5 + breite <= BILD.breite
+    ? { x: x + 5, anchor: 'start' }
+    : { x: x - 5, anchor: 'end' };
+}
+
 // Eine Stelle, an der die Reichweite des Seitenrisses herkommt. Solange es
 // zwei gab (Config hier, Ansicht im Radar), konnten sie auseinanderlaufen.
 // Kein Rueckfall auf die Config: console.js reicht sicht bei mount/onEnter/
@@ -118,7 +143,9 @@ registerPage({
     for (const ring of sichtbareRinge(sicht.rings_nm, rangeNm)) {
       const x = punktX(ring, rangeNm);
       teile.push(`<line class="g-v" x1="${x}" y1="0" x2="${x}" y2="${BILD.hoehe}"/>`);
-      teile.push(`<text class="g-t" x="${x + 5}" y="${BILD.hoehe - 6}">${ring} NM</text>`);
+      const b = ringBeschriftung(ring, rangeNm);
+      teile.push(`<text class="g-t" x="${b.x.toFixed(1)}" text-anchor="${b.anchor}"`
+        + ` y="${BILD.hoehe - 6}">${ring} NM</text>`);
     }
     for (const p of r.punkte) {
       const x = punktX(p.nm, rangeNm);
