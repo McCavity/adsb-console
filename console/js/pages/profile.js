@@ -79,8 +79,14 @@ export function punktY(altFt) {
 
 // Eine Stelle, an der die Reichweite des Seitenrisses herkommt. Solange es
 // zwei gab (Config hier, Ansicht im Radar), konnten sie auseinanderlaufen.
-export function profilReichweite(cfg, sicht) {
-  return sicht && Number.isFinite(sicht.range_nm) ? sicht.range_nm : cfg.radar.range_nm;
+// Kein Rueckfall auf die Config: console.js reicht sicht bei mount/onEnter/
+// render immer als vierten Parameter durch, und gilt() liefert range_nm
+// garantiert als endliche Zahl. Eine fehlende sicht ist ein Verdrahtungsfehler
+// und soll hier laut auffallen (TypeError), nicht still auf die Config
+// zurueckfallen -- sonst widerspricht das Profil dem Radar lautlos, statt
+// sichtbar, und genau dagegen wurde diese Funktion gebaut.
+export function profilReichweite(sicht) {
+  return sicht.range_nm;
 }
 
 registerPage({
@@ -96,7 +102,7 @@ registerPage({
       <div class="profil-spalte value"></div>`;
   },
   render(el, cfg, state, sicht) {
-    const rangeNm = profilReichweite(cfg, sicht);
+    const rangeNm = profilReichweite(sicht);
     const r = hoehenprofil(state.aircraft, state.receiver,
                            rangeNm, cfg.emergency.highlight);
     const svg = el.querySelector('.profil-svg');

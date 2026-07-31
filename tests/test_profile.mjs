@@ -183,11 +183,11 @@ test('ein anderer Maszstab verschiebt beide Enden mit', () => {
 test('Hoehenprofil folgt der umgeschalteten Reichweite, nicht der Config', () => {
   const cfg = mergeConfig({});
   const sicht = gilt(setzeStufe(erzeugeAnsicht(), 0), cfg);   // 10 NM
-  assert.equal(profilReichweite(cfg, sicht), 10);
-  assert.notEqual(profilReichweite(cfg, sicht), cfg.radar.range_nm);
+  assert.equal(profilReichweite(sicht), 10);
+  assert.notEqual(profilReichweite(sicht), cfg.radar.range_nm);
 });
 
 test('ohne Umschaltung ist die Profil-Reichweite die konfigurierte', () => {
   const cfg = mergeConfig({});
-  assert.equal(profilReichweite(cfg, gilt(erzeugeAnsicht(), cfg)), cfg.radar.range_nm);
+  assert.equal(profilReichweite(gilt(erzeugeAnsicht(), cfg)), cfg.radar.range_nm);
 });
