@@ -7,7 +7,14 @@ committet, damit die Konsole zur Laufzeit keine Fremdquelle braucht.
 Der Ausschnitt ist eine grobe Region (Rhein-Main), nicht die Umgebung der
 Empfaengerposition -- die gehoert nicht ins Repo, auch nicht als Mittelpunkt
 eines Suchfensters.
+
+Ohne Argumente verhaelt sich das Skript wie vor dem 31.07.2026: dieselbe
+Region, derselbe Praefix, dieselbe Zieldatei. Die Argumente gibt es fuer die
+Demo-Region der Veroeffentlichungsbilder (London) -- ein zweiter Ausschnitt
+darf den produktiven nicht ueberschreiben, deshalb ist --out Pflicht, sobald
+man von den Vorgaben abweicht.
 """
+import argparse
 import csv
 import io
 import json
@@ -15,8 +22,6 @@ import urllib.request
 from datetime import date
 
 BASE = "https://davidmegginson.github.io/ourairports-data/"
-LAT_MIN, LAT_MAX = 49.2, 51.2
-LON_MIN, LON_MAX = 7.6, 9.9
 KEEP_TYPES = {"large_airport", "medium_airport", "small_airport"}
 
 
@@ -26,6 +31,17 @@ def fetch(name):
 
 
 def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--lat-min", type=float, default=49.2)
+    p.add_argument("--lat-max", type=float, default=51.2)
+    p.add_argument("--lon-min", type=float, default=7.6)
+    p.add_argument("--lon-max", type=float, default=9.9)
+    p.add_argument("--prefix", default="ED", help="ICAO-Praefix, ED=Deutschland, EG=UK")
+    p.add_argument("--out", default="console/data/airports.json")
+    args = p.parse_args()
+    LAT_MIN, LAT_MAX = args.lat_min, args.lat_max
+    LON_MIN, LON_MAX = args.lon_min, args.lon_max
+
     airports = {}
     for a in fetch("airports.csv"):
         try:
@@ -34,7 +50,7 @@ def main():
             continue
         if not (LAT_MIN <= lat <= LAT_MAX and LON_MIN <= lon <= LON_MAX):
             continue
-        if a["type"] not in KEEP_TYPES or not a["ident"].startswith("ED"):
+        if a["type"] not in KEEP_TYPES or not a["ident"].startswith(args.prefix):
             continue
         airports[a["id"]] = {"icao": a["ident"], "name": a["name"],
                              "lat": round(lat, 5), "lon": round(lon, 5),
@@ -58,10 +74,11 @@ def main():
            "source": "OurAirports (public domain), davidmegginson.github.io/ourairports-data",
            "bbox": [LAT_MIN, LON_MIN, LAT_MAX, LON_MAX],
            "airports": sorted(airports.values(), key=lambda a: a["icao"])}
-    with open("console/data/airports.json", "w") as f:
+    with open(args.out, "w") as f:
         json.dump(out, f, indent=1)
     print(f"{len(out['airports'])} Plaetze, "
-          f"{sum(len(a['runways']) for a in out['airports'])} Bahnen geschrieben")
+          f"{sum(len(a['runways']) for a in out['airports'])} Bahnen "
+          f"nach {args.out} geschrieben")
 
 
 if __name__ == "__main__":

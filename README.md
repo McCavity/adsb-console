@@ -10,10 +10,21 @@ nichts am ADS-B-Stack — der Feed ist der Zweck des Geräts, die Anzeige ist es
 hervorgehobenes Ziel mit Notfall-Squawk 7700 und der Datenblock daneben](docs/bilder/radar.png)
 
 > [!note]
-> **Alle Bilder in diesem README zeigen eine synthetische Quelle**, keine realen Flüge.
-> Kennungen (`SYN####`) und Hex-Adressen sind erfunden. Nachts fliegt nichts und tagsüber
-> steht zufällig da, was da steht — ein Notfall-Squawk, ein HEAVY und ein voller Schirm
-> lassen sich nicht abwarten. Wie die Bilder entstanden sind, steht in
+> **In diesen Bildern sind Standort und Verkehr gestellt.** Der Empfänger steht in
+> Wirklichkeit nicht dort, und keiner der Flüge hat je stattgefunden — Kennungen
+> (`SYN####`) und Hex-Adressen sind erfunden.
+>
+> **Warum London:** Heathrow, Gatwick, Stansted, Luton und City liegen gemeinsam im
+> 50-NM-Kreis, dazu Biggin Hill und Northolt — 50 Plätze und 41 Bahnen in einem Bild.
+> Diese Dichte an Großflughäfen zeigt den Flugplatz-Layer so, wie er gemeint ist. Und sie
+> löst nebenbei ein Problem: Aus einem Radarbild ist der Empfängerstandort rechenbar
+> (Ringe auf den Empfänger zentriert, Maßstab auf der Seite, Flugplätze mit bekannten
+> Koordinaten). Ein gestellter Standort schneidet diesen Kanal ab, statt ihn klein zu
+> rechnen.
+>
+> **Warum überhaupt gestellt:** Nachts fliegt nichts und tagsüber steht zufällig da, was
+> da steht — ein Notfall-Squawk, ein HEAVY und ein voller Schirm lassen sich nicht
+> abwarten. Wie die Bilder entstanden sind, steht in
 > [`docs/messungen/2026-07-31-fotosession.md`](docs/messungen/2026-07-31-fotosession.md);
 > der Generator ist [`tools/fotoszene.py`](tools/fotoszene.py). Nur die Systemseite zeigt
 > **echte** Meßwerte dieser Hardware — eine erfundene CPU-Temperatur wäre eine Behauptung

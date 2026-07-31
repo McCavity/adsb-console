@@ -1,0 +1,991 @@
+{
+ "generated": "2026-07-31",
+ "source": "OurAirports (public domain), davidmegginson.github.io/ourairports-data",
+ "bbox": [
+  50.6,
+  -1.6,
+  52.4,
+  1.4
+ ],
+ "airports": [
+  {
+   "icao": "EGBF",
+   "name": "Bedford Aerodrome",
+   "lat": 52.23071,
+   "lon": -0.46382,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGBK",
+   "name": "Sywell Aerodrome",
+   "lat": 52.3053,
+   "lon": -0.79306,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGBT",
+   "name": "Turweston Aerodrome",
+   "lat": 52.0408,
+   "lon": -1.09556,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "09G",
+     "he_ident": "27G",
+     "le_lat": 52.04018,
+     "le_lon": -1.10102,
+     "he_lat": 52.04042,
+     "he_lon": -1.08996,
+     "length_ft": 2483
+    }
+   ]
+  },
+  {
+   "icao": "EGGW",
+   "name": "London Luton Airport",
+   "lat": 51.8747,
+   "lon": -0.36833,
+   "type": "large_airport",
+   "runways": [
+    {
+     "le_ident": "07",
+     "he_ident": "25",
+     "le_lat": 51.872002,
+     "le_lon": -0.38355,
+     "he_lat": 51.877201,
+     "he_lon": -0.353333,
+     "length_ft": 7093
+    }
+   ]
+  },
+  {
+   "icao": "EGHF",
+   "name": "Solent Airport",
+   "lat": 50.8142,
+   "lon": -1.20333,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "05",
+     "he_ident": "23",
+     "le_lat": 50.812863,
+     "le_lon": -1.211105,
+     "he_lat": 50.8194,
+     "he_lon": -1.200711,
+     "length_ft": 3375
+    }
+   ]
+  },
+  {
+   "icao": "EGHI",
+   "name": "Southampton Airport",
+   "lat": 50.9503,
+   "lon": -1.3568,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "02",
+     "he_ident": "20",
+     "le_lat": 50.943001,
+     "le_lon": -1.36088,
+     "he_lat": 50.9576,
+     "he_lon": -1.35274,
+     "length_ft": 6191
+    }
+   ]
+  },
+  {
+   "icao": "EGHJ",
+   "name": "Bembridge Airport",
+   "lat": 50.6781,
+   "lon": -1.10944,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGHL",
+   "name": "Lasham Airfield",
+   "lat": 51.18744,
+   "lon": -1.03166,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "09",
+     "he_ident": "27",
+     "le_lat": 51.1870002746582,
+     "le_lon": -1.046429991722107,
+     "he_lat": 51.188201904296875,
+     "he_lon": -1.0207899808883667,
+     "length_ft": 5896
+    }
+   ]
+  },
+  {
+   "icao": "EGHN",
+   "name": "Isle of Wight/Sandown Airport",
+   "lat": 50.6531,
+   "lon": -1.18222,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGHO",
+   "name": "Thruxton Aerodrome",
+   "lat": 51.2106,
+   "lon": -1.6,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGHP",
+   "name": "Popham Airfield",
+   "lat": 51.19469,
+   "lon": -1.23307,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGHR",
+   "name": "Goodwood Aerodrome",
+   "lat": 50.85983,
+   "lon": -0.76007,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGKA",
+   "name": "Brighton City Airport",
+   "lat": 50.8356,
+   "lon": -0.29722,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "02",
+     "he_ident": "20",
+     "le_lat": 50.832001,
+     "le_lon": -0.299531,
+     "he_lat": 50.839901,
+     "he_lon": -0.294595,
+     "length_ft": 3385
+    },
+    {
+     "le_ident": "06",
+     "he_ident": "24",
+     "le_lat": 50.8326,
+     "le_lon": -0.300292,
+     "he_lat": 50.836201,
+     "he_lon": -0.288933,
+     "length_ft": 2621
+    },
+    {
+     "le_ident": "13",
+     "he_ident": "31",
+     "le_lat": 50.838299,
+     "le_lon": -0.294522,
+     "he_lat": 50.836201,
+     "he_lon": -0.289742,
+     "length_ft": 1339
+    }
+   ]
+  },
+  {
+   "icao": "EGKB",
+   "name": "London Biggin Hill Airport",
+   "lat": 51.3308,
+   "lon": 0.0325,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "03",
+     "he_ident": "21",
+     "le_lat": 51.323601,
+     "le_lon": 0.027057,
+     "he_lat": 51.338299,
+     "he_lon": 0.03805,
+     "length_ft": 5925
+    }
+   ]
+  },
+  {
+   "icao": "EGKE",
+   "name": "Challock Airfield",
+   "lat": 51.2083,
+   "lon": 0.82917,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGKH",
+   "name": "Headcorn Aerodrome",
+   "lat": 51.1569,
+   "lon": 0.64167,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGKK",
+   "name": "London Gatwick Airport",
+   "lat": 51.14874,
+   "lon": -0.18574,
+   "type": "large_airport",
+   "runways": [
+    {
+     "le_ident": "08L",
+     "he_ident": "26R",
+     "le_lat": 51.146893,
+     "le_lon": -0.212599,
+     "he_lat": 51.151825,
+     "he_lon": -0.176795,
+     "length_ft": 8402
+    },
+    {
+     "le_ident": "08R",
+     "he_ident": "26L",
+     "le_lat": 51.145103,
+     "le_lon": -0.212345,
+     "he_lat": 51.151493,
+     "he_lon": -0.165992,
+     "length_ft": 10883
+    }
+   ]
+  },
+  {
+   "icao": "EGKL",
+   "name": "Deanland Lewes Airfield",
+   "lat": 50.88109,
+   "lon": 0.15435,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGKR",
+   "name": "Redhill Aerodrome",
+   "lat": 51.2136,
+   "lon": -0.13861,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "07L",
+     "he_ident": "25R",
+     "le_lat": 51.213562,
+     "le_lon": -0.143247,
+     "he_lat": 51.21521,
+     "he_lon": -0.133831,
+     "length_ft": 2241
+    },
+    {
+     "le_ident": "07R",
+     "he_ident": "25L",
+     "le_lat": 51.212517,
+     "le_lon": -0.144858,
+     "he_lat": 51.214657,
+     "he_lon": -0.132483,
+     "length_ft": 2943
+    },
+    {
+     "le_ident": "18",
+     "he_ident": "36",
+     "le_lat": 51.217598,
+     "le_lon": -0.140667,
+     "he_lat": 51.211311,
+     "he_lon": -0.140844,
+     "length_ft": 2792
+    }
+   ]
+  },
+  {
+   "icao": "EGLC",
+   "name": "London City Airport",
+   "lat": 51.5053,
+   "lon": 0.05528,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "09",
+     "he_ident": "27",
+     "le_lat": 51.505576,
+     "le_lon": 0.044333,
+     "he_lat": 51.504894,
+     "he_lon": 0.066026,
+     "length_ft": 4948
+    }
+   ]
+  },
+  {
+   "icao": "EGLD",
+   "name": "Denham Aerodrome",
+   "lat": 51.5883,
+   "lon": -0.51306,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGLF",
+   "name": "Farnborough Airport",
+   "lat": 51.2758,
+   "lon": -0.77633,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "06",
+     "he_ident": "24",
+     "le_lat": 51.270599365234375,
+     "le_lon": -0.7920439839363098,
+     "he_lat": 51.280799865722656,
+     "he_lon": -0.7611619830131531,
+     "length_ft": 8005
+    }
+   ]
+  },
+  {
+   "icao": "EGLJ",
+   "name": "Chalgrove Airfield",
+   "lat": 51.6761,
+   "lon": -1.08083,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "18",
+     "he_ident": "36",
+     "le_lat": 51.68330001831055,
+     "le_lon": -1.0770900249481201,
+     "he_lat": 51.67190170288086,
+     "he_lon": -1.0764399766921997,
+     "length_ft": 4167
+    }
+   ]
+  },
+  {
+   "icao": "EGLK",
+   "name": "Blackbushe Airport",
+   "lat": 51.3239,
+   "lon": -0.8475,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "07",
+     "he_ident": "25",
+     "le_lat": 51.32210159301758,
+     "le_lon": -0.8566219806671143,
+     "he_lat": 51.32569885253906,
+     "he_lon": -0.8383780121803284,
+     "length_ft": 4380
+    }
+   ]
+  },
+  {
+   "icao": "EGLL",
+   "name": "London Heathrow Airport",
+   "lat": 51.47075,
+   "lon": -0.45991,
+   "type": "large_airport",
+   "runways": [
+    {
+     "le_ident": "09L",
+     "he_ident": "27R",
+     "le_lat": 51.47749,
+     "le_lon": -0.489439,
+     "he_lat": 51.477681,
+     "he_lon": -0.433227,
+     "length_ft": 12799
+    },
+    {
+     "le_ident": "09R",
+     "he_ident": "27L",
+     "le_lat": 51.46478,
+     "le_lon": -0.486808,
+     "he_lat": 51.464957,
+     "he_lon": -0.434048,
+     "length_ft": 12001
+    }
+   ]
+  },
+  {
+   "icao": "EGLM",
+   "name": "White Waltham Airfield",
+   "lat": 51.5008,
+   "lon": -0.77444,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "03",
+     "he_ident": "21",
+     "le_lat": 51.49570083618164,
+     "le_lon": -0.7680060267448425,
+     "he_lat": 51.50400161743164,
+     "he_lon": -0.7685970067977905,
+     "length_ft": 3363
+    },
+    {
+     "le_ident": "07L",
+     "he_ident": "25R",
+     "le_lat": 51.4986,
+     "le_lon": -0.781661,
+     "he_lat": 51.502701,
+     "he_lon": -0.768006,
+     "length_ft": 3642
+    },
+    {
+     "le_ident": "07R",
+     "he_ident": "25L",
+     "le_lat": 51.498353,
+     "le_lon": -0.781436,
+     "he_lat": 51.501414,
+     "he_lon": -0.771101,
+     "length_ft": 2585
+    },
+    {
+     "le_ident": "11",
+     "he_ident": "29",
+     "le_lat": 51.499698638916016,
+     "le_lon": -0.7797470092773438,
+     "he_lat": 51.49700164794922,
+     "he_lon": -0.7680079936981201,
+     "length_ft": 3051
+    }
+   ]
+  },
+  {
+   "icao": "EGLP",
+   "name": "Brimpton Airfield",
+   "lat": 51.38346,
+   "lon": -1.1721,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGMA",
+   "name": "Fowlmere Airfield",
+   "lat": 52.0775,
+   "lon": 0.06167,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "07",
+     "he_ident": "25",
+     "le_lat": 52.075871,
+     "le_lon": 0.055994,
+     "he_lat": 52.078545,
+     "he_lon": 0.0653,
+     "length_ft": 2309
+    }
+   ]
+  },
+  {
+   "icao": "EGMC",
+   "name": "London Southend Airport",
+   "lat": 51.57056,
+   "lon": 0.69363,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "05",
+     "he_ident": "23",
+     "le_lat": 51.56719970703125,
+     "le_lon": 0.6862679719924927,
+     "he_lat": 51.575599670410156,
+     "he_lon": 0.7049959897994995,
+     "length_ft": 6089
+    }
+   ]
+  },
+  {
+   "icao": "EGMD",
+   "name": "Lydd London Ashford Airport",
+   "lat": 50.95625,
+   "lon": 0.93907,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "03",
+     "he_ident": "21",
+     "le_lat": 50.9505,
+     "le_lon": 0.933364,
+     "he_lat": 50.961601,
+     "he_lon": 0.944669,
+     "length_ft": 4938
+    }
+   ]
+  },
+  {
+   "icao": "EGMF",
+   "name": "Farthing Corner / Stoneacre Farm Airfield",
+   "lat": 51.33279,
+   "lon": 0.60106,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGMJ",
+   "name": "Little Gransden Airfield",
+   "lat": 52.16598,
+   "lon": -0.14922,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGML",
+   "name": "Damyns Hall Aerodrome",
+   "lat": 51.52756,
+   "lon": 0.24419,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGMT",
+   "name": "Thurrock Airfield",
+   "lat": 51.53751,
+   "lon": 0.36763,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGSC",
+   "name": "Cambridge City Airport",
+   "lat": 52.205,
+   "lon": 0.175,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "05",
+     "he_ident": "23",
+     "le_lat": 52.199299,
+     "le_lon": 0.164058,
+     "he_lat": 52.210701,
+     "he_lon": 0.186014,
+     "length_ft": 6444
+    }
+   ]
+  },
+  {
+   "icao": "EGSG",
+   "name": "Stapleford Aerodrome",
+   "lat": 51.6525,
+   "lon": 0.15583,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "03L",
+     "he_ident": "21R",
+     "le_lat": 51.648718,
+     "le_lon": 0.151123,
+     "he_lat": 51.656089,
+     "he_lon": 0.159458,
+     "length_ft": 3283
+    },
+    {
+     "le_ident": "03R",
+     "he_ident": "21L",
+     "le_lat": 51.648521,
+     "le_lon": 0.151553,
+     "he_lat": 51.656315,
+     "he_lon": 0.160403,
+     "length_ft": 3475
+    },
+    {
+     "le_ident": "10",
+     "he_ident": "28",
+     "le_lat": 51.656136,
+     "le_lon": 0.15117,
+     "he_lat": 51.655193,
+     "he_lon": 0.161393,
+     "length_ft": 2152
+    }
+   ]
+  },
+  {
+   "icao": "EGSL",
+   "name": "Andrewsfield Aerodrome",
+   "lat": 51.895,
+   "lon": 0.44917,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGSO",
+   "name": "Crowfield Airfield",
+   "lat": 52.17305,
+   "lon": 1.11065,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGSQ",
+   "name": "Clacton Airfield",
+   "lat": 51.785,
+   "lon": 1.13,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGSR",
+   "name": "Earls Colne Airfield",
+   "lat": 51.9144,
+   "lon": 0.6825,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGSS",
+   "name": "London Stansted Airport",
+   "lat": 51.885,
+   "lon": 0.235,
+   "type": "large_airport",
+   "runways": [
+    {
+     "le_ident": "04",
+     "he_ident": "22",
+     "le_lat": 51.875081,
+     "le_lon": 0.219933,
+     "he_lat": 51.895166,
+     "he_lon": 0.25005,
+     "length_ft": 10003
+    }
+   ]
+  },
+  {
+   "icao": "EGST",
+   "name": "Elmsett Airfield",
+   "lat": 52.07545,
+   "lon": 0.97765,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGSU",
+   "name": "Duxford Aerodrome",
+   "lat": 52.0908,
+   "lon": 0.13194,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "06",
+     "he_ident": "24",
+     "le_lat": 52.086899,
+     "le_lon": 0.123611,
+     "he_lat": 52.093601,
+     "he_lon": 0.142222,
+     "length_ft": 4750
+    },
+    {
+     "le_ident": "06L",
+     "he_ident": "24R",
+     "le_lat": 52.08940124511719,
+     "le_lon": 0.12527799606323242,
+     "he_lat": 52.09360122680664,
+     "he_lon": 0.13638900220394135,
+     "length_ft": 2887
+    }
+   ]
+  },
+  {
+   "icao": "EGSW",
+   "name": "Newmarket Heath Airfield",
+   "lat": 52.23515,
+   "lon": 0.35064,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGSX",
+   "name": "North Weald Airfield",
+   "lat": 51.7217,
+   "lon": 0.15417,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "02",
+     "he_ident": "20",
+     "le_lat": 51.71389,
+     "le_lon": 0.150842,
+     "he_lat": 51.730058,
+     "he_lon": 0.158155,
+     "length_ft": 6332
+    }
+   ]
+  },
+  {
+   "icao": "EGTB",
+   "name": "Wycombe Air Park",
+   "lat": 51.61177,
+   "lon": -0.80832,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "06",
+     "he_ident": "24",
+     "le_lat": 51.610231,
+     "le_lon": -0.812878,
+     "he_lat": 51.61327,
+     "he_lon": -0.803533,
+     "length_ft": 2411
+    },
+    {
+     "le_ident": "06G",
+     "he_ident": "24G",
+     "le_lat": 51.609933,
+     "le_lon": -0.811132,
+     "he_lat": 51.612559,
+     "he_lon": -0.80305,
+     "length_ft": 2001
+    }
+   ]
+  },
+  {
+   "icao": "EGTC",
+   "name": "Cranfield Airport",
+   "lat": 52.0722,
+   "lon": -0.61667,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "03",
+     "he_ident": "21",
+     "le_lat": 52.065201,
+     "le_lon": -0.623598,
+     "he_lat": 52.078999,
+     "he_lon": -0.609797,
+     "length_ft": 5902
+    }
+   ]
+  },
+  {
+   "icao": "EGTD",
+   "name": "Dunsfold Aerodrome",
+   "lat": 51.1172,
+   "lon": -0.53583,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGTF",
+   "name": "Fairoaks Airport",
+   "lat": 51.3481,
+   "lon": -0.55889,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "06",
+     "he_ident": "24",
+     "le_lat": 51.346092,
+     "le_lon": -0.563647,
+     "he_lat": 51.34996,
+     "he_lon": -0.5538,
+     "length_ft": 2667
+    }
+   ]
+  },
+  {
+   "icao": "EGTH",
+   "name": "Old Warden Airfield",
+   "lat": 52.08459,
+   "lon": -0.3201,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGTK",
+   "name": "London Oxford Airport",
+   "lat": 51.8369,
+   "lon": -1.32,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "01",
+     "he_ident": "19",
+     "le_lat": 51.830051,
+     "le_lon": -1.322059,
+     "he_lat": 51.843357,
+     "he_lon": -1.318008,
+     "length_ft": 5006
+    }
+   ]
+  },
+  {
+   "icao": "EGTO",
+   "name": "Rochester Airport",
+   "lat": 51.3519,
+   "lon": 0.50333,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGTR",
+   "name": "Elstree Airfield",
+   "lat": 51.6558,
+   "lon": -0.32583,
+   "type": "small_airport",
+   "runways": [
+    {
+     "le_ident": "08",
+     "he_ident": "26",
+     "le_lat": 51.655315,
+     "le_lon": -0.330438,
+     "he_lat": 51.656346,
+     "he_lon": -0.321223,
+     "length_ft": 2135
+    }
+   ]
+  },
+  {
+   "icao": "EGUB",
+   "name": "RAF Benson",
+   "lat": 51.61437,
+   "lon": -1.09599,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "01",
+     "he_ident": "19",
+     "le_lat": 51.60689926147461,
+     "le_lon": -1.0976500511169434,
+     "he_lat": 51.62310028076172,
+     "he_lon": -1.0940699577331543,
+     "length_ft": 5981
+    }
+   ]
+  },
+  {
+   "icao": "EGUD",
+   "name": "RAF Abingdon",
+   "lat": 51.69061,
+   "lon": -1.31657,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGUN",
+   "name": "RAF Mildenhall",
+   "lat": 52.3619,
+   "lon": 0.48641,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "10",
+     "he_ident": "28",
+     "le_lat": 52.3643,
+     "le_lon": 0.468,
+     "he_lat": 52.3587,
+     "he_lon": 0.508167,
+     "length_ft": 9213
+    }
+   ]
+  },
+  {
+   "icao": "EGUW",
+   "name": "Wattisham Airfield",
+   "lat": 52.12745,
+   "lon": 0.95619,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "05",
+     "he_ident": "23",
+     "le_lat": 52.120601654052734,
+     "le_lon": 0.9437999725341797,
+     "he_lat": 52.134300231933594,
+     "he_lon": 0.9685310125350952,
+     "length_ft": 7953
+    }
+   ]
+  },
+  {
+   "icao": "EGVN",
+   "name": "RAF Brize Norton",
+   "lat": 51.75,
+   "lon": -1.58362,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "07",
+     "he_ident": "25",
+     "le_lat": 51.74610137939453,
+     "le_lon": -1.6041300296783447,
+     "he_lat": 51.75389862060547,
+     "he_lon": -1.5617899894714355,
+     "length_ft": 10007
+    }
+   ]
+  },
+  {
+   "icao": "EGVO",
+   "name": "RAF Odiham",
+   "lat": 51.2341,
+   "lon": -0.94283,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "09",
+     "he_ident": "27",
+     "le_lat": 51.234500885009766,
+     "le_lon": -0.9558860063552856,
+     "he_lat": 51.23379898071289,
+     "he_lon": -0.9296280145645142,
+     "length_ft": 6030
+    }
+   ]
+  },
+  {
+   "icao": "EGVP",
+   "name": "Middle Wallop Airfield",
+   "lat": 51.14388,
+   "lon": -1.56893,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGWE",
+   "name": "RAF Henlow",
+   "lat": 52.0182,
+   "lon": -0.30385,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGWN",
+   "name": "RAF Halton",
+   "lat": 51.7907,
+   "lon": -0.73797,
+   "type": "small_airport",
+   "runways": []
+  },
+  {
+   "icao": "EGWU",
+   "name": "RAF Northolt",
+   "lat": 51.553,
+   "lon": -0.41817,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "07",
+     "he_ident": "25",
+     "le_lat": 51.55009841918945,
+     "le_lon": -0.43101900815963745,
+     "he_lat": 51.555301666259766,
+     "he_lon": -0.4081670045852661,
+     "length_ft": 5545
+    }
+   ]
+  },
+  {
+   "icao": "EGXH",
+   "name": "RAF Honington",
+   "lat": 52.3426,
+   "lon": 0.77294,
+   "type": "medium_airport",
+   "runways": [
+    {
+     "le_ident": "09",
+     "he_ident": "27",
+     "le_lat": 52.340999603271484,
+     "le_lon": 0.7531110048294067,
+     "he_lat": 52.34469985961914,
+     "he_lon": 0.7929059863090515,
+     "length_ft": 9012
+    }
+   ]
+  }
+ ]
+}

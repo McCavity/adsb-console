@@ -71,28 +71,33 @@ SEITEN = {
 # drei Ringen, damit weder das Radar noch die Tafel eine leere Haelfte hat.
 #
 # Die Peilungen und Entfernungen stammen aus plazierung.py und sind KEINE
-# Wunschwerte: Bei 50 NM liegen 34 Flugplaetze im Bild, und eine
-# Zielbeschriftung, die auf einer ICAO-Kennung sitzt, sieht aus wie ein
+# Wunschwerte: In der Londoner Demo-Region liegen 50 Flugplaetze im Bild, und
+# eine Zielbeschriftung, die auf einer ICAO-Kennung sitzt, sieht aus wie ein
 # Renderfehler. Die Suche haelt jede Beschriftung mindestens 8 px von jeder
 # Flugplatzkennung und von jeder anderen Zielbeschriftung frei; erreicht
-# wurden 9,0 px an der engsten Stelle. Wer die Szene aendert, laesst
-# plazierung.py neu laufen -- sie meldet ROT, wenn die Luft nicht reicht.
+# wurden 10,0 px an der engsten Stelle:
+#
+#   ATC_RECEIVER_LAT=51.51 ATC_RECEIVER_LON=-0.10 \
+#     python3 tools/plazierung.py tools/demo-airports-london.json 90 10
+#
+# Wer die Szene aendert, laesst sie neu laufen -- sie meldet ROT, wenn die
+# Luft nicht reicht.
 SZENE = [
-    ('SYN9016',  6, 125,  2400, 150, 355,  -704, '1000', 'A2'),
-    ('SYN1401',  6, 356,  7000, 240, 210, -1216, '1000', 'A3'),
-    ('SYN5509', 17, 277,  8500, 265, 145, -1408, '1000', 'A3'),
-    ('SYN3050', 19, 194,  3200, 175, 320,  -896, '1000', 'A2'),
-    ('SYN2210', 20,  52, 12000, 310, 275,  1600, '1000', 'A3'),
-    ('SYN0442', 26, 198, 27000, 452,  25,     0, '2451', 'A5'),   # HEAVY
-    ('SYN3378', 28, 292, 18000, 380, 100,  2048, '1000', 'A3'),
-    ('SYN7788', 33, 268,  4500, 190,  70, -1088, '7700', 'A3'),   # Notfall
-    ('SYN1122', 35, 338, 35000, 480, 130,     0, '1000', 'A3'),
-    ('SYN6631', 36,  10, 38000, 495, 175,     0, '3624', 'A3'),
-    ('SYN7145', 41,  63, 24000, 420, 195, -1792, '1000', 'A3'),
-    ('SYN8814', 41,  78, 33000, 470, 250,     0, '1000', 'A3'),
-    ('SYN2907', 44, 104, 30000, 465, 300,  1216, '1000', 'A5'),   # HEAVY
-    ('SYN4433', 47, 230, 36000, 488,  45,     0, '1000', 'A3'),
-    ('SYN5560', 49, 191, 39000, 500,  20,     0, '1000', 'A3'),
+    ('SYN9016', 23,  50,  2400, 150, 355,  -704, '1000', 'A2'),
+    ('SYN1401', 35,  94,  7000, 240, 210, -1216, '1000', 'A3'),
+    ('SYN5509', 19, 150,  8500, 265, 145, -1408, '1000', 'A3'),
+    ('SYN3050', 26, 171,  3200, 175, 320,  -896, '1000', 'A2'),
+    ('SYN2210', 41,  79, 12000, 310, 275,  1600, '1000', 'A3'),
+    ('SYN0442', 32, 204, 27000, 452,  25,     0, '2451', 'A5'),   # HEAVY
+    ('SYN3378', 37, 138, 18000, 380, 100,  2048, '1000', 'A3'),
+    ('SYN7788', 23, 234,  4500, 190,  70, -1088, '7700', 'A3'),   # Notfall
+    ('SYN1122', 13, 242, 35000, 480, 130,     0, '1000', 'A3'),
+    ('SYN6631', 44, 235, 38000, 495, 175,     0, '3624', 'A3'),
+    ('SYN7145', 45, 180, 24000, 420, 195, -1792, '1000', 'A3'),
+    ('SYN8814', 40, 314, 33000, 470, 250,     0, '1000', 'A3'),
+    ('SYN2907', 20, 335, 30000, 465, 300,  1216, '1000', 'A5'),   # HEAVY
+    ('SYN4433', 43,  29, 36000, 488,  45,     0, '1000', 'A3'),
+    ('SYN5560', 49,  54, 39000, 500,  20,     0, '1000', 'A3'),
     # Ausserhalb der eingestellten 50 NM. Steht absichtlich drin: Radar,
     # Tafel und Einzelziel MUESSEN es wegfiltern -- ein Filter, den kein
     # Datensatz je erreicht, ist ungeprueft.
@@ -227,9 +232,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         pass
 
 
-def schiess(basis, seite, ziel_png, port):
+def schiess(basis, seite, ziel_png, port, lat=None, lon=None):
     budget = SEITEN[seite] * 1000
-    LAT, LON = hole_position()
+    # Ohne --lat/--lon die echte Position des Geraets; mit ihnen ein frei
+    # gewaehlter Demo-Standort. Fuer die Veroeffentlichungsbilder ist das
+    # Zentrum von London gesetzt: Heathrow, Gatwick, Stansted, Luton und City
+    # liegen dort gemeinsam im 50-NM-Kreis, und kein Bild legt mehr nahe, wo
+    # der echte Empfaenger steht.
+    LAT, LON = (lat, lon) if lat is not None else hole_position()
     schreibe_szene(basis, SEITEN[seite], LAT, LON)
     handler = lambda *a, **k: Handler(*a, directory=basis, **k)
     socketserver.TCPServer.allow_reuse_address = True
@@ -260,10 +270,20 @@ def main():
     p.add_argument('--basis', required=True)
     p.add_argument('--seite', required=True, choices=sorted(SEITEN))
     p.add_argument('--ziel', default=None)
+    p.add_argument('--lat', type=float, default=None,
+                   help='Demo-Standort statt der Position des Geraets')
+    p.add_argument('--lon', type=float, default=None)
+    p.add_argument('--airports', default=None,
+                   help='Flugplatzdatei, die in die Kopie gelegt wird')
     p.add_argument('--port', type=int, default=8110)
     a = p.parse_args()
     ziel = a.ziel or os.path.join(a.basis, f'bild-{a.seite}.png')
-    return schiess(a.basis, a.seite, ziel, a.port)
+    if (a.lat is None) != (a.lon is None):
+        print('--lat und --lon nur gemeinsam')
+        return 2
+    if a.airports:
+        shutil.copyfile(a.airports, os.path.join(a.basis, 'data', 'airports.json'))
+    return schiess(a.basis, a.seite, ziel, a.port, a.lat, a.lon)
 
 
 if __name__ == '__main__':
