@@ -262,9 +262,24 @@ auszuführen.
 
 Was **wirklich** rot werden kann:
 
-1. **Höhenprofil und Radar melden dieselbe Reichweite** — echt rot, solange `profile.js` die
-   Konfiguration liest, und zwar gegen bestehenden Code. Der einzige der drei, der einen
-   vorhandenen Defekt zeigt.
+1. **Höhenprofil und Radar melden dieselbe Reichweite.** ⚠️ **Zweite Korrektur, 31.07. nach der
+   Umsetzung von Aufgabe 5:** Auch das stimmte nicht. Der Defekt war real und schwer —
+   `profile.js` nahm `sicht` nicht einmal als Parameter an, das Umschalten hatte auf den
+   Seitenriß **null** Wirkung (am Vorzustand `69eae6b` unabhängig verifiziert). Aber er saß in
+   `render()`, also in DOM-Code, den diese Codebasis bewußt nicht automatisiert prüft. Der Test
+   greift stattdessen die frisch **extrahierte** reine Funktion `profilReichweite` — und die gab
+   es vorher nicht. Der Rot-Lauf war deshalb ein Importfehler, keine fehlgeschlagene Behauptung
+   über einen falschen Wert.
+
+   **Das ist strukturell, nicht der Einzelfall:** Steckt ein Defekt in DOM-Code, und ist das
+   Herausziehen einer reinen Funktion Teil der Reparatur, dann *kann* der erste Rot-Lauf nur ein
+   Importfehler sein. Aus Code, den es noch nicht gibt, ist keine Wert-Behauptung zu gewinnen.
+   Wer so einen Lauf als „Beweis des Defekts" führt, verwechselt die Abwesenheit einer Funktion
+   mit dem Nachweis eines Fehlverhaltens.
+
+   Aussagekräftig ist hier allein der **kalibrierte** Rot-Lauf *nach* der Extraktion (Erwartung
+   absichtlich auf 50 verstellt → `actual: 10`) — er beweist, daß der Test etwas behauptet. Den
+   ursprünglichen Verhaltensdefekt beweist nur das Gerät.
 2. **Ring > Reichweite (4.4) — am Gerät, nicht im Test.** Vor dem Filter die Reichweite auf
    10 NM stellen und ein `grim`-Bild ziehen: Ringe außerhalb des Kreises. Das ist der
    Nachweis; ein Modultest darüber ist danach eine Regression, keine Kalibrierung.

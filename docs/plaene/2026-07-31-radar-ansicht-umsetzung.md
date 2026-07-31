@@ -722,10 +722,18 @@ Erwartet: FAIL — `profilReichweite is not a function`
 ```js
 // Eine Stelle, an der die Reichweite des Seitenrisses herkommt. Solange es
 // zwei gab (Config hier, Ansicht im Radar), konnten sie auseinanderlaufen.
-export function profilReichweite(cfg, sicht) {
-  return sicht && Number.isFinite(sicht.range_nm) ? sicht.range_nm : cfg.radar.range_nm;
+export function profilReichweite(sicht) {
+  return sicht.range_nm;
 }
 ```
+
+> **Korrektur 31.07. (Commit `d37404f`, aus der Prüfung von Aufgabe 5):** Der erste Entwurf
+> hatte hier einen Rückfall auf `cfg.radar.range_nm`, falls `sicht` fehlt. Das war ein Fehler:
+> `console.js` reicht die Ansicht immer durch, `gilt()` liefert immer eine finite Zahl — der
+> Zweig war unerreichbar und ungetestet. Vor allem aber hätte er eine künftig gebrochene
+> Weitergabe von `sicht` **lautlos** verdeckt, statt sie sichtbar zu machen: genau die
+> Fehlerklasse, gegen die diese Aufgabe gebaut ist. `radar.js` liest an denselben Stellen
+> ebenfalls ohne Rückfall. Eine fehlende Ansicht ist ein Verdrahtungsfehler und soll auffallen.
 
 Die Seitenfunktionen nehmen `sicht` als vierten Parameter entgegen. In `:94`, `:105-112` und
 `:146` wird `cfg.radar.range_nm` durch `profilReichweite(cfg, sicht)` ersetzt und
