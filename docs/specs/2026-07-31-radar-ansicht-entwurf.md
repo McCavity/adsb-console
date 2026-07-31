@@ -251,15 +251,29 @@ Stufenwahl gültig und außerhalb · konfigurierte Reichweite 35 wird sortiert e
 konfigurierte Reichweite 50 erzeugt **keine** Dublette · unbekannte Layer-Kennung wird
 ignoriert statt angelegt · `gilt()` ohne Überschreibung ist identisch zur Konfiguration.
 
-### 10.2 Kalibrierung — drei Tests, die vor dem Fix ROT sein müssen
+### 10.2 Kalibrierung
 
-1. Bei Reichweite 10 NM wird kein Ring > 10 gezeichnet *(rot gegen 4.4)*
-2. Nach dem Umschalten unterscheidet sich die Hintergrund-Signatur *(rot gegen `drawnBg`)*
-3. Höhenprofil und Radar melden dieselbe Reichweite *(rot, solange `profile.js` die
-   Konfiguration liest)*
+**Korrektur am 31.07. beim Schreiben des Umsetzungsplans:** Der erste Entwurf dieses
+Abschnitts verlangte *„drei Tests, die vor dem Fix ROT sein müssen"*. Das war
+vorgeschrieben, nicht gemessen — und zwei der drei können es gar nicht sein. Ein Test gegen
+eine Funktion, die es noch nicht gibt, ist rot, weil der Import scheitert, nicht weil er
+einen Defekt zeigt. Das ist genau die Sorte Bruch, die man in einen Plan schreibt, statt ihn
+auszuführen.
 
-Sie werden **vor** der Änderung ausgeführt und das rote Ergebnis ins Abnahmedokument
-geschrieben — nicht behauptet. Ein Prüfmittel, das nie ROT war, ist unkalibriert.
+Was **wirklich** rot werden kann:
+
+1. **Höhenprofil und Radar melden dieselbe Reichweite** — echt rot, solange `profile.js` die
+   Konfiguration liest, und zwar gegen bestehenden Code. Der einzige der drei, der einen
+   vorhandenen Defekt zeigt.
+2. **Ring > Reichweite (4.4) — am Gerät, nicht im Test.** Vor dem Filter die Reichweite auf
+   10 NM stellen und ein `grim`-Bild ziehen: Ringe außerhalb des Kreises. Das ist der
+   Nachweis; ein Modultest darüber ist danach eine Regression, keine Kalibrierung.
+3. **Hintergrund-Signatur** — neue Funktion, also nur Neubau-Test. Wird als solcher benannt
+   und nicht als Kalibrierung ausgegeben.
+
+Jeder **neue** Test wird trotzdem einmal absichtlich rot gesehen (falsche Erwartung
+eintragen, laufen lassen, zurückdrehen), bevor ihm geglaubt wird — das ist die
+Repo-Konvention und bleibt.
 
 ### 10.3 Absichtlich falsch bedienen
 
@@ -309,7 +323,8 @@ klären.
 - [ ] Flugplätze ein- und ausblendbar
 - [ ] Zahnrad nur auf Seiten mit Einstellungen
 - [ ] Dialog kann nicht offen steckenbleiben (60-Sekunden-Nachweis am Gerät)
-- [ ] Die drei Kalibriertests waren vor der Änderung rot und sind danach grün
+- [ ] Der Kopplungstest (Höhenprofil/Radar) war vor der Änderung rot und ist danach grün
+- [ ] Der Ring-Überstand bei 10 NM wurde vor dem Filter am Gerät im Bild gesehen
 - [ ] Fotosession mit synthetischer Quelle gelaufen, Gegenprobe leer und der Grep einmal
       absichtlich rot gewesen
 - [ ] Konsole nach der Session verifiziert zurück auf der echten Quelle
