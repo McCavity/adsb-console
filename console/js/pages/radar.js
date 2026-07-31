@@ -26,39 +26,39 @@ async function loadAirports() {
   return airports;
 }
 
-function drawBackground(ctx, cfg, receiver) {
+function drawBackground(ctx, cfg, receiver, sicht) {
   ctx.clearRect(0, 0, SIZE, SIZE);
   ctx.save();
   ctx.translate(CENTER, CENTER);
   ctx.strokeStyle = COL.ring;
   ctx.lineWidth = 1;
-  for (const nm of sichtbareRinge(cfg.radar.rings_nm, cfg.radar.range_nm)) {
-    const r = nm / cfg.radar.range_nm * R;
+  for (const nm of sichtbareRinge(sicht.rings_nm, sicht.range_nm)) {
+    const r = nm / sicht.range_nm * R;
     ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
     ctx.fillStyle = COL.ringText;
     ctx.font = '13px B612Mono, ui-monospace, monospace';
     ctx.fillText(`${nm}`, 4, -r - 5);
   }
   for (let d = 0; d < 360; d += 30) {          // Peilstrahlen
-    const p = projectToCanvas(cfg.radar.range_nm, d, cfg.radar.range_nm, R);
+    const p = projectToCanvas(sicht.range_nm, d, sicht.range_nm, R);
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(p.x, p.y); ctx.stroke();
-    const t = projectToCanvas(cfg.radar.range_nm * 0.94, d, cfg.radar.range_nm, R);
+    const t = projectToCanvas(sicht.range_nm * 0.94, d, sicht.range_nm, R);
     ctx.fillStyle = COL.ringText;
     ctx.font = '13px B612Mono, ui-monospace, monospace';
     ctx.textAlign = 'center';
     ctx.fillText(String(d === 0 ? 360 : d).padStart(3, '0'), t.x, t.y);
   }
   ctx.textAlign = 'left';
-  if (receiver && airports) drawAirports(ctx, cfg, receiver);
+  if (receiver && airports && sicht.layer.airports) drawAirports(ctx, receiver, sicht);
   ctx.restore();
 }
 
-function drawAirports(ctx, cfg, receiver) {
+function drawAirports(ctx, receiver, sicht) {
   for (const ap of airports) {
     const nm = haversineNm(receiver.lat, receiver.lon, ap.lat, ap.lon);
-    if (nm > cfg.radar.range_nm) continue;
+    if (nm > sicht.range_nm) continue;
     const p = projectToCanvas(nm, bearingDeg(receiver.lat, receiver.lon, ap.lat, ap.lon),
-                              cfg.radar.range_nm, R);
+                              sicht.range_nm, R);
     // Bahnen massstaeblich, sofern sie bei diesem Massstab ueberhaupt
     // sichtbar sind -- bei 0,161 NM/px sind 4000 m rund 13 px. Alles unter
     // vier Pixeln waere Strichgekritzel und wird zum blossen Symbol.
@@ -67,11 +67,11 @@ function drawAirports(ctx, cfg, receiver) {
       const a = projectToCanvas(
         haversineNm(receiver.lat, receiver.lon, rw.le_lat, rw.le_lon),
         bearingDeg(receiver.lat, receiver.lon, rw.le_lat, rw.le_lon),
-        cfg.radar.range_nm, R);
+        sicht.range_nm, R);
       const b = projectToCanvas(
         haversineNm(receiver.lat, receiver.lon, rw.he_lat, rw.he_lon),
         bearingDeg(receiver.lat, receiver.lon, rw.he_lat, rw.he_lon),
-        cfg.radar.range_nm, R);
+        sicht.range_nm, R);
       if (Math.hypot(b.x - a.x, b.y - a.y) < 4) continue;
       ctx.strokeStyle = COL.runway;
       ctx.lineWidth = 2;
@@ -108,7 +108,7 @@ registerPage({
   id: 'radar',
   title: 'Radar',
   ageSource: 'aircraft',
-  mount(el, cfg) {
+  mount(el, cfg, state, sicht) {
     // Drei Ebenen: eine gezeichnete (Hintergrund) und zwei, die der
     // Compositor bewegt. Kein requestAnimationFrame, keine Bildschleife.
     el.innerHTML = `
@@ -138,14 +138,8 @@ registerPage({
       document.fonts ? document.fonts.load('13px B612Mono').catch(() => null) : null,
     ]).then(() => { el._ctx.bgSig = null; });
   },
-  render(el, cfg, state) {
+  render(el, cfg, state, sicht) {
     const c = el._ctx;
-    // Behelfszeile bis Aufgabe 4: dort kommt `sicht` als vierter
-    // render()-Parameter aus ansicht.js herein, dann entfaellt diese
-    // Zeile wieder. Bis dahin haelt sie diese Aufgabe fuer sich allein
-    // lauffaehig und testbar.
-    const sicht = { range_nm: cfg.radar.range_nm, rings_nm: cfg.radar.rings_nm,
-                    layer: { airports: true } };
     const sig = hintergrundSignatur(sicht);
     if (c.bgSig !== sig && state.receiver) {
       drawBackground(c.bg, cfg, state.receiver, sicht);
@@ -165,10 +159,10 @@ registerPage({
           emergency: cfg.emergency.highlight && isEmergency(a),
         };
       })
-      .filter(t => t.nm <= cfg.radar.range_nm) : [];
+      .filter(t => t.nm <= sicht.range_nm) : [];
     const auswahl = waehleZiel(targets);
-    renderBlips(c.blips, cfg, targets, c.sweepStart, auswahl);
-    renderSide(el.querySelector('.radar-side'), cfg, state, targets, auswahl);
+    renderBlips(c.blips, cfg, sicht, targets, c.sweepStart, auswahl);
+    renderSide(el.querySelector('.radar-side'), cfg, sicht, state, targets, auswahl);
   },
 });
 
@@ -184,7 +178,7 @@ registerPage({
 // unlesbar. Am 27.07. am Panel gesehen.
 const MIN_RESYNC_DEG = 5;
 
-function renderBlips(root, cfg, targets, sweepStart, auswahl) {
+function renderBlips(root, cfg, sicht, targets, sweepStart, auswahl) {
   // Zuordnung ueber eine Map statt ueber einen Selector-String: Ein hex
   // mit einem Anfuehrungszeichen oder einer eckigen Klammer -- etwa aus
   // einer praeparierten Testquelle -- wuerde querySelector mitten in der
@@ -230,14 +224,14 @@ function renderBlips(root, cfg, targets, sweepStart, auswahl) {
 
     el.className = 'blip' + (t.heavy ? ' heavy' : '') + (t.emergency ? ' emg' : '')
                  + (istAusgewaehlt ? ' sel' : '');
-    const p = projectToCanvas(t.nm, t.brg, cfg.radar.range_nm, R);
+    const p = projectToCanvas(t.nm, t.brg, sicht.range_nm, R);
     el.style.left = (CENTER + p.x) + 'px';
     el.style.top = (CENTER + p.y) + 'px';
 
     const vec = el.querySelector('.vec');
     if (typeof t.gs === 'number' && typeof t.track === 'number') {
       // Track-Vektor: wo das Ziel in leader_s Sekunden waere.
-      const len = t.gs * (cfg.radar.leader_s / 3600) / cfg.radar.range_nm * R;
+      const len = t.gs * (cfg.radar.leader_s / 3600) / sicht.range_nm * R;
       vec.style.height = Math.max(0, len) + 'px';
       vec.style.transform = `rotate(${t.track}deg)`;
       vec.style.display = '';
@@ -324,7 +318,7 @@ function waehleZiel(targets) {
 // Der Datenblock rechts neben dem Schirm. Er ergaenzt das Bild, statt es
 // zu wiederholen: Was der Kreis zeigt (wo etwas ist), zeigt er nicht noch
 // einmal; er zeigt, was man aus dem Kreis nicht ablesen kann.
-function renderSide(root, cfg, state, targets, auswahl) {
+function renderSide(root, cfg, sicht, state, targets, auswahl) {
   if (!targets.length || !auswahl) {
     // Nachts ist das der Normalfall, kein Defekt -- deshalb bleibt die
     // Nachrichtenrate stehen: Sie laeuft weiter, auch wenn kein Ziel eine
@@ -379,8 +373,8 @@ function renderSide(root, cfg, state, targets, auswahl) {
       ${sideTile('Nachrichten', msgRate(state), '/s', 'letzte Minute')}
       ${sideTile('Weitestes Ziel', weitestes.nm.toFixed(0), 'NM',
                  `${weitestes.callsign || '——'} ${formatBearing(weitestes.brg)}`)}
-      ${sideTile('Maßstab', cfg.radar.range_nm, 'NM',
-                 `Ringe ${cfg.radar.rings_nm.join(' · ')}`)}
+      ${sideTile('Maßstab', sicht.range_nm, 'NM',
+                 `Ringe ${sicht.rings_nm.join(' · ')}`)}
     </div>`;
 }
 

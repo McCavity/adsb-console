@@ -1,13 +1,17 @@
 import { loadConfig } from './config.js';
 import { createDataStore, ageState } from './data.js';
 import { naechsterWechsel } from './carousel.js';
+import { erzeugeAnsicht, gilt } from './ansicht.js';
 
 const pages = new Map();          // id -> {id, title, ageSource, mount, render, onEnter?}
+let aenderer = null;
+export function ansichtAendern(fn) { if (aenderer) aenderer(fn); }
 
 export function registerPage(page) { pages.set(page.id, page); }
 
 export async function startConsole() {
   const config = await loadConfig();
+  let ansicht = erzeugeAnsicht();
   const store = createDataStore(() => renderCurrent());
   const order = config.activePages.filter(id => pages.has(id));
   const stage = document.getElementById('stage');
@@ -16,12 +20,22 @@ export async function startConsole() {
   let current = 0, rotateTimer = null, resumeTimer = null;
   const RESUME_MS = 60000;
 
+  // Der Einstellungsdialog aendert die Ansicht ueber genau diesen Weg --
+  // nicht durch Zugriff auf die Variable. So gibt es EINE Stelle, an der
+  // ein Wechsel neu rendert und als Beruehrung zaehlt; sonst waere die
+  // 60-Sekunden-Pause vom Zufall abhaengig, ob der Aufrufer daran denkt.
+  aenderer = fn => {
+    ansicht = fn(ansicht);
+    renderCurrent();
+    planeWechsel('beruehrung');
+  };
+
   for (const id of order) {
     const el = document.createElement('div');
     el.className = 'page';
     stage.appendChild(el);
     els.set(id, el);
-    pages.get(id).mount(el, config, store.state);
+    pages.get(id).mount(el, config, store.state, gilt(ansicht, config));
 
     const box = document.createElement('div');
     box.className = 'dotbox';
@@ -45,13 +59,13 @@ export async function startConsole() {
     store.state.systemVisible = id === 'system';
     if (id === 'system') store.refreshSystem();
     const page = pages.get(id);
-    if (page && page.onEnter) page.onEnter(els.get(id), config, store.state);
+    if (page && page.onEnter) page.onEnter(els.get(id), config, store.state, gilt(ansicht, config));
   }
 
   function renderCurrent() {
     const page = pages.get(order[current]);
     if (!page) return;
-    page.render(els.get(page.id), config, store.state);
+    page.render(els.get(page.id), config, store.state, gilt(ansicht, config));
     document.getElementById('page-title').textContent = page.title.toUpperCase();
     updateAge(page);
   }
