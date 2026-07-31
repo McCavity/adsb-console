@@ -81,8 +81,18 @@ der Baum auf dem Gerät, nicht das Remote. Auf `adsapp01` liegt er unter
 `/home/pi/adsb-console`. Er wird vom Arbeitsplatz aus gespiegelt:
 
 ```bash
-rsync -a --delete --exclude '.superpowers' ./ adsapp01:/home/pi/adsb-console/
+rsync -a --delete --exclude '.superpowers' --exclude '.git' ./ adsapp01:/home/pi/adsb-console/
 ```
+
+**`--exclude '.git'` ist seit dem 31.07.2026 dabei, und zwar mit Grund.** Der Spiegel
+existiert, damit die Installer aus einem Baum lesen können — dafür braucht es die
+Historie nicht. Ohne den Ausschluß gleicht rsync bei jedem Lauf rund zehntausend lose
+Git-Objekte ab: Der Lauf dauerte Sekunden statt 1,1 s und erzeugte einen I/O-Sturm auf
+einem Gerät mit 1,8 GB RAM. An genau so einem Lauf hing zeitlich der Totalausfall vom
+31.07. (`docs/2026-07-31-ausfall-adsapp01.md`) — bewiesen ist der Zusammenhang **nicht**,
+aber der Ausschluß kostet nichts und nimmt die Last weg. Nebenwirkung, die man kennen
+muß: `--exclude` schützt auch vor `--delete`, das `.git` auf dem Gerät bleibt also als
+Altlast liegen.
 
 **Das Spiegeln ist der erste Schritt, nicht der optionale.** Bis zum 30.07.2026 lag auf
 dem Gerät ein Baum vom Stand *Stufe 1* — in `/tmp`, also nach dem nächsten Neustart weg.
