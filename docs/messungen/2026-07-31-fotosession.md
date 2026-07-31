@@ -21,6 +21,26 @@ am Rand. Belegt in der Spec-11-Messung: 70 000 ms Budget = 70 000 ms Seitenzeit,
 
 ## Was gestellt wurde
 
+**Auch der Standort.** Die Bilder zeigen einen Empfänger im Zentrum von London
+(51,51 / −0,10), nicht den echten. Zwei Gründe, beide gleich stark:
+
+- **Dichte.** Heathrow, Gatwick, Stansted, Luton und City liegen gemeinsam im 50-NM-Kreis,
+  dazu Biggin Hill und Northolt: **50 Plätze und 41 Bahnen** gegen 34 Plätze im
+  Rhein-Main-Ausschnitt. Der Flugplatz-Layer zeigt sich so, wie er gemeint ist.
+- **Der rechenbare Standort.** Abschnitt 3 des Radar-Entwurfs hält fest, daß aus dem
+  Radarbild der Empfängerstandort rechenbar ist. Die synthetische Quelle schneidet den
+  Kanal über die Flüge ab (es gibt sie nicht), die Flugplatzgeometrie blieb. Sie hätte
+  nur die ohnehin freigegebene gerundete Position hergegeben — das Frontend rechnet alles
+  gegen `receiver.json`, und darin steht die gerundete (`data.js:86`). Ein gestellter
+  Standort schneidet auch diesen Rest ab, statt ihn klein zu rechnen.
+
+Die Flugplatzdatei dafür kommt aus derselben gemeinfreien Quelle wie die produktive:
+
+```bash
+python3 tools/build_airports.py --lat-min 50.6 --lat-max 52.4 \
+  --lon-min -1.6 --lon-max 1.4 --prefix EG --out tools/demo-airports-london.json
+```
+
 17 Ziele, davon 15 innerhalb der eingestellten 50 NM, eines auf 62 NM und eines ohne
 Position. Alle Kennungen erfunden (`SYN####`, hex im Block `f0….`) — nicht nur wegen der
 Daten, sondern aus Ehrlichkeit: Wer das Bild sieht, soll nicht glauben, er sähe einen realen
@@ -32,15 +52,38 @@ eine erfundene CPU-Temperatur im README eine Behauptung im Gewand eines Belegs w
 
 ### Die Ziele stehen nicht, wo sie hübsch wären, sondern wo Platz ist
 
-Bei 50 NM liegen **34 Flugplätze** im Bild. Der erste Durchgang schrieb `EDSYN1122` und
-`EDSYN5509` — Zielbeschriftung auf ICAO-Kennung, was wie ein Renderfehler aussieht.
-`tools/plazierung.py` sucht deshalb Peilung und Entfernung so, daß jede Beschriftung
-mindestens **8 px** von jeder Flugplatzkennung und jeder anderen Zielbeschriftung frei bleibt.
+In der Londoner Region liegen **50 Flugplätze** im Bild. Ein früherer Durchgang über
+Rhein-Main schrieb `EDSYN1122` und `EDSYN5509` — Zielbeschriftung auf ICAO-Kennung, was wie
+ein Renderfehler aussieht. `tools/plazierung.py` sucht deshalb Peilung und Entfernung so,
+daß jede Beschriftung mindestens **8 px** von jeder Flugplatzkennung und jeder anderen
+Zielbeschriftung frei bleibt.
 
-Die Luft steht als **Zahl** im Prüfmittel. Sonst bliebe es grün bis 0,0 px — und genau das
-meldete der erste Lauf mit engem Suchfenster: zwei Ziele bei 6,6 und 7,1 px, Exit 1. Mit
-weiterem Fenster: **9,0 px an der engsten Stelle**, Exit 0. Das Werkzeug war rot, bevor es
-grün war.
+Die Luft steht als **Zahl** im Prüfmittel — sonst bliebe es grün bis 0,0 px. Genau das kam
+in London auch heraus: Mit den Frankfurter Suchparametern blieben vier Ziele darunter, eines
+bei 0,0 px. Drei Anläufe waren nötig, und der dritte hat den Fehler in der Suche selbst
+gefunden:
+
+1. **Weiteres Fenster** → grün, aber der Westen des Schirms war bis auf ein Ziel leer. Die
+   Suche optimiert Luft, nicht Verteilung; mit viel Freiheit wandern alle Ziele in die
+   flugplatzfreien Zonen.
+2. **Gleichmäßige Ausgangsspirale** (Azimut alle 24°) statt der Frankfurter Wunschwerte →
+   Verteilung gut, aber drei Ziele nahe am Zentrum bei 0,0 px. Bei 50 NM Maßstab liegen
+   7 NM auf 43 px, und dort drängen sich die stadtnahen Plätze (London City 5,8 NM).
+   Seither beginnt die Spirale bei 13 NM.
+3. **Nachbesserungsrunden**, weil die gierige Suche in Listenreihenfolge die guten Plätze
+   verteilt und die letzten leer ausgehen läßt. Jedes Ziel wird herausgenommen und gegen
+   *alle* übrigen neu gesucht.
+
+Dabei fiel ein Fehler in der Abbruchbedingung auf: Sie verglich nur das **Minimum** der
+Luftwerte. Klebt ein Ziel bei 0,0 px, bewegt sich das Minimum nie, und die Schleife brach
+nach der ersten Runde ab, während alle anderen sich noch verbessert hätten. Verglichen wird
+jetzt die ganze sortierte Liste.
+
+Ergebnis: **10,0 px an der engsten Stelle**, Exit 0. Das Werkzeug war dabei mehrfach rot,
+bevor es grün war.
+
+Zwei Randbedingungen stecken zusätzlich in der Spirale: Notfall und beide HEAVY müssen
+unter den **zwölf nächsten** liegen, sonst fehlen sie auf der Tafel — die zeigt nur zwölf.
 
 ### Was das Datenblatt verlangt
 
@@ -102,9 +145,23 @@ gemacht**, bevor ihr Grün zählt (`tools/gegenprobe.py`).
 `tEXt`/`iTXt`/`zTXt`. Kalibrierung an einem selbstgebauten JPEG mit GPS → **rot**, und zwar
 mit `EXIF-Tag 0x8825 (GPS-IFD)`.
 
-Der erste Entwurf dieses Detektors suchte das GPS-Tag als Byte-Muster und löste bei der
-Kalibrierung **nicht** aus, obwohl GPS drinstand — ein Zweig, der ohne den erzwungenen
-Fehlerfall nie betreten worden wäre. Er parst den TIFF-Kopf jetzt wirklich.
+Dieser Detektor hat sich dreimal selbst korrigiert, und **jeder** Fehler wäre ohne den
+erzwungenen Fehlerfall unentdeckt geblieben:
+
+- Der erste Entwurf suchte das GPS-Tag als **Byte-Muster** und löste bei der Kalibrierung
+  nicht aus, obwohl GPS drinstand. Er parst den TIFF-Kopf jetzt wirklich.
+- Die zweite Fassung suchte Bilder als `bild-*.png`. Nachdem die Dateien in `radar.png`
+  umbenannt waren, lief der Abschnitt über **null Dateien und meldete Grün** — die
+  Sammelvariable war mit `True` vorbelegt. Er meldet jetzt `NICHT PRUEFBAR` und Exit 2,
+  wenn nichts zu prüfen war.
+- Die dritte suchte die Schlüsselwörter in den **Rohbytes** der ganzen Datei und schlug auf
+  `empfang.png` an: `Zeichenkette "gps"`. Nachgemessen lagen die drei Buchstaben bei Byte
+  3050 mitten im komprimierten Pixelstrom, zwischen `\xac` und `\xb7`; die Datei trägt
+  außer IHDR, IDAT und IEND keinen einzigen Chunk. Ein Treffer im Bilddatenstrom ist Zufall,
+  kein Befund. Durchsucht werden jetzt nur Metadatenbereiche.
+
+Der zweite Fall ist der gefährlichste: Ein Prüfmittel, das nichts messen konnte und
+trotzdem Grün meldet, ist schlimmer als keines.
 
 ## Zwei Darstellungsfehler, die dabei aufgefallen sind — und behoben wurden
 

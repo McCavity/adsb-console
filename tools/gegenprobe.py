@@ -95,10 +95,18 @@ def ortsdaten(pfad):
     daten = Path(pfad).read_bytes()
     chunks = png_chunks(pfad)
     funde = []
+    # Durchsucht werden nur METADATEN, nie die ganze Datei. Die erste Fassung
+    # suchte die Schluesselwoerter in den Rohbytes und schlug am 31.07.2026 auf
+    # empfang.png an: Die drei Buchstaben "gps" standen bei Byte 3050 mitten im
+    # komprimierten Pixelstrom, zwischen \xac und \xb7. Ein Treffer im IDAT ist
+    # Zufall, kein Befund -- das Pruefmittel beantwortete eine andere Frage.
+    durchsuchbar = b''
     if chunks is not None:
         for typ, _ in chunks:
             if typ in ('eXIf', 'tEXt', 'iTXt', 'zTXt'):
                 funde.append(f'PNG-Chunk {typ}')
+                durchsuchbar = daten      # dann lohnt die Textsuche
+
     elif daten[:2] == b'\xff\xd8':
         # JPEG: APP1-Segmente durchgehen
         i = 2
@@ -115,9 +123,10 @@ def ortsdaten(pfad):
             if marker == 0xDA:
                 break
             i += 2 + laenge
+        durchsuchbar = daten              # JPEG: Segmente sind Metadaten genug
     else:
         return None, ['nicht pruefbar: unbekanntes Format']
-    roh = daten.lower()
+    roh = durchsuchbar.lower()
     for s in ORT_SCHLUESSEL:
         if s.encode() in roh:
             funde.append(f'Zeichenkette "{s}"')
@@ -147,8 +156,17 @@ def main():
           else 'GRUEN -- der Detektor prueft NICHTS')
 
     print('\n=== B) Ortsdaten in den Bildern ===')
+    # NICHT nur 'bild-*.png': Am 31.07.2026 lief dieser Abschnitt ueber NULL
+    # Dateien und meldete trotzdem Gruen, weil die Bilder inzwischen radar.png
+    # statt bild-radar.png hiessen. Ein Pruefmittel, das nichts messen konnte,
+    # meldet "nicht pruefbar" -- niemals Gruen.
+    bilder = sorted(set(basis.glob('*.png')) | set(basis.glob('*.jpg'))
+                    - {basis / 'koeder-mit-gps.jpg'})
+    if not bilder:
+        print('  NICHT PRUEFBAR: keine Bilddateien in', basis)
+        return 2
     alle_sauber = True
-    for p in sorted(basis.glob('bild-*.png')):
+    for p in bilder:
         hat, funde = ortsdaten(p)
         if hat is None or hat:
             alle_sauber = False
