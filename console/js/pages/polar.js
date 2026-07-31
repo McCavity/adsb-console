@@ -378,12 +378,7 @@ export const RING_SCHRITT = 25;
 // Aussenring selbst.
 //
 // Die Zwischenringe sind kein Schoenheitsmittel: Ohne sie haette der
-// aeussere Bereich bei gewachsener Skala gar kein Gitter mehr, und die
-// Kopplung an die Radarringe -- wer den Radarmassstab umstellt, verschiebt
-// beide Seiten gemeinsam -- gilt weiterhin fuer die inneren. Seit Aufgabe 5
-// laeuft diese Kopplung ueber sicht.rings_nm (die Laufzeit-Ansicht aus
-// ansicht.js), nicht mehr ueber cfg.radar.rings_nm direkt -- wer hier nach
-// der Konfiguration sucht, findet die falsche Stelle.
+// aeussere Bereich bei gewachsener Skala gar kein Gitter mehr.
 //
 // Die Formel garantiert, dass der aeusserste Abstand echt ueber
 // RING_MAX_LUECKE - RING_SCHRITT und hoechstens RING_MAX_LUECKE liegt: Ein
@@ -405,6 +400,25 @@ export function ringe(skala, ringeNm) {
   return out;
 }
 
+// Woher nimmt DIESE Seite ihre Ringe? Aus dem Bootvertrag (console.json,
+// von mergeConfig gehaertet) -- nicht aus der Laufzeit-Ansicht.
+//
+// Aufgabe 5 hatte sie an sicht.rings_nm gekoppelt, also an die aktive
+// Radarstufe. Die Kopplung galt, solange die Radarreichweite eine Konstante
+// war: Dann zeigten beide Kreise dieselben Ringe, und wer den Massstab in
+// console.json umstellte, verschob beide Seiten gemeinsam. Seit die
+// Reichweite am Panel umschaltbar ist, traegt sie nicht mehr -- denn die
+// Polarskala wandert NICHT mit (skalaNm waechst mit dem Rekordbestand,
+// zuletzt 80 NM). Bei Radarstufe 10 NM landeten deren Ringe 2/5/10 in einem
+// 80-NM-Bild: der innerste bei 6,9 px, zwoelf Radiale liefen dort zusammen,
+// zwei Beschriftungen ueberlappten (10,2 px Abstand bei 13 px Schrift).
+//
+// Als eigene Funktion und nicht als Ausdruck in render(): So laesst sich die
+// Entkopplung pruefen, statt sie zu behaupten.
+export function bildRinge(cfg, skala) {
+  return ringe(skala, cfg.radar.rings_nm);
+}
+
 registerPage({
   id: 'polar',
   title: 'Reichweite',
@@ -419,7 +433,11 @@ registerPage({
       </div>
       <div class="polar-spalte value"></div>`;
   },
-  render(el, cfg, state, sicht) {
+  // Ohne sicht: Diese Seite folgt der umgeschalteten Radarreichweite
+  // ausdruecklich NICHT (siehe bildRinge). console.js reicht den vierten
+  // Parameter weiterhin an jede Seite -- wer ihn hier wieder aufnimmt,
+  // koppelt eine Skala an eine andere, die nicht mitwandert.
+  render(el, cfg, state) {
     const svg = el.querySelector('.polar-svg');
     const spalte = el.querySelector('.polar-spalte');
     const m = polarModell(state.range);
@@ -433,10 +451,9 @@ registerPage({
     }
 
     const teile = [];
-    // Ringkreise: die des Radars, soweit sie in die Skala passen, dazu der
-    // Aussenring. Wer auf dem Radar den 50-NM-Ring sieht, findet ihn hier
-    // wieder -- und ein umgestellter Radarmassstab verschiebt beide Seiten
-    // gemeinsam. Das GANZE Gitter -- Ringe UND ihre Beschriftung -- wird
+    // Ringkreise: die aus console.json, soweit sie in die Skala passen, dazu
+    // der Aussenring (bildRinge -- dort steht, warum nicht die aktive
+    // Radarstufe). Das GANZE Gitter -- Ringe UND ihre Beschriftung -- wird
     // separat gesammelt (ringGitter) und erst nach der Flaeche angehaengt,
     // genau wie auf jedem Radarschirm: Das Gitter liegt ueber der Flaeche,
     // nicht darunter. Die erste Fassung schob nur die BESCHRIFTUNG nach
@@ -446,7 +463,7 @@ registerPage({
     // Flaechenradius 56,1 px, 10-NM-Ring bei 34,5 px -- der Ring war
     // unsichtbar, und seine Beschriftung stand mitten in der Flaeche und
     // zeigte auf nichts.
-    const ringListe = ringe(m.skalaNm, sicht.rings_nm);
+    const ringListe = bildRinge(cfg, m.skalaNm);
     const ringGitter = [];
     // Die Radialen ZUERST in ringGitter, die Ringkreise danach: Beide
     // landen ueber der Flaeche (ringGitter wird ganz zum Schluss
@@ -454,7 +471,7 @@ registerPage({
     // liegen, nicht die Radialen -- dieselbe Reihenfolge-Regel wie zwischen
     // Flaeche und Gitter oben, nur eine Ebene tiefer.
     //
-    // radialen() bekommt dieselbe berechnete Liste, nicht sicht.rings_nm
+    // radialen() bekommt dieselbe berechnete Liste, nicht cfg.radar.rings_nm
     // direkt: Sind dort gar keine brauchbaren Ringe angegeben, liefert
     // radialen() sonst ein leeres Gitter, waehrend Ringe trotzdem gezeichnet
     // wuerden -- mit ringListe haben die Radialen immer einen Anker. Bei

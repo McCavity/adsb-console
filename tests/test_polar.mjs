@@ -5,8 +5,10 @@ import { SEKTOREN, SKALA_STUFE, skalaNm, sektorBereich, halterName, polarModell,
   RICHTUNGEN, SEKTOREN_JE_RICHTUNG, richtungen, zuletztGefallen,
   BILD, R_PX, MITTE, werteArray, keilPfad, treppenPfade,
   markenPlatz, markenKasten, PEIL_SCHRIFT, PEIL_LUFT, datumKurz, zahlNm, radialen,
-  ringe, RING_MAX_LUECKE, RING_SCHRITT }
+  ringe, bildRinge, RING_MAX_LUECKE, RING_SCHRITT }
   from '../console/js/pages/polar.js';
+import { mergeConfig } from '../console/js/config.js';
+import { erzeugeAnsicht, setzeStufe, gilt } from '../console/js/ansicht.js';
 
 test('36 Sektoren zu je zehn Grad', () => {
   assert.equal(SEKTOREN, 36);
@@ -423,6 +425,28 @@ test('ein umgestellter Radarmassstab traegt die Regel mit', () => {
   // Ringe 5/12/25 gab es bei der Stufe-2-Abnahme wirklich. Eine naive
   // Fassung zoege hier einen Ring bei 75 ein -- 5 NM neben dem Aussenring.
   assert.deepEqual(ringe(80, [5, 12, 25]), [5, 12, 25, 50, 80]);
+});
+
+// Die Kopplung an die Radarringe galt, solange die Radarreichweite eine
+// Konstante war. Seit sie am Panel umschaltbar ist, traegt sie nicht mehr:
+// Diese Seite hat ihre EIGENE Skala (skalaNm, waechst mit dem Bestand), die
+// nicht mitwandert. Bei Radarstufe 10 NM landeten deren Ringe 2/5/10 in
+// einem 80-NM-Bild -- der innerste bei 6,9 px, mit zwoelf dort
+// zusammenlaufenden Radialen und zwei ueberlappenden Beschriftungen.
+test('Reichweite-Seite koppelt an den Bootvertrag, nicht an die aktive Radarstufe', () => {
+  const cfg = mergeConfig({});
+  const zehn = gilt(setzeStufe(erzeugeAnsicht(), 0), cfg);      // 10-NM-Stufe
+  assert.deepEqual(zehn.rings_nm, [2, 5, 10], 'Voraussetzung des Falls');
+
+  assert.deepEqual(bildRinge(cfg, 80), ringe(80, cfg.radar.rings_nm));
+  assert.notDeepEqual(bildRinge(cfg, 80), ringe(80, zehn.rings_nm));
+
+  // Und der messbare Grund dahinter: Der innerste Ring muss vom Mittelpunkt
+  // wegkommen. 20 px als Grenze ist kalibriert -- der Bootvertrag ergibt
+  // 34,25 px, die Radarstufe 6,85 px.
+  const innersterPx = bildRinge(cfg, 80)[0] / 80 * R_PX;
+  assert.ok(innersterPx > 20,
+    `innerster Ring bei ${innersterPx.toFixed(1)} px -- zu dicht am Mittelpunkt`);
 });
 
 test('Ringe jenseits der Skala fallen raus, der Aussenring bleibt', () => {
