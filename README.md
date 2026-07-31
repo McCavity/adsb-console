@@ -6,18 +6,40 @@ sechs weitere Seiten in einem Karussell, die zeigen, was der Empfänger gerade s
 Die Konsole ist ein **Leser**. Sie liest die JSON-Ausgaben von `dump1090-fa` und ändert
 nichts am ADS-B-Stack — der Feed ist der Zweck des Geräts, die Anzeige ist es nicht.
 
+![Radarseite der Konsole: PPI mit umlaufender Keule, Flugplätzen und Bahnen, ein rot
+hervorgehobenes Ziel mit Notfall-Squawk 7700 und der Datenblock daneben](docs/bilder/radar.png)
+
+> [!note]
+> **Alle Bilder in diesem README zeigen eine synthetische Quelle**, keine realen Flüge.
+> Kennungen (`SYN####`) und Hex-Adressen sind erfunden. Nachts fliegt nichts und tagsüber
+> steht zufällig da, was da steht — ein Notfall-Squawk, ein HEAVY und ein voller Schirm
+> lassen sich nicht abwarten. Wie die Bilder entstanden sind, steht in
+> [`docs/messungen/2026-07-31-fotosession.md`](docs/messungen/2026-07-31-fotosession.md);
+> der Generator ist [`tools/fotoszene.py`](tools/fotoszene.py). Nur die Systemseite zeigt
+> **echte** Meßwerte dieser Hardware — eine erfundene CPU-Temperatur wäre eine Behauptung
+> im Gewand eines Belegs.
+
 ## Stand
 
-**Stufe 1 läuft seit dem 27.07.2026 auf dem Gerät** — Radar, Board und Statistik, mit
-Schreiber-Daemon und Kiosk-Autostart. **Stufe 2 (Einzelziel, Höhenprofil, System) ist
-gebaut**; die Abnahme am Gerät steht noch aus. **Stufe 3 (Reichweiten-Polar) ist
-gebaut**; die Abnahme am Gerät steht ebenfalls noch aus.
+**Alle sieben Seiten laufen auf dem Gerät, alle vier Ausbaustufen sind am Panel
+abgenommen.** 215 Frontend-Tests und 44 Daemon-Tests, ein Wächter gegen die
+Empfängerposition im Repo.
 
-- Entwurf Stufe 1: [`docs/specs/2026-07-27-atc-konsole-design.md`](docs/specs/2026-07-27-atc-konsole-design.md)
-- Entwurf Stufe 2: [`docs/specs/2026-07-28-stufe-2-entwurf.md`](docs/specs/2026-07-28-stufe-2-entwurf.md)
-- Entwurf Stufe 3: [`docs/specs/2026-07-29-stufe-3-entwurf.md`](docs/specs/2026-07-29-stufe-3-entwurf.md)
-- Abnahme am Gerät: [`docs/abnahme/2026-07-27-stufe-1.md`](docs/abnahme/2026-07-27-stufe-1.md)
-- Messungen (Positionsquelle, Panel-Drehung, Animationskosten): [`docs/messungen/`](docs/messungen/)
+| Stufe | Inhalt | Abnahme am Gerät |
+|---|---|---|
+| 1 | Radar, Ziele, Empfang, Schreiber-Daemon, Kiosk-Autostart | [27.07.2026](docs/abnahme/2026-07-27-stufe-1.md) |
+| 2 | Einzelziel, Höhenprofil, System | [28.07.2026](docs/abnahme/2026-07-28-stufe-2.md) |
+| 3 | Reichweite (Polar) | [30.07.2026](docs/abnahme/2026-07-30-stufe-3.md) |
+| Radar-Ansicht | Reichweitenstufen 10/50/80 NM, Flugplatz-Layer, Einstellungsdialog | [31.07.2026](docs/abnahme/2026-07-31-radar-ansicht.md) |
+
+Die Abnahmen sind keine Häkchenlisten: Sie werden **gegen die Absicht** bedient — Schritte
+doppelt ausgeführt, mitten im Ablauf abgebrochen, Werte an den falschen Ort gelegt. Der
+vorgesehene Weg beweist nur, daß es ihn gibt.
+
+- Entwürfe: [`docs/specs/`](docs/specs/) — Stufe 1 bis 3 und die Radar-Ansicht
+- Messungen: [`docs/messungen/`](docs/messungen/) — Positionsquelle, Panel-Drehung,
+  Animationskosten, Schrift, Wärme, Frischeanzeige, Fotosession
+- Abnahmen: [`docs/abnahme/`](docs/abnahme/)
 
 ## Die Idee in drei Sätzen
 
@@ -29,21 +51,91 @@ zur Laufzeit. Ein Chromium-Kiosk unter labwc zeigt es auf dem Panel.
 
 ## Seiten
 
-Reihenfolge im Karussell:
+Reihenfolge im Karussell. Der **Titel** steht in der Kopfzeile des Panels, der
+**Schlüssel** ist der Name in `config/console.json` — beide auseinanderzuhalten spart die
+Sucherei, die einen sonst erwischt, wenn man „Empfang" abschalten will und `stats` meint.
 
-| Seite | Inhalt |
-|---|---|
-| Radar | PPI mit umlaufendem Sweep, Nachglühen, Flugplätzen und Bahnen |
-| Einzelziel | volles Datenblatt zum beim Betreten eingefrorenen Ziel: Geschwindigkeit (GS/IAS/TAS/Mach), Höhe samt Zielflugfläche, Lage, Ort, Empfangs- und Positionsgüte |
-| Höhenprofil | Seitenriß — Entfernung × Flugfläche, ein Punkt je Ziel — mit den sechs Bändern als Zählspalte daneben |
-| Polar | Reichweite je Sektor als Windrose — Allzeit-Rekord und Stundenmaximum, mit Trophäe, zwölf Richtungen und dem zuletzt gefallenen Rekord |
-| Board | Zielliste nach Entfernung, samt der Ziele ohne Position |
-| Statistik | Nachrichtenrate, Signalpegel, Verstärkung, Track-Güte |
-| System | Temperatur, Load, Speicher, Drosselung, Dienste |
+| Titel | Schlüssel | Standzeit | Inhalt |
+|---|---|---|---|
+| Radar | `radar` | 45 s | PPI mit umlaufender Keule, Nachglühen, Flugplätzen und Bahnen; Reichweite 10/50/80 NM am Zahnrad umschaltbar |
+| Einzelziel | `target` | 15 s | volles Datenblatt zum beim Betreten eingefrorenen Ziel: Geschwindigkeit (GS/IAS/TAS/Mach), Höhe samt Zielflugfläche, Lage, Ort, Empfangs- und Positionsgüte |
+| Höhenprofil | `profile` | 15 s | Seitenriß — Entfernung × Flugfläche, ein Punkt je Ziel — mit den sechs Bändern als Zählspalte daneben |
+| Reichweite | `polar` | 15 s | Reichweite je Sektor als Windrose — Allzeit-Rekord und Stundenmaximum, mit Trophäe, zwölf Richtungen und dem zuletzt gefallenen Rekord |
+| Ziele | `board` | 15 s | die zwölf nächsten Ziele nach Entfernung, samt derer ohne Position |
+| Empfang | `stats` | 15 s | Nachrichtenrate, Signalpegel, Verstärkung, Track-Güte |
+| System | `system` | 15 s | Temperatur, Load, Speicher, Drosselung, Dienste |
 
-`polar` hat seit Stufe 3 einen eigenen Renderer (`console/js/pages/polar.js`) und läuft
-mit den übrigen sechs — heute laufen alle sieben Seiten. Jede Seite läßt sich in
-`config/console.json` einzeln abschalten.
+Ein Umlauf dauert damit 2:15. Jede Seite läßt sich in `config/console.json` einzeln
+abschalten; eine Berührung hält das Karussell 60 Sekunden an.
+
+### Die übrigen sechs Seiten
+
+<details>
+<summary><b>Ziele</b> — die zwölf nächsten, Notfall rot, HEAVY markiert</summary>
+
+![Zielliste: zwölf Zeilen mit Callsign, Flugfläche, Geschwindigkeit, Kurs, Entfernung und
+Peilung; die Notfallzeile rot samt Squawk 7700, darunter die Zeile für Ziele ohne
+Position](docs/bilder/ziele.png)
+
+Der Filter sitzt auf der eingestellten Reichweite: Ein Ziel, das das Radar als außer
+Reichweite behandelt, taucht hier nicht fünfzehn Sekunden später als volles Datenblatt auf.
+</details>
+
+<details>
+<summary><b>Einzelziel</b> — 23 Felder zum eingefrorenen Ziel</summary>
+
+![Datenblatt eines Ziels in sechs Kacheln: Geschwindigkeit, Höhe, Lage, Ort, Empfang und
+Positionsgüte](docs/bilder/einzelziel.png)
+
+Die Seite friert ihr Ziel beim Betreten ein. Zwei Ziele bei 12,3 und 12,4 NM würden sonst
+im Sekundentakt tauschen, und ein Datenblatt, dessen Gegenstand springt, ist unlesbar.
+</details>
+
+<details>
+<summary><b>Höhenprofil</b> — Seitenriß mit Zählspalte</summary>
+
+![Seitenriß: Entfernung waagerecht, Flugfläche senkrecht, ein Punkt je Ziel; rechts die
+sechs Flugflächenbänder als Balken mit Anzahl](docs/bilder/hoehenprofil.png)
+
+Die Kachel „nicht im Bild" erklärt die Differenz zwischen Bändern und Punkten: Ziele mit
+Höhe, aber ohne Position, und Ziele außerhalb der Reichweite. Eine Zählung, deren Summe
+nicht aufgeht, wirft mehr Fragen auf, als sie beantwortet.
+</details>
+
+<details>
+<summary><b>Reichweite</b> — Windrose aus Rekord und letzter Stunde</summary>
+
+![Polardiagramm mit 36 Sektoren: gefüllte Fläche für den Allzeit-Rekord, eine Linie für das
+Stundenmaximum; rechts zwölf Richtungen als Balkenpaare](docs/bilder/reichweite.png)
+
+Zwei Spuren, weil eine nichts über heute sagt. Wo die Stundenlinie aus der Rekordfläche
+ragt, ist gerade ein Rekord gefallen.
+</details>
+
+<details>
+<summary><b>Empfang</b> — Nachrichtenrate und Signalpegel</summary>
+
+![Empfangsstatistik in drei Zeitfenstern: Nachrichten pro Sekunde, akzeptierte Nachrichten,
+starke Signale, Peak, Signal und Rauschen in dBFS](docs/bilder/empfang.png)
+
+Drei Fenster nebeneinander (1, 5, 15 Minuten), weil ein Einzelwert nicht sagt, ob er
+Ausreißer oder Zustand ist.
+</details>
+
+<details>
+<summary><b>System</b> — Temperatur, Last, Drosselung, Dienste</summary>
+
+![Systemseite mit CPU-Temperatur samt Markenbalken, Last, Speicher und Platte, SDR-Leser,
+Drosselungsflags jetzt und seit Boot, Dienstliste und Daemon-Alter](docs/bilder/system.png)
+
+Drei Marken, aber nur zwei Farbschwellen: 60 °C ist der Firmware-Vorgabewert und bloß ein
+Strich, 72 °C die Abnahmegrenze dieses Projekts, 80 °C die harte Grenze. Eine Anzeige, die
+im Regelbetrieb dauernd Alarmfarbe zeigt, wird nach drei Tagen nicht mehr gelesen.
+
+Die Drosselungsflags kennen **drei** Zustände, nicht zwei: Ein fehlender Wert ist keine
+Entwarnung. Und „Daemon geschrieben vor" wird ab 30 s rot — das ist die Anzeige, die einen
+stehengebliebenen Schreiber verrät, während alle anderen Zahlen noch plausibel aussehen.
+</details>
 
 ## Installation
 
