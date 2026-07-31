@@ -76,8 +76,80 @@ nachziehen.
 
 ## Was daraus für den Deploy folgt
 
-Der Ausfall lag zeitlich hinter zwei `rsync`-Trockenläufen und einem `tar` über rund
-zehntausend lose Git-Objekte. Ein Zusammenhang ist **nicht belegt** — und die naheliegenden
-Mechanismen sind oben gerade ausgeschlossen. Trotzdem trägt der Spiegel-Befehl im README seit
-dem 31.07. ein `--exclude '.git'`: Der Baum auf dem Gerät existiert, damit die Installer
-daraus lesen können, die Historie braucht es dafür nicht. Der Lauf dauert damit **1,1 s**.
+Der Ausfall lag zeitlich hinter zwei `rsync`-Trockenläufen und einem `tar` über das
+Geräte-`.git`. Ein Zusammenhang ist **nicht belegt**, und die naheliegenden Mechanismen sind
+oben ausgeschlossen.
+
+> [!warning]
+> Die erste Fassung dieses Abschnitts sprach von „rund zehntausend losen Git-Objekten".
+> Nachgezählt sind es **883 Objekte, 6,2 MB, 341 Dateien im rsync-Vergleich** — für einen
+> Pi keine nennenswerte Last. Die Zahl war geschätzt und hat die Lasthypothese größer
+> aussehen lassen, als sie ist. Wer eine Größenordnung in eine Ursachenanalyse schreibt,
+> ohne sie zu zählen, stützt damit genau die Erklärung, die er sucht.
+
+Der Spiegel-Befehl im README trägt trotzdem seit dem 31.07. ein `--exclude '.git'` — nicht
+als Fehlerbehebung, sondern weil der Lauf damit **1,1 s** dauert und die Historie auf dem
+Gerät niemand braucht.
+
+
+## Nachtrag: Streßtest am selben Abend — nicht reproduzierbar
+
+Die Last, die zeitlich am Ausfall hing, wurde gezielt wiederholt und dabei **deutlich
+überschritten**. Gemessen wurde mit einem Fühler, der alle 2 s ins jetzt persistente Journal
+schreibt — genau die Größen, die im Monitoring fehlen: Prozesse, Threads, Zombies, freier
+RAM, Load, offene Dateideskriptoren.
+
+Gestuft, damit hinterher zuzuordnen ist, welche Last was tut — pro Lauf eine Variable:
+
+| Stufe | Last | Prozesse | Threads | Zombies | RAM verfügbar min | FDs max |
+|---|---|---|---|---|---|---|
+| 1 | 5 × `rsync`-Trockenlauf mit `.git` | ±0 | ±0 | 0 | 1198 MB | 2208 |
+| 2 | 5 × Chromium seriell | +12 | +97 | 2 | 1045 MB | 3117 |
+| 3 | 12 × Chromium, 4 parallel | +23 | +86 | 0 | 1012 MB | 3960 |
+| 4 | 24 × Chromium + 3 × `tar` + 3 × `rsync`, alles parallel | +40 | +97 | 0 | **1021 MB** | 4989 |
+
+**Stufe 4 liegt weit über der Last des Ausfallabends, und das Gerät steckt sie weg.** Nach
+jeder Runde kehrt der verfügbare Speicher auf rund 1,3 GB zurück; Load 3,1 auf vier Kernen.
+Kein Leck: Nach den Läufen sind alle zwölf laufenden Chromium-Prozesse **4363 s alt**, also
+vom Kiosk-Start — keiner stammt aus den Testläufen, und die Dateideskriptoren fallen auf den
+Ausgangswert zurück.
+
+**Von außen gegengeprüft, unabhängig von den Zahlen aus dem Gerät:** Eine Sonde vom
+Arbeitsplatz aus fragte 20 Minuten lang alle 5 s Ping, Port 22 und HTTP ab — **240 Meßpunkte,
+fünf Störungen, und alle fünf im Fenster des abschließenden `reboot`** (22:06:36–22:07:11).
+Während der gesamten Last war das Gerät durchgehend erreichbar. Am Ausfallabend zeigte
+dieselbe Sonde fünf Minuten am Stück `ssh=zu` und `http=000`.
+
+Der Unterschied im Verlauf ist dabei aufschlußreich: Beim gewollten Neustart geht zuerst SSH,
+dann HTTP, dann der Ping — und nach 25 s ist alles zurück. Am Ausfallabend blieb der **Ping
+minutenlang beantwortet**, während der Userspace schon stand. Ein geordnetes Herunterfahren
+sieht anders aus als das, was dort passiert ist.
+
+**Damit ist die Lasthypothese erledigt.** Sie war ohnehin nur eine zeitliche Koinzidenz, und
+die Zahl, die sie stützte, war geschätzt (siehe Warnung oben). Die Ursache des Ausfalls
+bleibt unbekannt.
+
+### Was der Streßtest zusätzlich bewiesen hat
+
+Der abschließende Neustart war die eigentliche Probe auf die Journal-Umstellung — eine
+Migration ist erst geprüft, wenn sie einen Reboot überlebt hat:
+
+```
+IDX BOOT ID                          FIRST ENTRY                  LAST ENTRY
+ -1 0cf4bca3de0b44288b72694afe7427e2 Fri 2026-07-31 20:21:37 CEST Fri 2026-07-31 22:06:45
+  0 122ecd6eea0d466c8faebc5557f13d3a Fri 2026-07-31 22:06:46 CEST Fri 2026-07-31 22:07:04
+```
+
+**Zwei Boots, und alle 159 Meßzeilen des vorigen sind lesbar.** Genau das hat am Abend
+gefehlt. Fällt das Gerät noch einmal aus, ist die Vorgeschichte da.
+
+### Und wieder das Prüfmittel
+
+Der Auswerter suchte den Stufenmarker als **Teilzeichenkette** und traf damit
+`=== STUFE 2 ENDE` statt `=== STUFE 2:`. Ausgewertet wurde die Ruhe **nach** der Last statt
+der Last selbst — Stufe 1 und 2 meldeten zuerst „Delta 0", was wie ein Ergebnis aussah.
+Aufgefallen an der Zahl der Meßpunkte: zwei statt der erwarteten fünfzig.
+
+Davor hatte derselbe Fühler den **falschen Speicherwert** protokolliert: `read _ _ _ _ VERF _`
+über `free -m` liefert `shared`, nicht `available` — 68 MB statt 1235. Gefangen, weil die
+Zahl nicht zum vorher gemessenen Wert paßte.
