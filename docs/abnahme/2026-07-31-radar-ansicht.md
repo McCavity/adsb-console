@@ -164,7 +164,56 @@ Das belegt nebenbei die ganze Stufenmechanik am realen Gerät, nicht nur im Test
 ausschließlich die 50-NM-Stufe überschreibt — genau das Verhalten aus Befund A der
 Schlußprüfung.
 
-**Wärmemessung bei 80 NM** (Block 3, eigener Lauf): 30 Minuten auf der größten Stufe, dazu die
-Blip-Zahl bei 50 und bei 80 NM gegenübergestellt. Ausgangslage bei Abnahmeende: **74,5 °C**,
-`throttled=0x0`. Die 72 °C sind bereits im Ausgangszustand gerissen — das ist der Befund vom
-30.07. (Ursache ist die Raumtemperatur, R² 0,84) und keine Folge dieser Änderung.
+### Wärmemessung bei 80 NM — ✓ 31.07., 18:38–19:08
+
+60 Punkte im 30-Sekunden-Takt, Stufe am Panel gesetzt und **vor dem Start unabhängig
+gegengeprüft** (`grim`-Ausschnitt der Maßstabskachel: `80 NM · Ringe 20 · 50 · 80`) — nicht
+angenommen, daß sie steht.
+
+| Größe | Wert |
+|---|---|
+| CPU min / max | 69,6 / **74,0 °C** |
+| Mittel / Median | 71,8 / 72,0 °C |
+| über 72 °C | 14 von 60 Punkten (23 %) |
+| über 75 °C | **0** |
+| `get_throttled` | durchgehend `0x0` |
+
+**Die 80-NM-Stufe kostet keine meßbare Wärme.** Der Vergleich zum 24-h-Lauf vom 30.07. (auf
+50 NM): dort **76,4 °C** Maximum und 32,8 % der Punkte über 72. Heute abend auf der
+*größten* Stufe: 74,0 °C und 23 %. Die größere Reichweite liegt damit **unter** dem
+Referenzlauf der kleineren.
+
+Der Grund steht in den mitgeschriebenen Zielzahlen — und ohne sie wäre er nicht auffindbar
+gewesen:
+
+| | min | max | Mittel |
+|---|---:|---:|---:|
+| Ziele ≤ 50 NM | 4 | 18 | 9,5 |
+| Ziele ≤ 80 NM | 4 | 19 | 10,6 |
+| **Aufschlag 80 gegen 50** | **0** | **4** | **1,1** |
+
+Die Sorge der Schlußprüfung war, daß 80 NM deutlich mehr Blips bedeutet und damit mehr
+laufende CSS-Animationen. **Im Mittel ist es ein einziges Ziel.** Der beherrschende Faktor
+bleibt die Umgebungstemperatur — der Befund vom 30.07. (R² = 0,84) wird davon nicht berührt.
+
+⚠️ **Was diese Messung ausdrücklich nicht sagt:** Sie lief an einem Freitagabend mit dünnem
+Verkehr (im Mittel 9,5 Ziele innerhalb 50 NM). Zur Mittagszeit mit dichtem Verkehr wäre der
+Aufschlag zwischen 50 und 80 NM größer, und damit auch sein Wärmebeitrag. Aus einem ruhigen
+Abend „unkritisch" zu machen, wäre derselbe Fehlschluß wie aus einem einzelnen Tag einen
+Vorfall — er ist am 25.07. schon einmal passiert. Wer die Frage wirklich beantworten will,
+wiederholt den Lauf zur Hauptverkehrszeit.
+
+Rohdaten: `waerme-80nm.csv` im Sitzungs-Scratchpad, 60 Punkte, sieben Spalten.
+
+---
+
+## 9. Fazit
+
+Die Abnahme ist bestanden. Elf Bedienprüfungen am Panel, das Ausrollen über HTTP
+gegengeprüft, der Zahnrad-Glyph objektiv gegen ein Kontrollzeichen gemessen, die
+Stufenmechanik am Gerät belegt, und die Wärmefrage beantwortet. Zwei Vorhersagen aus Plan und
+Entwurf haben der Messung nicht standgehalten und sind an Ort und Stelle korrigiert (der
+Ring-Überstand in Abschnitt 2, die Anwesenheitsspur in der Repo-Durchsicht).
+
+Offen bleibt nur, was bewußt ausgelagert ist: die Fotosession mit synthetischer Quelle und
+der Doku-Durchgang vor der Veröffentlichung.
