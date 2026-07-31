@@ -1419,7 +1419,7 @@ git commit -m "Daemon-Hauptschleife, Ausgabedateien und systemd-Unit"
 
 - [ ] **Schritt 1: `install-console.sh` schreiben**
 
-Übernimm `install-console.sh` aus `~/git/projects/own/jeelink-davis` als Grundlage und
+Übernimm `install-console.sh` aus dem Schwesterprojekt `jeelink-davis` als Grundlage und
 passe an: `SERVICE_USER=atc`, `SERVICE_FILE=atc-console.service`,
 `CONSOLE_STATE_DIR=/var/lib/atc-console`, Ziel-URL `http://127.0.0.1/atc/`. **Unverändert
 übernehmen** — das sind teuer bezahlte Details, keine Stilfragen:

@@ -1,13 +1,17 @@
 import { loadConfig } from './config.js';
 import { createDataStore, ageState } from './data.js';
 import { naechsterWechsel } from './carousel.js';
+import { erzeugeAnsicht, gilt, setzeStufe, schalteLayer } from './ansicht.js';
 
 const pages = new Map();          // id -> {id, title, ageSource, mount, render, onEnter?}
+let aenderer = null;
+export function ansichtAendern(fn) { if (aenderer) aenderer(fn); }
 
 export function registerPage(page) { pages.set(page.id, page); }
 
 export async function startConsole() {
   const config = await loadConfig();
+  let ansicht = erzeugeAnsicht();
   const store = createDataStore(() => renderCurrent());
   const order = config.activePages.filter(id => pages.has(id));
   const stage = document.getElementById('stage');
@@ -16,12 +20,22 @@ export async function startConsole() {
   let current = 0, rotateTimer = null, resumeTimer = null;
   const RESUME_MS = 60000;
 
+  // Der Einstellungsdialog aendert die Ansicht ueber genau diesen Weg --
+  // nicht durch Zugriff auf die Variable. So gibt es EINE Stelle, an der
+  // ein Wechsel neu rendert und als Beruehrung zaehlt; sonst waere die
+  // 60-Sekunden-Pause vom Zufall abhaengig, ob der Aufrufer daran denkt.
+  aenderer = fn => {
+    ansicht = fn(ansicht);
+    renderCurrent();
+    planeWechsel('beruehrung');
+  };
+
   for (const id of order) {
     const el = document.createElement('div');
     el.className = 'page';
     stage.appendChild(el);
     els.set(id, el);
-    pages.get(id).mount(el, config, store.state);
+    pages.get(id).mount(el, config, store.state, gilt(ansicht, config));
 
     const box = document.createElement('div');
     box.className = 'dotbox';
@@ -45,13 +59,13 @@ export async function startConsole() {
     store.state.systemVisible = id === 'system';
     if (id === 'system') store.refreshSystem();
     const page = pages.get(id);
-    if (page && page.onEnter) page.onEnter(els.get(id), config, store.state);
+    if (page && page.onEnter) page.onEnter(els.get(id), config, store.state, gilt(ansicht, config));
   }
 
   function renderCurrent() {
     const page = pages.get(order[current]);
     if (!page) return;
-    page.render(els.get(page.id), config, store.state);
+    page.render(els.get(page.id), config, store.state, gilt(ansicht, config));
     document.getElementById('page-title').textContent = page.title.toUpperCase();
     updateAge(page);
   }
@@ -109,6 +123,69 @@ export async function startConsole() {
     if (ausloeser === 'beruehrung') resumeTimer = timer; else rotateTimer = timer;
   }
 
+  const cog = document.getElementById('cog');
+  const panel = document.getElementById('settings');
+
+  // Zahnrad nur, wo es etwas zu stellen gibt. Ein Knopf, der auf fuenf von
+  // sieben Seiten nichts tut, ist schlimmer als keiner.
+  function zeigeZahnrad() {
+    const page = pages.get(order[current]);
+    cog.hidden = !(page && typeof page.einstellungen === 'function');
+    if (cog.hidden) schliesseDialog();
+  }
+
+  function schliesseDialog() { panel.hidden = true; panel.innerHTML = ''; }
+
+  // Heute sind alle Quellen des Dialogs Literale oder gehaertete Zahlen --
+  // die Luecke gibt es also noch nicht. Sie entstuende aber, ohne dass
+  // jemand diese Datei anfasst: einstellungen() ist der vorgesehene
+  // Anschlusspunkt fuer spaetere Layer (Staedte, Sektoren, Luftraeume), und
+  // deren Beschriftungen kaemen aus einer Datendatei. Ein Anschlusspunkt,
+  // der erst beim zweiten Eintrag sicher wird, ist eine Falle fuer den, der
+  // ihn benutzt.
+  function escapeHtml(v) {
+    return String(v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function baueDialog() {
+    const page = pages.get(order[current]);
+    let eintraege;
+    try {
+      eintraege = page.einstellungen(config, gilt(ansicht, config));
+    } catch (_) {
+      // Eine Seite, deren Einstellungen werfen, darf die Konsole nicht
+      // anhalten -- dieselbe Haltung wie das finally in goTo().
+      cog.hidden = true; schliesseDialog(); return;
+    }
+    panel.innerHTML = eintraege.map(e => e.art === 'auswahl'
+      ? `<div class="setzeile"><span>${escapeHtml(e.beschriftung)}</span><span class="segmente">${
+          e.optionen.map(o => `<button data-k="${e.kennung}" data-w="${o.wert}"${
+            o.wert === e.wert ? ' class="an"' : ''}>${escapeHtml(o.text)}</button>`).join('')
+        }</span></div>`
+      : `<div class="setzeile"><span>${escapeHtml(e.beschriftung)}</span><button data-k="${e.kennung}"
+           data-w="${e.wert ? 'aus' : 'an'}" class="schalter${e.wert ? ' an' : ''}">${
+           e.wert ? 'an' : 'aus'}</button></div>`).join('');
+    panel.hidden = false;
+  }
+
+  cog.addEventListener('pointerup', e => {
+    e.stopPropagation();
+    if (panel.hidden) baueDialog(); else schliesseDialog();
+    planeWechsel('beruehrung');
+  });
+
+  panel.addEventListener('pointerup', e => {
+    e.stopPropagation();
+    const b = e.target.closest('button');
+    if (!b) { planeWechsel('beruehrung'); return; }
+    const k = b.dataset.k, w = b.dataset.w;
+    ansichtAendern(z => k === 'stufe' ? setzeStufe(z, Number(w))
+                                      : schalteLayer(z, k, w === 'an'));
+    baueDialog();
+  });
+
   // ausloeser: Was den Wechsel anstoesst -- 'automatisch' (der Umlauf) oder
   // 'beruehrung' (Wisch/Tipp/Punkt). Ausdruecklich als Parameter und nicht
   // ueber die Aufrufreihenfolge: Vorher rief die Touch-Behandlung erst
@@ -125,6 +202,13 @@ export async function startConsole() {
   function goTo(index, ausloeser = 'automatisch', wischRichtung = null) {
     const next = ((index % order.length) + order.length) % order.length;
     try {
+      // VOR dem Vergleich, nicht darin: Bei genau einer aktiven Seite ist
+      // next immer current, der Block darunter wird nie betreten -- und der
+      // Dialog bliebe offen, bis ihn jemand von Hand schliesst. Eine Seite
+      // ist erreichbar: ueber config.pages und ueber den Notfall-Rueckfall
+      // activePages = ['radar']. Die Zusage "kann per Konstruktion nicht
+      // offen steckenbleiben" galt bis zum 31.07.2026 nur ab zwei Seiten.
+      schliesseDialog();
       if (next !== current) {
         const alt = els.get(order[current]);
         alt.classList.remove('active');
@@ -135,6 +219,7 @@ export async function startConsole() {
         }
         current = next;
         betrete(current);
+        zeigeZahnrad();
         renderCurrent();
         const neu = els.get(order[current]);
         raeumeWisch(neu);
@@ -180,6 +265,7 @@ export async function startConsole() {
   renderCurrent();
   tickClock();
   setInterval(tickClock, 1000);
+  zeigeZahnrad();
   planeWechsel('automatisch');
 
   // Naechtlicher Reload -- nur wenn die Quelle vorher antwortet. Ohne diese

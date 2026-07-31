@@ -292,3 +292,28 @@ html, body {
   font-display: block;
 }
 .radar-wrap .blip .lab { font-family: 'B612Mono', ui-monospace, monospace; }
+
+/* Zahnrad und Einstellungsdialog. Die erste Fassung trug eine blau-graue
+   Palette (#0d1620/#24425c/#16273a/#b7c8d8/#1d4f74/#eaf4ff) -- die einzigen
+   blau-grauen Flaechen einer durchgehend gruenen ATC-Optik. Jeder Wert
+   steht jetzt auf seinem Gegenstueck aus dem Panel: Kachelgrund und -rand
+   (.tile), Fliesstextfarbe (body), Punktfarbe (.dot/.dot.on).
+   #cog las var(--slate, #7f93a8) -- --slate ist in dieser Datei nirgends
+   definiert, der Rueckfallwert griff also immer. Die Variable ist raus und
+   die Farbe steht da, die in der Kopfzeile daneben ohnehin gilt
+   (#page-title, #date, .sub-d). */
+#cog { background: none; border: 0; color: #4e9c6a; font-size: 22px;
+       line-height: 1; padding: 0 10px; cursor: pointer; }
+#cog[hidden] { display: none; }
+#settings { position: absolute; top: 56px; right: 12px; z-index: 20;
+            background: #0b1f13; border: 1px solid #14361f; border-radius: 6px;
+            padding: 10px 12px; min-width: 320px; }
+#settings[hidden] { display: none; }
+.setzeile { display: flex; align-items: center; justify-content: space-between;
+            gap: 18px; padding: 7px 0; font-size: 17px; }
+.segmente button, .schalter { background: #0f2a19; border: 1px solid #14361f;
+            color: #b8f5cc; font: inherit; padding: 5px 11px; cursor: pointer; }
+.segmente button:first-child { border-radius: 4px 0 0 4px; }
+.segmente button:last-child { border-radius: 0 4px 4px 0; }
+.schalter { border-radius: 4px; min-width: 62px; }
+.segmente button.an, .schalter.an { background: #1d4a2e; color: #b8ffcf; }

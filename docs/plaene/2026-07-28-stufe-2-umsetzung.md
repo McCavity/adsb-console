@@ -2190,7 +2190,7 @@ durch:
 ```markdown
 - **Korrektur vom 28.07.: Die Radarseite war 60 % der Zeit sichtbar, nicht ein Drittel.**
   Der ursprüngliche Satz war nach den eigenen Zahlen dieses Dokuments falsch. `console.js`
-  filtert `activePages` gegen die **registrierten** Renderer; am Meßcommit `f2df217`
+  filtert `activePages` gegen die **registrierten** Renderer; am Meßcommit `be74d8a`
   registrierte `index.html` genau drei Seiten (Radar, Board, Statistik). Bei Standzeiten
   von 45 + 15 + 15 s ergibt das einen Umlauf von 75 s und einen Radaranteil von 45/75 =
   60 %.

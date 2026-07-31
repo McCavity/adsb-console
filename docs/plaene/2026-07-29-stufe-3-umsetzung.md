@@ -1285,7 +1285,7 @@ sichtbar anderen Zwischenstufe etwas bewies.
 > wurde — dieselbe Fehlerklasse wie Befund 5 der Stufe-1-Abnahme. Außerdem lagen drei
 > von vier Ringbeschriftungen **unter** der Füllfläche, weil SVG in Dokumentreihenfolge
 > zeichnet; nur „80 NM" ragte heraus und war lesbar.
-> Behoben in `e0a7654` und `0932335`: `BILD.rand` 26 → 34, `punktAussen` und die feste
+> Behoben in `a852b07` und `c0e519e`: `BILD.rand` 26 → 34, `punktAussen` und die feste
 > `MARKEN`-Tabelle ersetzt durch `markenPlatz(grad)`/`markenKasten(grad)`, die **aus
 > `BILD.rand` rechnen**, Ringbeschriftungen zuletzt gezeichnet mit Aussparungsrand.
 > Dazu ein Test, den es beim ersten Mal nicht gab: keine Marke darf über die Bildkante

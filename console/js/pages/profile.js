@@ -1,4 +1,4 @@
-import { haversineNm, isEmergency, nmToPx } from '../geo.js';
+import { haversineNm, isEmergency, nmToPx, sichtbareRinge } from '../geo.js';
 import { registerPage } from '../console.js';
 import { leerUntertitel } from './gemeinsam.js';
 
@@ -77,6 +77,18 @@ export function punktY(altFt) {
   return BILD.rand + (1 - altFt / FL_MAX) * (BILD.hoehe - 2 * BILD.rand);
 }
 
+// Eine Stelle, an der die Reichweite des Seitenrisses herkommt. Solange es
+// zwei gab (Config hier, Ansicht im Radar), konnten sie auseinanderlaufen.
+// Kein Rueckfall auf die Config: console.js reicht sicht bei mount/onEnter/
+// render immer als vierten Parameter durch, und gilt() liefert range_nm
+// garantiert als endliche Zahl. Eine fehlende sicht ist ein Verdrahtungsfehler
+// und soll hier laut auffallen (TypeError), nicht still auf die Config
+// zurueckfallen -- sonst widerspricht das Profil dem Radar lautlos, statt
+// sichtbar, und genau dagegen wurde diese Funktion gebaut.
+export function profilReichweite(sicht) {
+  return sicht.range_nm;
+}
+
 registerPage({
   id: 'profile',
   title: 'Höhenprofil',
@@ -89,9 +101,10 @@ registerPage({
       </div>
       <div class="profil-spalte value"></div>`;
   },
-  render(el, cfg, state) {
+  render(el, cfg, state, sicht) {
+    const rangeNm = profilReichweite(sicht);
     const r = hoehenprofil(state.aircraft, state.receiver,
-                           cfg.radar.range_nm, cfg.emergency.highlight);
+                           rangeNm, cfg.emergency.highlight);
     const svg = el.querySelector('.profil-svg');
     const spalte = el.querySelector('.profil-spalte');
 
@@ -102,14 +115,13 @@ registerPage({
       teile.push(`<line class="g-h" x1="0" y1="${y}" x2="${BILD.breite}" y2="${y}"/>`);
       teile.push(`<text class="g-t" x="4" y="${y - 5}">FL${ft / 100}</text>`);
     }
-    for (const ring of cfg.radar.rings_nm) {
-      if (ring > cfg.radar.range_nm) continue;
-      const x = punktX(ring, cfg.radar.range_nm);
+    for (const ring of sichtbareRinge(sicht.rings_nm, rangeNm)) {
+      const x = punktX(ring, rangeNm);
       teile.push(`<line class="g-v" x1="${x}" y1="0" x2="${x}" y2="${BILD.hoehe}"/>`);
       teile.push(`<text class="g-t" x="${x + 5}" y="${BILD.hoehe - 6}">${ring} NM</text>`);
     }
     for (const p of r.punkte) {
-      const x = punktX(p.nm, cfg.radar.range_nm);
+      const x = punktX(p.nm, rangeNm);
       const y = punktY(p.altFt);
       const klassen = 'p' + (p.emergency ? ' emg' : '') + (p.geklemmt ? ' klemm' : '');
       teile.push(`<circle class="${klassen}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${BILD.punkt}"/>`);
@@ -143,7 +155,7 @@ registerPage({
         <div class="lbl">Nicht im Bild</div>
         <div class="db-zeile"><span class="db-label">mit Höhe, ohne Position</span>
           <span class="db-wert">${r.ohnePosition}</span></div>
-        <div class="db-zeile"><span class="db-label">außerhalb ${cfg.radar.range_nm} NM</span>
+        <div class="db-zeile"><span class="db-label">außerhalb ${rangeNm} NM</span>
           <span class="db-wert">${r.ausserhalb}</span></div>
       </div>`;
   },

@@ -72,3 +72,41 @@ test('ein vorhandenes Callsign bleibt das Callsign', () => {
   const t = splitTargets(ac, { lat: 50.0, lon: 9.0 }).positioned[0];
   assert.equal(t.callsign, 'DLH123');
 });
+
+// 50.36 / 9.0 liegt rund 21,6 NM von RX2 entfernt. Bis zum 31.07.2026
+// listete die Tafel bis ueber 100 NM, waehrend das Radar daneben nichts
+// meldete.
+const RX2 = { lat: 50.0, lon: 9.0 };
+const NAH  = { hex: 'nah',  lat: 50.05, lon: 9.0, alt_baro: 3000 };
+const FERN = { hex: 'fern', lat: 50.36, lon: 9.0, alt_baro: 35000 };
+
+test('Ziele jenseits der Reichweite stehen nicht mehr in der Tafel', () => {
+  assert.equal(splitTargets([NAH, FERN], RX2, true).positioned.length, 2,
+               'Voraussetzung: ohne Reichweite sind es zwei');
+  const p = splitTargets([NAH, FERN], RX2, true, 10).positioned;
+  assert.deepEqual(p.map(t => t.hex), ['nah']);
+});
+
+test('Ziele ohne Position bleiben, sie haben keine Entfernung', () => {
+  // Sie stehen in der eigenen Zeile "ohne Position" und lassen sich nicht
+  // gegen eine Reichweite pruefen -- ein Filter waere hier eine Erfindung.
+  const r = splitTargets([FERN, { hex: 'nopos', alt_baro: 12000 }], RX2, true, 10);
+  assert.equal(r.positioned.length, 0);
+  assert.equal(r.unpositioned.length, 1);
+});
+
+test('gefiltert wird die ganze Liste, nicht erst die zwoelf naechsten', () => {
+  // Die Tafel zeigt "die zwoelf naechsten". Der Schnitt auf zwoelf sitzt in
+  // render(); der Filter muss VORHER greifen -- also hier, in der reinen
+  // Funktion, die render() speist.
+  const viele = [];
+  for (let i = 0; i < 20; i++) viele.push({ hex: `n${i}`, lat: 50.0 + i * 0.002, lon: 9.0 });
+  viele.push(FERN);
+  const p = splitTargets(viele, RX2, true, 10).positioned;
+  assert.equal(p.length, 20, 'alle zwanzig nahen Ziele bleiben, nur das ferne faellt');
+  assert.equal(p.some(t => t.hex === 'fern'), false);
+});
+
+test('ohne vierten Parameter bleibt die Tafel unbegrenzt', () => {
+  assert.equal(splitTargets([NAH, FERN], RX2, true).positioned.length, 2);
+});
