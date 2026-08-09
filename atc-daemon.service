@@ -18,9 +18,14 @@ SupplementaryGroups=video
 # /var/lib/atc-console mit den richtigen Rechten an, bevor ExecStart laeuft.
 StateDirectory=atc-console
 StateDirectoryMode=0750
+# --antenna-m ist der einzige ANLAGENWERT hier: Antennenhoehe ueber Grund, geht
+# in die Plausibilitaetsgrenze fuer Reichweiten-Rekorde ein (Radio-Horizont).
+# Hier 5 m -- Oberkante Buerofenster im Hochparterre. Wer nachbaut, traegt seinen
+# eigenen Wert ein; ohne Angabe rechnet der Daemon konservativ mit 0.
 ExecStart=/usr/local/lib/atc-console/atc_daemon.py \
   --out-dir /var/www/html/atc/data \
-  --db /var/lib/atc-console/atc.db
+  --db /var/lib/atc-console/atc.db \
+  --antenna-m 5
 Restart=always
 RestartSec=5
 # Der Daemon liest nur und schreibt in genau zwei Verzeichnisse.

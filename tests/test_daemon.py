@@ -261,6 +261,154 @@ class Zielfilter(unittest.TestCase):
         self.assertIsNone(d.usable_positions(self.doc([ac]), self.LAT0, self.LON0)[0]["alt_ft"])
 
 
+class RadioHorizont(unittest.TestCase):
+    """Hoehenabhaengige Plausibilitaetsgrenze.
+
+    Anlass ist ein echter Fehleintrag: am 07.08.2026 wurde in Sektor 27 ein
+    Rekord von 262,76 NM bei 35.975 ft uebernommen. Der feste Deckel von
+    300 NM hat ihn durchgelassen; die direkten Nachbarsektoren standen bei
+    23,06 und 32,77 NM.
+
+    Die Paare unten sind der ECHTE Rekordbestand (nm, alt_ft) vom 09.08.2026 --
+    reine Zahlen, keine Position. Sie sind die bekannte Wahrheit, gegen die
+    der Filter kalibriert wird: genau einer muss fallen, 35 muessen bleiben.
+    """
+
+    ECHTE_REKORDE = [
+        (76.93, 43000), (96.36, 37975), (98.35, 36700), (66.9, 41000),
+        (90.55, 36000), (61.5, 29175), (57.2, 22325), (65.16, 35000),
+        (56.69, 38000), (50.17, 38000), (68.67, 35025), (62.41, 39975),
+        (55.55, 37975), (88.01, 40000), (63.04, 40000), (57.95, 21000),
+        (58.01, 23000), (40.11, 33625), (27.12, 37000), (25.05, 34975),
+        (25.98, 37000), (28.53, 38950), (24.32, 43000), (27.27, 38000),
+        (27.59, 38000), (26.77, 36025), (23.06, 35975), (262.76, 35975),
+        (32.77, 38000), (31.16, 44975), (38.95, 31950), (44.06, 37000),
+        (56.55, 35975), (62.2, 36000), (78.31, 34025), (67.47, 34950),
+    ]
+    AUSREISSER = (262.76, 35975)
+
+    # --- die Formel selbst ---
+
+    def test_horizont_waechst_mit_der_wurzel_der_hoehe(self):
+        # Vervierfachte Hoehe = doppelte Sichtweite.
+        self.assertAlmostEqual(d.radio_horizon_nm(10000, 0) * 2,
+                               d.radio_horizon_nm(40000, 0), delta=0.01)
+
+    def test_bekannter_stuetzwert(self):
+        # 1.23 * sqrt(35975) = 233,3 NM bei Antennenhoehe 0.
+        self.assertAlmostEqual(d.radio_horizon_nm(35975, 0), 233.3, delta=0.5)
+
+    def test_antenne_hebt_den_horizont(self):
+        self.assertGreater(d.radio_horizon_nm(35975, 65), d.radio_horizon_nm(35975, 0))
+
+    # --- Kalibrierung an der bekannten Wahrheit ---
+
+    def test_genau_der_ausreisser_faellt_und_sonst_keiner(self):
+        gefallen = [(nm, alt) for nm, alt in self.ECHTE_REKORDE
+                    if nm > d.plausible_limit_nm(alt)]
+        self.assertEqual(gefallen, [self.AUSREISSER],
+                         "Es darf genau der 262,76-NM-Eintrag fallen")
+
+    def test_ausreisser_faellt_bei_jeder_realistischen_antennenhoehe(self):
+        # 0 bis 30 m -- das Ergebnis darf nicht am Anlagenwert haengen. Die 30 m
+        # sind bewusst grosszuegig: sie decken auch den Fall "Funkmast im Garten"
+        # ab, falls die Antenne je hoeher kommt.
+        for meter in (0, 5, 10, 15, 20, 25, 30):
+            nm, alt = self.AUSREISSER
+            with self.subTest(antenne_m=meter):
+                self.assertGreater(nm, d.plausible_limit_nm(alt, meter * d.METER_TO_FT))
+
+    def test_produktivwert_der_anlage_faengt_den_ausreisser(self):
+        # Nicht der Default, sondern der Wert, der in der Unit steht.
+        grenze = d.plausible_limit_nm(35975, 5 * d.METER_TO_FT)
+        self.assertAlmostEqual(grenze, 250.2, delta=0.5)
+        self.assertGreater(self.AUSREISSER[0], grenze)
+
+    # --- der Anlagenwert muss auch ANKOMMEN, nicht nur konfigurierbar sein ---
+
+    def test_cli_kennt_antenna_m(self):
+        import argparse
+        ap = argparse.ArgumentParser()
+        ap.add_argument("--antenna-m", type=float, default=0.0)
+        self.assertEqual(ap.parse_args(["--antenna-m", "5"]).antenna_m, 5.0)
+
+    @staticmethod
+    def _exec_start(unit_text):
+        """Nur die ExecStart-Zeile samt Fortsetzungen -- NICHT die ganze Datei.
+
+        Erste Fassung dieses Tests suchte in der ganzen Datei und blieb gruen,
+        nachdem das Argument aus ExecStart entfernt war: der Kommentar darueber
+        enthaelt denselben String. Der Test hat das Falsche gemessen.
+        """
+        zeilen, sammeln, out = unit_text.splitlines(), False, []
+        for z in zeilen:
+            if z.startswith("ExecStart="):
+                sammeln = True
+            elif sammeln and not out[-1].rstrip().endswith("\\"):
+                break
+            if sammeln:
+                out.append(z)
+        return "\n".join(out)
+
+    def test_unit_datei_uebergibt_die_antennenhoehe(self):
+        # Ein stiller Vertrag: die Unit ruft den Daemon auf. Steht das Argument
+        # dort nicht, rechnet die Anlage still mit 0 -- konfiguriert ist nicht
+        # gleich wirksam. Beide Seiten gegeneinander pruefen statt zu glauben.
+        wurzel = Path(__file__).resolve().parent.parent
+        exec_start = self._exec_start((wurzel / "atc-daemon.service").read_text())
+        self.assertIn("--antenna-m", exec_start,
+                      "ExecStart uebergibt die Antennenhoehe nicht")
+        self.assertIn('"--antenna-m"', (wurzel / "daemon" / "atc_daemon.py").read_text(),
+                      "Der Daemon kennt das Argument nicht, das die Unit uebergibt")
+
+    def test_der_unit_test_misst_execstart_und_nicht_den_kommentar(self):
+        # Kalibrierung des Tests darueber: eine Unit, die das Argument NUR im
+        # Kommentar nennt, muss durchfallen.
+        nur_kommentar = "# --antenna-m waere hier richtig\nExecStart=/x --db /y\n"
+        self.assertNotIn("--antenna-m", self._exec_start(nur_kommentar))
+
+    def test_hoehere_antenne_hebt_die_grenze(self):
+        # Der Funkmast-Fall: 10 m muessen mehr Reichweite erlauben als 5 m.
+        self.assertGreater(d.plausible_limit_nm(35000, 10 * d.METER_TO_FT),
+                           d.plausible_limit_nm(35000, 5 * d.METER_TO_FT))
+
+    # --- der Rueckfall darf nie zum Wegwerfen fuehren ---
+
+    def test_ohne_hoehe_gilt_der_alte_deckel(self):
+        for ohne in (None, "ground", "", 0, -75, True):
+            with self.subTest(alt=ohne):
+                self.assertEqual(d.plausible_limit_nm(ohne), d.MAX_PLAUSIBLE_NM)
+
+    def test_sockel_schuetzt_tieffliegende_ziele(self):
+        # Ein Flugzeug am Boden in FRA meldet mitunter numerisch 25 ft; sein
+        # rechnerischer Horizont waere 6,2 NM. Ohne Sockel flaege es raus.
+        self.assertEqual(d.plausible_limit_nm(25), d.MIN_LIMIT_NM)
+        self.assertGreater(d.plausible_limit_nm(25), 12.0)
+
+    def test_grenze_ueberschreitet_nie_den_alten_deckel(self):
+        # Auch in extremer Hoehe bleibt MAX_PLAUSIBLE_NM die Obergrenze.
+        self.assertLessEqual(d.plausible_limit_nm(60000), d.MAX_PLAUSIBLE_NM)
+
+    # --- Wirkung im Filter selbst ---
+
+    def _doc(self, ac):
+        return {"aircraft": [ac]}
+
+    def test_filter_wirft_ueberhorizont_ziel_weg(self):
+        # 3 Grad noerdlich = 180 NM, gemeldet aus 1000 ft -> unmoeglich.
+        ac = {"hex": "a", "lat": 15.0, "lon": 34.0, "alt_baro": 1000, "mlat": []}
+        self.assertEqual(d.usable_positions(self._doc(ac), 12.0, 34.0), [])
+
+    def test_filter_behaelt_dasselbe_ziel_in_reiseflughoehe(self):
+        ac = {"hex": "a", "lat": 15.0, "lon": 34.0, "alt_baro": 37000, "mlat": []}
+        self.assertEqual(len(d.usable_positions(self._doc(ac), 12.0, 34.0)), 1)
+
+    def test_filter_behaelt_ziel_ohne_hoehe(self):
+        # "ground" darf nicht als 0 ft gelesen werden und alles wegwerfen.
+        ac = {"hex": "a", "lat": 12.1, "lon": 34.0, "alt_baro": "ground", "mlat": []}
+        self.assertEqual(len(d.usable_positions(self._doc(ac), 12.0, 34.0)), 1)
+
+
 class SystemJson(unittest.TestCase):
     def test_pflichtschluessel_vorhanden(self):
         s = d.build_system_json(0x0, vcgen_available=True)

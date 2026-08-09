@@ -142,9 +142,63 @@ from collections import deque
 
 SECTORS = 36
 HOUR_S = 3600.0
-MAX_PLAUSIBLE_NM = 300.0     # weit ueber dem gemessenen Maximum (69 NM),
-                             # aber unterhalb offensichtlichen Unsinns
+MAX_PLAUSIBLE_NM = 300.0     # Rueckfallgrenze, wenn die Hoehe unbekannt ist.
+                             # ⚠️ Als ALLEINIGE Grenze war sie wirkungslos: am
+                             # 07.08.2026 lieferte ein Frame 262,76 NM in Sektor 27
+                             # bei 35.975 ft und wurde als Rekord uebernommen --
+                             # Faktor 2,7 ueber dem zweithoechsten Wert des ganzen
+                             # Datensatzes (98,35 NM) und Faktor 8-11 ueber den
+                             # direkten Nachbarsektoren (23,06 / 32,77 NM).
 MAX_WINDOW_ITEMS = 200_000   # Notbremse gegen unbegrenztes Wachstum, s. HourWindow
+
+# --- Plausibilitaet ueber den Radio-Horizont ---------------------------------
+# Ein fester Deckel ist die falsche Regel: 262 NM sind bei 36.000 ft unmoeglich,
+# bei 43.000 ft dagegen physikalisch drin. Was die Grenze setzt, ist die Hoehe
+# des Ziels -- und die steht in derselben Meldung.
+#
+# d[NM] ~ 1.23 * (sqrt(h_ziel[ft]) + sqrt(h_antenne[ft]))
+# Der Faktor 1.23 enthaelt bereits die Standard-Refraktion (4/3-Erdradius).
+ANTENNA_FT = 0.0             # Antennenhoehe ueber Grund. Anlagenwert, KEINE Konstante:
+                             # gesetzt aus --antenna-m (main), gesetzt in der Unit.
+                             # Der Code-Default 0 ist die konservative Annahme fuer
+                             # jede fremde Anlage, die nichts angibt. Bei 36.000 ft
+                             # traegt die Antenne ohnehin nur wenige NM bei (0 m ->
+                             # 233,3 NM, 5 m -> 238,3 NM, 10 m -> 240,3 NM); fuer
+                             # tieffliegende Ziele ist sie der ganze Unterschied.
+METER_TO_FT = 3.28084
+HORIZON_MARGIN = 1.05        # Zuschlag fuer Ueberreichweite (Superrefraktion).
+                             # 1.05 faengt den 262,76-NM-Fall bei JEDER Antennen-
+                             # hoehe bis 30 m; 1.10 laesst ihn ab 30 m durch.
+MIN_LIMIT_NM = 100.0         # Sockel: unterhalb davon wird nie gefiltert.
+                             # Ohne ihn wuerfe die Horizont-Regel echte Ziele weg --
+                             # ein Flugzeug, das am Boden in FRA (~12 NM) numerisch
+                             # 25 ft meldet, haette einen Horizont von 6,2 NM.
+                             # Der Zweck ist der grobe Ausreisser, nicht Feinarbeit.
+
+
+def radio_horizon_nm(alt_ft: float, antenna_ft: float | None = None) -> float:
+    """Sichtweite in NM fuer ein Ziel in alt_ft ueber einer Antenne in antenna_ft.
+
+    antenna_ft=None nimmt den Anlagenwert ANTENNA_FT (aus --antenna-m). Der
+    Parameter existiert, damit Tests eine Hoehe vorgeben koennen, ohne den
+    Modulzustand anzufassen.
+    """
+    if antenna_ft is None:
+        antenna_ft = ANTENNA_FT
+    return 1.23 * (math.sqrt(max(alt_ft, 0.0)) + math.sqrt(max(antenna_ft, 0.0)))
+
+
+def plausible_limit_nm(alt_ft, antenna_ft: float | None = None) -> float:
+    """Groesste Entfernung, in der ein Ziel dieser Hoehe empfangbar ist.
+
+    Ohne brauchbare Hoehe (kein alt_baro, "ground", 0 oder negativ) faellt die
+    Pruefung auf MAX_PLAUSIBLE_NM zurueck -- lieber ein Ausreisser zuviel als ein
+    echtes Ziel weniger.
+    """
+    if not isinstance(alt_ft, (int, float)) or isinstance(alt_ft, bool) or alt_ft <= 0:
+        return MAX_PLAUSIBLE_NM
+    horizont = radio_horizon_nm(alt_ft, antenna_ft) * HORIZON_MARGIN
+    return max(MIN_LIMIT_NM, min(MAX_PLAUSIBLE_NM, horizont))
 
 
 class RangeStore:
@@ -228,9 +282,18 @@ def usable_positions(doc, lat0, lon0, max_nm=MAX_PLAUSIBLE_NM) -> list[dict]:
         nm = great_circle_nm(lat0, lon0, lat, lon)
         if nm > max_nm:
             continue
-        brg = bearing_deg(lat0, lon0, lat, lon)
         flight = ac.get("flight")
         alt = ac.get("alt_baro")
+        # Zweite, hoehenabhaengige Schranke: ueber dem Radio-Horizont kann das
+        # Ziel nicht empfangen worden sein, die Position ist also falsch
+        # dekodiert. Verworfene Faelle werden gemeldet -- ein Filter, dessen
+        # Wirkung man nicht sieht, laesst sich nicht nachkalibrieren.
+        grenze = plausible_limit_nm(alt)
+        if nm > grenze:
+            print(f"Position verworfen: {ac.get('hex')} {nm:.2f} NM bei {alt} ft "
+                  f"(Grenze {grenze:.2f} NM)", flush=True)
+            continue
+        brg = bearing_deg(lat0, lon0, lat, lon)
         out.append({
             "hex": ac.get("hex"),
             # dump1090 schreibt "ground" woertlich in alt_baro -- das ist
@@ -428,7 +491,21 @@ def main(argv=None) -> int:
     ap.add_argument("--out-dir", default="/var/www/html/atc/data")
     ap.add_argument("--db", default="/var/lib/atc-console/atc.db")
     ap.add_argument("--run-dir", default=str(RUN_DIR))
+    ap.add_argument("--antenna-m", type=float, default=0.0,
+                    help="Antennenhoehe ueber Grund in Metern. Geht in die "
+                         "Plausibilitaetsgrenze ein (Radio-Horizont). Default 0 "
+                         "ist konservativ; bei Reiseflughoehe macht der Wert nur "
+                         "wenige NM aus, fuer tieffliegende Ziele den Unterschied.")
     args = ap.parse_args(argv)
+
+    # Anlagenwert einmalig setzen. Die Empfaengerposition wird zur Laufzeit aus
+    # dump1090 gelesen (read_receiver_position) -- die Antennenhoehe steht dort
+    # nicht und kann nur von aussen kommen.
+    global ANTENNA_FT
+    ANTENNA_FT = max(args.antenna_m, 0.0) * METER_TO_FT
+    print(f"Antennenhoehe {args.antenna_m:.1f} m ueber Grund "
+          f"({ANTENNA_FT:.1f} ft) -- Grenze bei FL350: "
+          f"{plausible_limit_nm(35000):.1f} NM", flush=True)
 
     # Signale ueber eine Variable leiten, damit die Schleife sauber austritt
     # und keine halb geschriebene Datei zuruecklaesst.
