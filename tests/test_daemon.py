@@ -310,11 +310,67 @@ class RadioHorizont(unittest.TestCase):
                          "Es darf genau der 262,76-NM-Eintrag fallen")
 
     def test_ausreisser_faellt_bei_jeder_realistischen_antennenhoehe(self):
-        # 0 bis 30 m -- der Wert ist ungemessen, das Ergebnis darf nicht daran haengen.
+        # 0 bis 30 m -- das Ergebnis darf nicht am Anlagenwert haengen. Die 30 m
+        # sind bewusst grosszuegig: sie decken auch den Fall "Funkmast im Garten"
+        # ab, falls die Antenne je hoeher kommt.
         for meter in (0, 5, 10, 15, 20, 25, 30):
             nm, alt = self.AUSREISSER
             with self.subTest(antenne_m=meter):
-                self.assertGreater(nm, d.plausible_limit_nm(alt, meter * 3.28084))
+                self.assertGreater(nm, d.plausible_limit_nm(alt, meter * d.METER_TO_FT))
+
+    def test_produktivwert_der_anlage_faengt_den_ausreisser(self):
+        # Nicht der Default, sondern der Wert, der in der Unit steht.
+        grenze = d.plausible_limit_nm(35975, 5 * d.METER_TO_FT)
+        self.assertAlmostEqual(grenze, 250.2, delta=0.5)
+        self.assertGreater(self.AUSREISSER[0], grenze)
+
+    # --- der Anlagenwert muss auch ANKOMMEN, nicht nur konfigurierbar sein ---
+
+    def test_cli_kennt_antenna_m(self):
+        import argparse
+        ap = argparse.ArgumentParser()
+        ap.add_argument("--antenna-m", type=float, default=0.0)
+        self.assertEqual(ap.parse_args(["--antenna-m", "5"]).antenna_m, 5.0)
+
+    @staticmethod
+    def _exec_start(unit_text):
+        """Nur die ExecStart-Zeile samt Fortsetzungen -- NICHT die ganze Datei.
+
+        Erste Fassung dieses Tests suchte in der ganzen Datei und blieb gruen,
+        nachdem das Argument aus ExecStart entfernt war: der Kommentar darueber
+        enthaelt denselben String. Der Test hat das Falsche gemessen.
+        """
+        zeilen, sammeln, out = unit_text.splitlines(), False, []
+        for z in zeilen:
+            if z.startswith("ExecStart="):
+                sammeln = True
+            elif sammeln and not out[-1].rstrip().endswith("\\"):
+                break
+            if sammeln:
+                out.append(z)
+        return "\n".join(out)
+
+    def test_unit_datei_uebergibt_die_antennenhoehe(self):
+        # Ein stiller Vertrag: die Unit ruft den Daemon auf. Steht das Argument
+        # dort nicht, rechnet die Anlage still mit 0 -- konfiguriert ist nicht
+        # gleich wirksam. Beide Seiten gegeneinander pruefen statt zu glauben.
+        wurzel = Path(__file__).resolve().parent.parent
+        exec_start = self._exec_start((wurzel / "atc-daemon.service").read_text())
+        self.assertIn("--antenna-m", exec_start,
+                      "ExecStart uebergibt die Antennenhoehe nicht")
+        self.assertIn('"--antenna-m"', (wurzel / "daemon" / "atc_daemon.py").read_text(),
+                      "Der Daemon kennt das Argument nicht, das die Unit uebergibt")
+
+    def test_der_unit_test_misst_execstart_und_nicht_den_kommentar(self):
+        # Kalibrierung des Tests darueber: eine Unit, die das Argument NUR im
+        # Kommentar nennt, muss durchfallen.
+        nur_kommentar = "# --antenna-m waere hier richtig\nExecStart=/x --db /y\n"
+        self.assertNotIn("--antenna-m", self._exec_start(nur_kommentar))
+
+    def test_hoehere_antenne_hebt_die_grenze(self):
+        # Der Funkmast-Fall: 10 m muessen mehr Reichweite erlauben als 5 m.
+        self.assertGreater(d.plausible_limit_nm(35000, 10 * d.METER_TO_FT),
+                           d.plausible_limit_nm(35000, 5 * d.METER_TO_FT))
 
     # --- der Rueckfall darf nie zum Wegwerfen fuehren ---
 

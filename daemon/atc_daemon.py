@@ -158,14 +158,14 @@ MAX_WINDOW_ITEMS = 200_000   # Notbremse gegen unbegrenztes Wachstum, s. HourWin
 #
 # d[NM] ~ 1.23 * (sqrt(h_ziel[ft]) + sqrt(h_antenne[ft]))
 # Der Faktor 1.23 enthaelt bereits die Standard-Refraktion (4/3-Erdradius).
-ANTENNA_FT = 16.4            # 5 m ueber Grund (Henning, 09.08.2026): Oberkante des
-                             # Buerofensters im Hochparterre, tatsaechlich eher 3-4 m.
-                             # Bewusst die OBERGRENZE seiner Angabe -- eine zu hoch
-                             # angesetzte Antenne macht den Filter lockerer und wirft
-                             # eher einen Ausreisser zuviel durch als ein echtes Ziel
-                             # weg. Bei 36.000 ft traegt sie ohnehin nur ~5 NM bei
-                             # (233,3 -> 238,3 NM); fuer tieffliegende Ziele dagegen
-                             # ist sie der ganze Unterschied.
+ANTENNA_FT = 0.0             # Antennenhoehe ueber Grund. Anlagenwert, KEINE Konstante:
+                             # gesetzt aus --antenna-m (main), gesetzt in der Unit.
+                             # Der Code-Default 0 ist die konservative Annahme fuer
+                             # jede fremde Anlage, die nichts angibt. Bei 36.000 ft
+                             # traegt die Antenne ohnehin nur wenige NM bei (0 m ->
+                             # 233,3 NM, 5 m -> 238,3 NM, 10 m -> 240,3 NM); fuer
+                             # tieffliegende Ziele ist sie der ganze Unterschied.
+METER_TO_FT = 3.28084
 HORIZON_MARGIN = 1.05        # Zuschlag fuer Ueberreichweite (Superrefraktion).
                              # 1.05 faengt den 262,76-NM-Fall bei JEDER Antennen-
                              # hoehe bis 30 m; 1.10 laesst ihn ab 30 m durch.
@@ -176,12 +176,19 @@ MIN_LIMIT_NM = 100.0         # Sockel: unterhalb davon wird nie gefiltert.
                              # Der Zweck ist der grobe Ausreisser, nicht Feinarbeit.
 
 
-def radio_horizon_nm(alt_ft: float, antenna_ft: float = ANTENNA_FT) -> float:
-    """Sichtweite in NM fuer ein Ziel in alt_ft ueber einer Antenne in antenna_ft."""
+def radio_horizon_nm(alt_ft: float, antenna_ft: float | None = None) -> float:
+    """Sichtweite in NM fuer ein Ziel in alt_ft ueber einer Antenne in antenna_ft.
+
+    antenna_ft=None nimmt den Anlagenwert ANTENNA_FT (aus --antenna-m). Der
+    Parameter existiert, damit Tests eine Hoehe vorgeben koennen, ohne den
+    Modulzustand anzufassen.
+    """
+    if antenna_ft is None:
+        antenna_ft = ANTENNA_FT
     return 1.23 * (math.sqrt(max(alt_ft, 0.0)) + math.sqrt(max(antenna_ft, 0.0)))
 
 
-def plausible_limit_nm(alt_ft, antenna_ft: float = ANTENNA_FT) -> float:
+def plausible_limit_nm(alt_ft, antenna_ft: float | None = None) -> float:
     """Groesste Entfernung, in der ein Ziel dieser Hoehe empfangbar ist.
 
     Ohne brauchbare Hoehe (kein alt_baro, "ground", 0 oder negativ) faellt die
@@ -484,7 +491,21 @@ def main(argv=None) -> int:
     ap.add_argument("--out-dir", default="/var/www/html/atc/data")
     ap.add_argument("--db", default="/var/lib/atc-console/atc.db")
     ap.add_argument("--run-dir", default=str(RUN_DIR))
+    ap.add_argument("--antenna-m", type=float, default=0.0,
+                    help="Antennenhoehe ueber Grund in Metern. Geht in die "
+                         "Plausibilitaetsgrenze ein (Radio-Horizont). Default 0 "
+                         "ist konservativ; bei Reiseflughoehe macht der Wert nur "
+                         "wenige NM aus, fuer tieffliegende Ziele den Unterschied.")
     args = ap.parse_args(argv)
+
+    # Anlagenwert einmalig setzen. Die Empfaengerposition wird zur Laufzeit aus
+    # dump1090 gelesen (read_receiver_position) -- die Antennenhoehe steht dort
+    # nicht und kann nur von aussen kommen.
+    global ANTENNA_FT
+    ANTENNA_FT = max(args.antenna_m, 0.0) * METER_TO_FT
+    print(f"Antennenhoehe {args.antenna_m:.1f} m ueber Grund "
+          f"({ANTENNA_FT:.1f} ft) -- Grenze bei FL350: "
+          f"{plausible_limit_nm(35000):.1f} NM", flush=True)
 
     # Signale ueber eine Variable leiten, damit die Schleife sauber austritt
     # und keine halb geschriebene Datei zuruecklaesst.
