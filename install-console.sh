@@ -82,11 +82,13 @@ if [[ ! "$OUTPUT" =~ ^[A-Za-z0-9-]+$ ]]; then
     exit 1
 fi
 
-echo "Installing labwc, wlr-randr, chromium, seatd and curl …"
+echo "Installing labwc, wlr-randr, chromium, seatd, curl and grim …"
 apt-get update -qq
 # Kein Emoji-Font: Die Konsole benutzt keine Emoji, und die Radarschrift
 # liegt gebundelt im Repo (console/fonts/HERKUNFT.md).
-apt-get install -y --no-install-recommends labwc wlr-randr chromium seatd curl
+# grim: Panelbild für Abnahmen, ohne vor dem Gerät zu stehen —
+#   sudo -u atc XDG_RUNTIME_DIR=/run/atc-console WAYLAND_DISPLAY=wayland-0 grim /var/tmp/panel.png
+apt-get install -y --no-install-recommends labwc wlr-randr chromium seatd curl grim
 
 echo "Enabling seatd …"
 systemctl enable --now seatd.service
